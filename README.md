@@ -1,2 +1,2 @@
 # mosec
-Model Serving Efficient in Cloud
+Model Serving made Efficient in the Cloud.
