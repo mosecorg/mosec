@@ -8,6 +8,7 @@ install:
 
 test:
 	pytest tests -vv
+	export RUST_BACKTRACE=1 && cargo test -vv
 
 doc:
 	cd docs && make html
