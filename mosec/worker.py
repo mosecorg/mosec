@@ -2,37 +2,46 @@ import json
 import pickle
 
 
-class ServiceBase:
+class Worker:
     """
-    This class defines the default service
-    decoding/encoding methods.
-    """
-
-    def unpack(self):  # ingress
-        json.loads()
-
-    def pack(self):  # egress
-        json.dumps()
-
-
-class WorkerBase(ServiceBase):
-    """
-    This class defines the default inter-worker
-    IPC de/serialize methods, worker stage and maximum batch size.
+    This public class defines the mosec worker interface. It provides
+    default IPC de/serialize methods, stores the worker stage and
+    maximum batch size, and implements the forward pass pipeline.
     """
 
     def __init__(self):
-        self._stage = "x"
+        self._stage = "x"  # {"ingress", "x", "egress"}
         self._max_batch_size = 1
 
-    def serialize(self, data):
+    def __str__(self):
+        return self.__class__.__name__
+
+    @staticmethod
+    def _serialize(data):
+        """Defines IPC serialize method"""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def deserialize(self, data):
+    @staticmethod
+    def _deserialize(data):
+        """Defines IPC deserialize method"""
         return pickle.loads(data)
 
-    def __call__(self):
-        raise NotImplementedError("worker forward pass method not implemented")
+    def _set_stage(self, stage):
+        self._stage = stage
 
-    def __repr__(self):
-        return self.__class__.__name__
+    def _set_mbs(self, mbs):
+        self._max_batch_size = mbs
+
+    @staticmethod
+    def unpack(data):
+        """Defines service ingress unpack method, overridable"""
+        return json.loads(data)
+
+    @staticmethod
+    def pack(data):
+        """Defines service egress pack method, overridable"""
+        return json.dumps()
+
+    def forward(self):
+        """Defines worker's computation, must be overridden by all subclasses"""
+        raise NotImplementedError

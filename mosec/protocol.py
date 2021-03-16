@@ -1,22 +1,15 @@
 import logging
-import signal
 import socket
 import struct
-import traceback
 from itertools import zip_longest
-from multiprocessing.synchronize import Event
-
-from pydantic import ValidationError
-
-from .worker import WorkerBase
 
 logger = logging.getLogger(__name__)
 
 
 class Protocol:
     """
-    This class implemnets the protocol based on uds
-    to communicate with the server and process the received tasks.
+    This private class implemnets the client-side
+    protocol based on uds to communicate with the server.
     """
 
     # byte formats (https://docs.python.org/3/library/struct.html#format-characters)
@@ -39,20 +32,12 @@ class Protocol:
 
     def __init__(
         self,
-        addr: str,
-        worker: WorkerBase,
-        id: int,
-        shutdown: Event,
+        name: str,
         timeout=1.0,
     ):
         """Initialize the protocol
 
         Args:
-            addr (str): socket address (in file system name space).
-            worker (WorkerBase): worker that implements (by users) `__call__` as
-                forward pass, and optionally `__repr__` for naming.
-            id (int): worker id at the same stage.
-            shutdown (Event): shutdown event to close this protocol.
             timeout (float, optional): socket timeout. Defaults to 1.0.
         """
 
@@ -61,80 +46,12 @@ class Protocol:
             socket.SOCK_STREAM,
         )
         self.socket.settimeout(timeout)
+        self.name = name
+        self.addr = ""
+
+    def set_addr(self, addr: str):
+        """Set the socket address in file system's namespace"""
         self.addr = addr
-        self.worker = worker
-        self.name = f"<{worker.__repr__}_{id}>"
-
-        # ignore termination & interruption signal
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        self.shutdown = shutdown
-
-    def communicate(self):
-        """Start communicating with the server"""
-        while not self.shutdown.is_set():
-            try:
-                self.socket.connect(self.addr)
-                logger.info(f"{self.name} socket connected to {self.addr}")
-            except BrokenPipeError as err:
-                logger.warning(f"{self.name} socket is broken: {err}")
-                continue
-            except FileNotFoundError as err:
-                logger.warning(f"{self.name} socket file not found: {err}")
-                break
-
-            while not self.shutdown.is_set():
-                try:
-                    ids, data = self.receive()
-                except socket.timeout:
-                    continue
-                except (struct.error, OSError) as err:
-                    logger.warning(f"{self.name} struct unpack error: {err}")
-                    break
-
-                status = self.FLAG_OK
-                try:
-                    decoder = (
-                        self.worker.unpack
-                        if self.worker._stage == "ingress"
-                        else self.worker.deserialize
-                    )
-                    encoder = (
-                        self.worker.pack
-                        if self.worker._stage == "egress"
-                        else self.worker.serialize
-                    )
-                    data = [decoder(item) for item in data]
-                    data = (
-                        self.worker(data)
-                        if self.worker._max_batch_size > 1
-                        else (self.worker(data[0]),)
-                    )
-                    data = [encoder(item) for item in data]
-                    if len(ids) != len(data):
-                        raise ValueError(
-                            "returned data doesn't match the input data:"
-                            f"input({len(ids)})!=output({len(data)})"
-                        )
-                except ValidationError as err:
-                    err_msg = str(err).replace("\n", " - ")
-                    logger.info(f"{self.name} validation error: {err_msg}")
-                    status = self.FLAG_VALIDATION_ERROR
-                    err = err.json().encode()
-                    data = (self.worker.pack(err),)
-                except Exception:
-                    logger.warning(
-                        f"{self.name} internal error: {traceback.format_exc()}"
-                    )
-                    status = self.FLAG_INTERNAL_ERROR
-                    data = (self.worker.pack("Internal Error".encode()),)
-                try:
-                    self.send(ids, data, status)
-                except OSError as err:
-                    logger.warning(f"{self.name} socket send error: {err}")
-                    break
-
-        self.stop()
 
     def receive(self):
         """Receive tasks from the server"""
@@ -148,7 +65,7 @@ class Protocol:
             id_bytes = self.socket.recv(self.LENGTH_TASK_ID)
             length_bytes = self.socket.recv(self.LENGTH_TASK_BODY_LEN)
             length = struct.unpack(self.FORMAT_LENGTH, length_bytes)[0]
-            payload = recv_all(self.socket, length)
+            payload = _recv_all(self.socket, length)
             ids.append(id_bytes)
             data.append(payload)
 
@@ -177,7 +94,7 @@ class Protocol:
         logger.info(f"{self.name} socket closed")
 
 
-def recv_all(conn, length):
+def _recv_all(conn, length):
     buffer = bytearray(length)
     mv = memoryview(buffer)
     size = 0
