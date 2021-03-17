@@ -13,6 +13,9 @@ from .worker import Worker
 
 logger = logging.getLogger(__name__)
 
+SUCCESS = True
+FAIL = False
+
 
 class Coordinator:
     """
@@ -30,84 +33,124 @@ class Coordinator:
         stage_id: int,
         worker_id: int,
     ):
+        """Initialize the mosec coordinator
+
+        Args:
+            worker (Worker): subclass of `mosec.Worker` implemented by users.
+            max_batch_size (int): maximum batch size for this worker.
+            stage (str): identifier to distinguish the first and last stages.
+            shutdown (Event): `multiprocessing.synchronize.Event` for shutdown IPC.
+            socket_prefix (str): prefix for the socket addresses.
+            stage_id (int): identification number for worker stages.
+            worker_id (int): identification number for worker processes at the same stage.
+        """
         self.worker = worker()
         self.worker._set_mbs(max_batch_size)
         self.worker._set_stage(stage)
 
         self.name = f"<{stage_id+1}|{str(self.worker)}|{worker_id+1}>"
 
-        self.protocol = Protocol(self.name)
-        self.protocol.set_addr(join(socket_prefix, f"stage{stage_id}.sock"))
+        self.protocol = Protocol(
+            name=self.name, addr=join(socket_prefix, f"stage{stage_id}.sock")
+        )
+        self.protocol_max_retry = 10
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         self.shutdown = shutdown
 
-        self.coordinate()
+        if self.init_protocol() == SUCCESS:
+            self.run()
+
+    def init_protocol(self) -> bool:
+        """Establish protocol connection and returns status"""
+        retry_count = 0
+        while retry_count < self.protocol_max_retry:
+            try:
+                self.protocol.open()
+                return SUCCESS
+            except ConnectionRefusedError as err:
+                logger.warning(f"{self.name} socket connection refused: {err}")
+                return FAIL
+            except FileNotFoundError:
+                retry_count += 1
+                logger.debug(
+                    f"{self.name} trying to find the socket file: {self.protocol.addr} "
+                    f"({retry_count}/{self.protocol_conn_retry})"
+                )
+                continue
+        else:
+            logger.warning(f"{self.name} socket file not found")
+            return FAIL
+
+    def run(self):
+        """Maintain the protocol connection and run the coordination"""
+        while not self.shutdown.is_set():
+            # reconnect if needed
+            try:
+                self.protocol.open()
+            except OSError as err:
+                if err.errno != 56:  # Socket is already connected
+                    logger.error(f"{self.name} socket connection error: {err}")
+                    break
+            except ConnectionRefusedError as err:
+                logger.error(f"{self.name} socket connection refused: {err}")
+                break
+            except FileNotFoundError:
+                logger.error(f"{self.name} socket file not found")
+                break
+            self.coordinate()
 
     def coordinate(self):
-        """Start communicating with the server and processing tasks"""
+        """Start coordinating the protocol's communication and worker's forward pass"""
         while not self.shutdown.is_set():
             try:
-                self.protocol.socket.connect(self.protocol.addr)
-                logger.info(f"{self.name} socket connected to {self.protocol.addr}")
-            except BrokenPipeError as err:
-                logger.warning(f"{self.name} socket is broken: {err}")
+                ids, data = self.protocol.receive()
+            except socket.timeout:
                 continue
-            except FileNotFoundError as err:
-                logger.warning(f"{self.name} socket file not found: {err}")
+            except (struct.error, OSError) as err:
+                logger.error(f"{self.name} socket receive error: {err}")
                 break
 
-            while not self.shutdown.is_set():
-                try:
-                    ids, data = self.protocol.receive()
-                except socket.timeout:
-                    continue
-                except (struct.error, OSError) as err:
-                    logger.warning(f"{self.name} struct unpack error: {err}")
-                    break
-
+            try:
+                decoder = (
+                    self.worker.unpack
+                    if self.worker._stage == "ingress"
+                    else self.worker._deserialize
+                )
+                encoder = (
+                    self.worker.pack
+                    if self.worker._stage == "egress"
+                    else self.worker._serialize
+                )
+                data = [decoder(item) for item in data]
+                data = (
+                    self.worker(data)
+                    if self.worker._max_batch_size > 1
+                    else (self.worker.forward(data[0]),)
+                )
                 status = self.protocol.FLAG_OK
-                try:
-                    decoder = (
-                        self.worker.unpack
-                        if self.worker._stage == "ingress"
-                        else self.worker._deserialize
+                data = [encoder(item) for item in data]
+                if len(ids) != len(data):
+                    raise ValueError(
+                        "returned data doesn't match the input data:"
+                        f"input({len(ids)})!=output({len(data)})"
                     )
-                    encoder = (
-                        self.worker.pack
-                        if self.worker._stage == "egress"
-                        else self.worker._serialize
-                    )
-                    data = [decoder(item) for item in data]
-                    data = (
-                        self.worker(data)
-                        if self.worker._max_batch_size > 1
-                        else (self.worker.forward(data[0]),)
-                    )
-                    data = [encoder(item) for item in data]
-                    if len(ids) != len(data):
-                        raise ValueError(
-                            "returned data doesn't match the input data:"
-                            f"input({len(ids)})!=output({len(data)})"
-                        )
-                except ValidationError as err:
-                    err_msg = str(err).replace("\n", " - ")
-                    logger.info(f"{self.name} validation error: {err_msg}")
-                    status = self.protocol.FLAG_VALIDATION_ERROR
-                    err = err.json().encode()
-                    data = (self.worker.pack(err),)
-                except Exception:
-                    logger.warning(
-                        f"{self.name} internal error: {traceback.format_exc()}"
-                    )
-                    status = self.protocol.FLAG_INTERNAL_ERROR
-                    data = (self.worker.pack("Internal Error".encode()),)
-                try:
-                    self.protocol.send(ids, data, status)
-                except OSError as err:
-                    logger.warning(f"{self.name} socket send error: {err}")
-                    break
+            except ValidationError as err:
+                err_msg = str(err).replace("\n", " - ")
+                logger.info(f"{self.name} validation error: {err_msg}")
+                status = self.protocol.FLAG_VALIDATION_ERROR
+                data = (self.worker.pack(err.json().encode()),)
+            except Exception:
+                logger.warning(f"{self.name} internal error: {traceback.format_exc()}")
+                status = self.protocol.FLAG_INTERNAL_ERROR
+                data = (self.worker.pack("Internal Error".encode()),)
 
-        self.protocol.stop()
+            try:
+                self.protocol.send(ids, data, status)
+            except OSError as err:
+                logger.error(f"{self.name} socket send error: {err}")
+                break
+
+        self.protocol.close()

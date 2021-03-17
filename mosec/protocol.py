@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 
 class Protocol:
     """
-    This private class implemnets the client-side
-    protocol based on uds to communicate with the server.
+    This private class implements the client-side
+    protocol based on uds to communicate with the
+    server hosted on mosec controller side.
     """
 
     # byte formats (https://docs.python.org/3/library/struct.html#format-characters)
@@ -33,24 +34,22 @@ class Protocol:
     def __init__(
         self,
         name: str,
-        timeout=1.0,
+        addr: str,
+        timeout=2.0,
     ):
-        """Initialize the protocol
+        """Initialize the protocol client
 
         Args:
-            timeout (float, optional): socket timeout. Defaults to 1.0.
+            name (str): name of its belonging coordinator.
+            addr (str): unix domain socket address in file system's namespace.
+            timeout (float, optional): socket timeout. Defaults to 2.0 seconds.
         """
-
         self.socket = socket.socket(
             socket.AF_UNIX,
             socket.SOCK_STREAM,
         )
         self.socket.settimeout(timeout)
         self.name = name
-        self.addr = ""
-
-    def set_addr(self, addr: str):
-        """Set the socket address in file system's namespace"""
         self.addr = addr
 
     def receive(self):
@@ -88,7 +87,12 @@ class Protocol:
         self.socket.sendall(data)
         logger.debug(f"{self.name} sent {ids}")
 
-    def stop(self):
+    def open(self):
+        """Open the socket connection"""
+        self.socket.connect(self.addr)
+        logger.info(f"{self.name} socket connected to {self.protocol.addr}")
+
+    def close(self):
         """Close the socket connection"""
         self.socket.close()
         logger.info(f"{self.name} socket closed")
