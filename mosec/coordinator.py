@@ -2,6 +2,7 @@ import logging
 import signal
 import socket
 import struct
+import time
 import traceback
 from multiprocessing.synchronize import Event
 from os.path import join
@@ -13,8 +14,10 @@ from .worker import Worker
 
 logger = logging.getLogger(__name__)
 
-SUCCESS = True
-FAIL = False
+INIT_SUCCESS = True
+INIT_FAIL = False
+CONN_MAX_RETRY = 10
+CHECK_INTERVAL = 1
 
 
 class Coordinator:
@@ -53,36 +56,36 @@ class Coordinator:
         self.protocol = Protocol(
             name=self.name, addr=join(socket_prefix, f"stage{stage_id}.sock")
         )
-        self.protocol_max_retry = 10
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         self.shutdown = shutdown
 
-        if self.init_protocol() == SUCCESS:
+        if self.init_protocol() == INIT_SUCCESS:
             self.run()
 
     def init_protocol(self) -> bool:
         """Establish protocol connection and returns status"""
         retry_count = 0
-        while retry_count < self.protocol_max_retry:
+        while retry_count < CONN_MAX_RETRY:
             try:
                 self.protocol.open()
-                return SUCCESS
+                return INIT_SUCCESS
             except ConnectionRefusedError as err:
                 logger.warning(f"{self.name} socket connection refused: {err}")
-                return FAIL
+                return INIT_FAIL
             except FileNotFoundError:
                 retry_count += 1
                 logger.debug(
                     f"{self.name} trying to find the socket file: {self.protocol.addr} "
                     f"({retry_count}/{self.protocol_conn_retry})"
                 )
+                time.sleep(CHECK_INTERVAL)
                 continue
         else:
             logger.warning(f"{self.name} socket file not found")
-            return FAIL
+            return INIT_FAIL
 
     def run(self):
         """Maintain the protocol connection and run the coordination"""
