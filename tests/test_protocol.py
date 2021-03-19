@@ -41,9 +41,10 @@ def echo(p: Protocol, datum: list):
     sent_ids, sent_payloads = prepare_buffer(p, datum)
 
     _, ids, payloads = p.receive()  # client recv
+    assert buffer_is_empty(p)
     p.send(sent_status, ids, payloads)  # client echo
 
-    status, ids, payloads = p.receive()  # symmetric protocol
+    status, ids, payloads = p.receive()  # server recv (symmetric protocol)
 
     assert buffer_is_empty(p)
     assert struct.unpack("!H", status)[0] == sent_status
@@ -59,5 +60,12 @@ def test_protocol(mocker):
     p.open()
     echo(p, ["test"])
     echo(p, [1, 2, 3])
-    echo(p, json.dumps({"rid": "147982364", "data": "im_b64_str"}))
+    echo(
+        p,
+        [
+            json.dumps({"rid": "147982364", "data": "im_b64_str"}),
+            json.dumps({"rid": "147982365", "data": "another_im_b64_str"}),
+        ],
+    )
+
     p.close()
