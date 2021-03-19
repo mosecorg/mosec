@@ -18,6 +18,7 @@ INIT_SUCCESS = True
 INIT_FAIL = False
 CONN_MAX_RETRY = 10
 CHECK_INTERVAL = 1
+SOCK_CONN_ERRNO = 56
 
 
 class Coordinator:
@@ -45,7 +46,8 @@ class Coordinator:
             shutdown (Event): `multiprocessing.synchronize.Event` for shutdown IPC.
             socket_prefix (str): prefix for the socket addresses.
             stage_id (int): identification number for worker stages.
-            worker_id (int): identification number for worker processes at the same stage.
+            worker_id (int): identification number for worker processes at the same
+                stage.
         """
         self.worker = worker()
         self.worker._set_mbs(max_batch_size)
@@ -94,7 +96,7 @@ class Coordinator:
             try:
                 self.protocol.open()
             except OSError as err:
-                if err.errno != 56:  # Socket is already connected
+                if err.errno != SOCK_CONN_ERRNO:  # ignore "Socket is already connected"
                     logger.error(f"{self.name} socket connection error: {err}")
                     break
             except ConnectionRefusedError as err:
@@ -109,7 +111,7 @@ class Coordinator:
         """Start coordinating the protocol's communication and worker's forward pass"""
         while not self.shutdown.is_set():
             try:
-                ids, data = self.protocol.receive()
+                _, ids, payloads = self.protocol.receive()
             except socket.timeout:
                 continue
             except (struct.error, OSError) as err:
@@ -127,31 +129,31 @@ class Coordinator:
                     if self.worker._stage == "egress"
                     else self.worker._serialize
                 )
-                data = [decoder(item) for item in data]
+                data = [decoder(item) for item in payloads]
                 data = (
                     self.worker(data)
                     if self.worker._max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
                 status = self.protocol.FLAG_OK
-                data = [encoder(item) for item in data]
-                if len(ids) != len(data):
+                payloads = [encoder(item) for item in data]
+                if len(data) != len(payloads):
                     raise ValueError(
                         "returned data doesn't match the input data:"
-                        f"input({len(ids)})!=output({len(data)})"
+                        f"input({len(data)})!=output({len(payloads)})"
                     )
             except ValidationError as err:
                 err_msg = str(err).replace("\n", " - ")
                 logger.info(f"{self.name} validation error: {err_msg}")
                 status = self.protocol.FLAG_VALIDATION_ERROR
-                data = (self.worker.pack(err.json().encode()),)
+                payloads = (self.worker.pack(err.json().encode()),)
             except Exception:
                 logger.warning(f"{self.name} internal error: {traceback.format_exc()}")
                 status = self.protocol.FLAG_INTERNAL_ERROR
-                data = (self.worker.pack("Internal Error".encode()),)
+                payloads = (self.worker.pack("Internal Error".encode()),)
 
             try:
-                self.protocol.send(ids, data, status)
+                self.protocol.send(status, ids, payloads)
             except OSError as err:
                 logger.error(f"{self.name} socket send error: {err}")
                 break

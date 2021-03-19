@@ -54,10 +54,10 @@ class Protocol:
 
     def receive(self):
         """Receive tasks from the server"""
-        _ = self.socket.recv(self.LENGTH_TASK_FLAG)
+        flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
         batch_size = struct.unpack(self.FORMAT_BATCH, batch_size_bytes)[0]
-        ids, data = [], []
+        ids, payloads = [], []
 
         while batch_size > 0:
             batch_size -= 1
@@ -66,16 +66,16 @@ class Protocol:
             length = struct.unpack(self.FORMAT_LENGTH, length_bytes)[0]
             payload = _recv_all(self.socket, length)
             ids.append(id_bytes)
-            data.append(payload)
+            payloads.append(payload)
 
         logger.debug(f"{self.name} received {ids}")
-        return ids, data
+        return flag, ids, payloads
 
-    def send(self, ids, payloads, flag):
+    def send(self, flag, ids, payloads):
         """Send results to the server"""
-        batch_size = len(ids)
         data = bytearray()
         data.extend(struct.pack(self.FORMAT_FLAG, flag))
+        batch_size = len(ids)
         data.extend(struct.pack(self.FORMAT_BATCH, batch_size))
 
         for task_id, payload in zip_longest(ids, payloads, fillvalue=payloads[0]):
@@ -90,7 +90,7 @@ class Protocol:
     def open(self):
         """Open the socket connection"""
         self.socket.connect(self.addr)
-        logger.info(f"{self.name} socket connected to {self.protocol.addr}")
+        logger.info(f"{self.name} socket connected to {self.addr}")
 
     def close(self):
         """Close the socket connection"""
