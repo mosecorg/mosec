@@ -37,6 +37,7 @@ setup(
     extras_require={
         "dev": [
             "pytest>=6",
+            "pytest-mock>=3.5",
             "flake8>=3.8",
             "black>=20.8b1",
             "isort>=5.6",
