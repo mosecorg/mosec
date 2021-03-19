@@ -1,6 +1,8 @@
 import json
 import pickle
 
+from pydantic.json import pydantic_encoder
+
 
 class Worker:
     """
@@ -10,20 +12,17 @@ class Worker:
     """
 
     def __init__(self):
-        self._stage = "x"  # {"ingress", "x", "egress"}
+        self._stage = None  # {"ingress", "x", "egress"}
         self._max_batch_size = 1
 
-    def __str__(self):
-        return self.__class__.__name__
-
     @staticmethod
-    def _serialize(data):
-        """Defines IPC serialize method"""
+    def _serialize_ipc(data):
+        """Define IPC serialize method"""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
-    def _deserialize(data):
-        """Defines IPC deserialize method"""
+    def _deserialize_ipc(data):
+        """Define IPC deserialize method"""
         return pickle.loads(data)
 
     def _set_stage(self, stage):
@@ -33,15 +32,15 @@ class Worker:
         self._max_batch_size = mbs
 
     @staticmethod
-    def unpack(data):
-        """Defines service ingress unpack method, overridable"""
-        return json.loads(data)
+    def deserialize(data):
+        """Define service ingress unpack method, overridable"""
+        return json.loads(data) if data else {}
 
     @staticmethod
-    def pack(data):
-        """Defines service egress pack method, overridable"""
-        return json.dumps()
+    def serialize(data):
+        """Define service egress pack method, overridable"""
+        return json.dumps(data, indent=2, default=pydantic_encoder).encode()
 
     def forward(self):
-        """Defines worker's computation, must be overridden by all subclasses"""
+        """Define worker's computation, must be overridden by all subclasses"""
         raise NotImplementedError
