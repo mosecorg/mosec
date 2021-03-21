@@ -20,12 +20,12 @@ def prepare_buffer(p: Protocol, l_data: List[Any]):
     body = b""
     sent_ids = []
     sent_payloads = []
-    for i in range(len(l_data)):
+    for data in l_data:
         tid = struct.pack("!I", random.randint(1, 100))
-        payloads = pickle.dumps(l_data[i])
-        length = struct.pack("!I", len(payloads))
         sent_ids.append(tid)
+        payloads = pickle.dumps(data)
         sent_payloads.append(payloads)
+        length = struct.pack("!I", len(payloads))
         body += tid + length + payloads
     send_socket_buffer(p, header + body)
     return sent_ids, sent_payloads
@@ -40,17 +40,21 @@ def echo(p: Protocol, datum: list):
 
     sent_ids, sent_payloads = prepare_buffer(p, datum)
 
-    _, ids, payloads = p.receive()  # client recv
+    _, got_ids, got_payloads = p.receive()  # client recv
     assert buffer_is_empty(p)
-    p.send(sent_status, ids, payloads)  # client echo
+    assert got_ids == sent_ids
+    assert all(
+        [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
+    )
 
-    status, ids, payloads = p.receive()  # server recv (symmetric protocol)
+    p.send(sent_status, got_ids, got_payloads)  # client echo
+    status, got_ids, got_payloads = p.receive()  # server recv (symmetric protocol)
 
     assert buffer_is_empty(p)
     assert struct.unpack("!H", status)[0] == sent_status
-    assert ids == sent_ids
+    assert got_ids == sent_ids
     assert all(
-        [bytes(payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
+        [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
     )
 
 
@@ -58,6 +62,7 @@ def test_protocol(mocker):
     mocker.patch("mosec.protocol.socket", socket)
     p = Protocol(name="test", addr="mock.uds")
     p.open()
+    echo(p, [])
     echo(p, ["test"])
     echo(p, [1, 2, 3])
     echo(
@@ -65,7 +70,8 @@ def test_protocol(mocker):
         [
             json.dumps({"rid": "147982364", "data": "im_b64_str"}),
             json.dumps({"rid": "147982365", "data": "another_im_b64_str"}),
-        ],
+        ]
+        * random.randint(1, 20),
     )
 
     p.close()

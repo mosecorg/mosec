@@ -4,9 +4,10 @@ import socket
 import struct
 import time
 import traceback
-from collections.abc import Callable
+from errno import EISCONN
 from multiprocessing.synchronize import Event
 from os.path import join
+from typing import Callable
 
 from pydantic import BaseModel, ValidationError
 
@@ -15,12 +16,9 @@ from .worker import Worker
 
 logger = logging.getLogger(__name__)
 
-EXIT_SUCCESS = 0
-EXIT_FAIL = 1
 
 CONN_MAX_RETRY = 10
 CONN_CHECK_INTERVAL = 1
-CONN_IGNORE_ERRNO = 56
 
 STAGE_INGRESS = "ingress"
 STAGE_EGRESS = "egress"
@@ -79,21 +77,23 @@ class Coordinator:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         self.shutdown = shutdown
 
-        if self.init_protocol() == EXIT_SUCCESS:
-            self.run()
-        else:
-            logger.warning(f"{self.name} protocol init failed")
+        self.init_protocol()
+        self.run()
 
-    def init_protocol(self) -> int:
+    def exit(self):
+        logger.info(f"{self.name} exiting...")
+        self.shutdown.set()
+
+    def init_protocol(self):
         """Establish protocol connection and returns status"""
         retry_count = 0
         while retry_count < CONN_MAX_RETRY:
             try:
                 self.protocol.open()
-                return EXIT_SUCCESS
+                return
             except ConnectionRefusedError as err:
-                logger.warning(f"{self.name} socket connection refused: {err}")
-                return EXIT_FAIL
+                logger.error(f"{self.name} socket connection refused: {err}")
+                break
             except FileNotFoundError:
                 retry_count += 1
                 logger.debug(
@@ -102,7 +102,7 @@ class Coordinator:
                 )
                 time.sleep(CONN_CHECK_INTERVAL)
                 continue
-        return EXIT_FAIL
+        self.exit()
 
     def run(self):
         """Maintain the protocol connection and run the coordination"""
@@ -111,9 +111,7 @@ class Coordinator:
             try:
                 self.protocol.open()
             except OSError as err:
-                if (
-                    err.errno != CONN_IGNORE_ERRNO
-                ):  # ignore "Socket is already connected"
+                if err.errno != EISCONN:  # ignore "Socket is already connected"
                     logger.error(f"{self.name} socket connection error: {err}")
                     break
             except ConnectionRefusedError as err:
@@ -123,19 +121,15 @@ class Coordinator:
                 logger.error(f"{self.name} socket file not found")
                 break
 
-            if self.notify_readiness() == EXIT_FAIL:
-                logger.warning(f"{self.name} readiness signal failed")
-                break
-            else:
-                self.coordinate()
+            self.notify_readiness()
+            self.coordinate()
 
-    def notify_readiness(self) -> int:
+    def notify_readiness(self):
         try:
             self.protocol.send(self.protocol.FLAG_OK, [], [])
-            return EXIT_SUCCESS
         except OSError as err:
             logger.error(f"{self.name} socket send error: {err}")
-            return EXIT_FAIL
+            self.exit()
 
     def get_decoder(self) -> Callable:
         if self.worker._stage == STAGE_INGRESS:
@@ -146,7 +140,7 @@ class Coordinator:
 
             return decoder if self.req_schema is None else validate_decoder
         else:
-            decoder = self.worker._deserialize_ipc
+            return self.worker._deserialize_ipc
 
     def get_encoder(self) -> Callable:
         if self.worker._stage == STAGE_EGRESS:
@@ -160,7 +154,7 @@ class Coordinator:
 
             return encoder if self.resp_schema is None else validate_encoder
         else:
-            encoder = self.worker._serialize_ipc
+            return self.worker._serialize_ipc
 
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""

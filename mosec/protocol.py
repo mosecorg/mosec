@@ -77,12 +77,12 @@ class Protocol:
         data.extend(struct.pack(self.FORMAT_FLAG, flag))
         batch_size = len(ids)
         data.extend(struct.pack(self.FORMAT_BATCH, batch_size))
-
-        for task_id, payload in zip_longest(ids, payloads, fillvalue=payloads[0]):
-            length = struct.pack(self.FORMAT_LENGTH, len(payload))
-            data.extend(task_id)
-            data.extend(length)
-            data.extend(payload)
+        if batch_size > 0:
+            for task_id, payload in zip_longest(ids, payloads, fillvalue=payloads[0]):
+                length = struct.pack(self.FORMAT_LENGTH, len(payload))
+                data.extend(task_id)
+                data.extend(length)
+                data.extend(payload)
 
         self.socket.sendall(data)
         logger.debug(f"{self.name} sent {ids}")
