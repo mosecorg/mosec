@@ -48,10 +48,10 @@ def echo(p: Protocol, datum: list):
     )
 
     p.send(sent_status, got_ids, got_payloads)  # client echo
-    status, got_ids, got_payloads = p.receive()  # server recv (symmetric protocol)
+    got_status, got_ids, got_payloads = p.receive()  # server recv (symmetric protocol)
 
     assert buffer_is_empty(p)
-    assert struct.unpack("!H", status)[0] == sent_status
+    assert struct.unpack("!H", got_status)[0] == sent_status
     assert got_ids == sent_ids
     assert all(
         [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
