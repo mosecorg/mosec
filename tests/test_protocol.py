@@ -11,10 +11,6 @@ from mosec.protocol import Protocol
 from .mock_socket import socket
 
 
-def send_socket_buffer(p: Protocol, data):
-    p.socket.buffer += data
-
-
 def prepare_buffer(p: Protocol, l_data: List[Any]):
     # explicit byte format here for sanity check
     # placeholder flag, should be discarded by receiver
@@ -29,12 +25,8 @@ def prepare_buffer(p: Protocol, l_data: List[Any]):
         sent_payloads.append(payloads)
         length = struct.pack("!I", len(payloads))
         body += tid + length + payloads
-    send_socket_buffer(p, header + body)
+    p.socket.buffer += header + body
     return sent_ids, sent_payloads
-
-
-def buffer_is_empty(p: Protocol):
-    return len(p.socket.buffer) == 0
 
 
 def echo(p: Protocol, datum: list):
@@ -43,7 +35,7 @@ def echo(p: Protocol, datum: list):
     sent_ids, sent_payloads = prepare_buffer(p, datum)
 
     _, got_ids, got_payloads = p.receive()  # client recv
-    assert buffer_is_empty(p)
+    assert len(p.socket.buffer) == 0
     assert got_ids == sent_ids
     assert all(
         [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
@@ -52,7 +44,7 @@ def echo(p: Protocol, datum: list):
     p.send(sent_status, got_ids, got_payloads)  # client echo
     got_status, got_ids, got_payloads = p.receive()  # server recv (symmetric protocol)
 
-    assert buffer_is_empty(p)
+    assert len(p.socket.buffer) == 0
     assert struct.unpack("!H", got_status)[0] == sent_status
     assert got_ids == sent_ids
     assert all(
