@@ -4,6 +4,8 @@ import random
 import struct
 from typing import Any, List
 
+import pytest
+
 from mosec.protocol import Protocol
 
 from .mock_socket import socket
@@ -58,20 +60,27 @@ def echo(p: Protocol, datum: list):
     )
 
 
-def test_protocol(mocker):
+@pytest.fixture
+def mock_protocol(mocker):
     mocker.patch("mosec.protocol.socket", socket)
     p = Protocol(name="test", addr="mock.uds")
-    p.open()
-    echo(p, [])
-    echo(p, ["test"])
-    echo(p, [1, 2, 3])
-    echo(
-        p,
+    return p
+
+
+@pytest.mark.parametrize(
+    "test_data",
+    [
+        [],
+        ["test"],
+        [1, 2, 3],
         [
             json.dumps({"rid": "147982364", "data": "im_b64_str"}),
             json.dumps({"rid": "147982365", "data": "another_im_b64_str"}),
         ]
         * random.randint(1, 20),
-    )
-
-    p.close()
+    ],
+)
+def test_protocol(mock_protocol, test_data):
+    mock_protocol.open()
+    echo(mock_protocol, test_data)
+    mock_protocol.close()
