@@ -139,8 +139,8 @@ class Coordinator:
                 return self.req_schema.parse_obj(decoder(data))
 
             return decoder if self.req_schema is None else validate_decoder
-        else:
-            return self.worker._deserialize_ipc
+
+        return self.worker._deserialize_ipc
 
     def get_encoder(self) -> Callable:
         if self.worker._stage == STAGE_EGRESS:
@@ -153,8 +153,8 @@ class Coordinator:
                 return encoder(data)
 
             return encoder if self.resp_schema is None else validate_encoder
-        else:
-            return self.worker._serialize_ipc
+
+        return self.worker._serialize_ipc
 
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
@@ -191,7 +191,7 @@ class Coordinator:
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
                 status = self.protocol.FLAG_INTERNAL_ERROR
-                payloads = (self.worker.pack("Internal Error"),)
+                payloads = ("Internal Error".encode(),)
 
             try:
                 self.protocol.send(status, ids, payloads)
