@@ -12,22 +12,9 @@ logger = logging.getLogger(__name__)
 AtLeastOne: Type[int] = conint(strict=True, ge=1)
 
 
-class CommSettings(BaseSettings):
-    socket_prefix: str
-
-
-class CtrSettings(BaseSettings):
-    waitUtil: str
-
-
-class CoordSettings(BaseSettings):
-    waitUtil: str
-
-
 class Settings(BaseSettings):
-    common: CommSettings = CommSettings(socket_prefix="/tmp/mosec/")
-    controller: CtrSettings = CtrSettings()
-    coordinator: CoordSettings = CoordSettings()
+    socket_prefix: str = "/tmp/mosec/"
+    waitUtil: str = "10ms"
 
 
 class Server:
@@ -62,12 +49,10 @@ class Server:
             stage = ""
             stage += STAGE_INGRESS if stage_id == 0 else ""
             stage += STAGE_EGRESS if stage_id == len(self._worker_cls) - 1 else ""
-
             req_schema = self._req_schema if stage_id == 0 else None
             resp_schema = (
                 self._resp_schema if stage_id == len(self._worker_cls) - 1 else None
             )
-
             for worker_id in range(len(w_num)):
                 # multiple workers
                 shutdown = mp.get_context(c_ctx).Event()
@@ -78,7 +63,7 @@ class Server:
                         w_mbs,
                         stage,
                         shutdown,
-                        self._configs.common.socket_prefix,
+                        self._configs.socket_prefix,
                         stage_id,
                         worker_id,
                         req_schema,
