@@ -12,7 +12,7 @@ class Worker:
     """
 
     def __init__(self):
-        self._stage = None  # {"ingress", "x", "egress"}
+        self._stage = None
         self._max_batch_size = 1
 
     @staticmethod

@@ -1,14 +1,15 @@
 import logging
 import multiprocessing as mp
-from typing import List, Union
+from typing import List, Type, Union
 
-from pydantic import BaseSettings
+from pydantic import BaseModel, BaseSettings, conint, validate_arguments
 
-from .coordinator import STAGE_EGRESS, STAGE_INGRESS, STAGE_INTERNAL, Coordinator
-from .utils import validate_input
+from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
+
+AtLeastOne: Type[int] = conint(strict=True, ge=1)
 
 
 class CommSettings(BaseSettings):
@@ -30,16 +31,18 @@ class Settings(BaseSettings):
 
 
 class Server:
-    def __init__(self):
-        self._req_schema = None
-        self._resp_schema = None
+    def __init__(
+        self, req_schema: Type[BaseModel] = None, resp_schema: Type[BaseModel] = None
+    ):
+        self._req_schema = req_schema
+        self._resp_schema = resp_schema
 
-        self._worker_cls = []
-        self._worker_num = []
-        self._worker_mbs = []
+        self._worker_cls: List[Type[Worker]] = []
+        self._worker_num: List[AtLeastOne] = []  # type: ignore
+        self._worker_mbs: List[AtLeastOne] = []  # type: ignore
 
-        self._coordinator_ctx = []
-        self._coordinator_pools = []
+        self._coordinator_ctx: List[str] = []
+        self._coordinator_pools: List[List[mp.Process]] = []
 
         self._configs = Settings()
 
@@ -54,7 +57,17 @@ class Server:
                 self._worker_mbs,
                 self._coordinator_ctx,
             )
-        ):  # sequential stages
+        ):
+            # sequential stages
+            stage = ""
+            stage += STAGE_INGRESS if stage_id == 0 else ""
+            stage += STAGE_EGRESS if stage_id == len(self._worker_cls) - 1 else ""
+
+            req_schema = self._req_schema if stage_id == 0 else None
+            resp_schema = (
+                self._resp_schema if stage_id == len(self._worker_cls) - 1 else None
+            )
+
             for worker_id in range(len(w_num)):
                 # multiple workers
                 shutdown = mp.get_context(c_ctx).Event()
@@ -63,19 +76,13 @@ class Server:
                     args=(
                         w_cls,
                         w_mbs,
-                        STAGE_INGRESS
-                        if stage_id == 0
-                        else STAGE_EGRESS
-                        if stage_id == len(self._worker_cls) - 1
-                        else STAGE_INTERNAL,
+                        stage,
                         shutdown,
-                        self._configs["common"]["socket_prefix"],
+                        self._configs.common.socket_prefix,
                         stage_id,
                         worker_id,
-                        self._req_schema if stage_id == 0 else None,
-                        self._resp_schema
-                        if stage_id == len(self._worker_cls) - 1
-                        else None,
+                        req_schema,
+                        resp_schema,
                     ),
                 )
                 self._coordinator_pools[stage_id].append(worker_process)
@@ -90,28 +97,21 @@ class Server:
     def _manage_coordinators(self):
         pass
 
-    def set_req_schema(self, schema):
-        self._req_schema = schema
+    def _combine_workers(self, workers: List[Type[Worker]]) -> Type[Worker]:
+        pass
 
-    def set_resp_schema(self, schema):
-        self._resp_schema = schema
-
+    @validate_arguments
     def append_worker(
         self,
-        worker: Union[Worker, List[Worker]],
-        num: int = 1,
-        max_batch_size: int = 1,
+        worker: Union[Type[Worker], List[Type[Worker]]],
+        num: AtLeastOne = 1,  # type: ignore
+        max_batch_size: AtLeastOne = 1,  # type: ignore
         start_method: str = "spawn",
     ):
-        validate_input(
-            self.append_worker,
-            worker=worker,
-            num=num,
-            max_batch_size=max_batch_size,
-            start_method=start_method,
-        )
-        assert num > 0, "worker number must be at least 1"
-        assert max_batch_size > 0, "maximum batch size must be at least 1"
+        assert start_method in {
+            "spawn",
+            "fork",
+        }, "start method needs to be one of {'spawn', 'fork'}"
 
         if isinstance(worker, list):
             worker = self._combine_workers(worker)

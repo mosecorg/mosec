@@ -7,7 +7,7 @@ import traceback
 from errno import EISCONN
 from multiprocessing.synchronize import Event
 from os.path import join
-from typing import Callable
+from typing import Callable, Type
 
 from pydantic import BaseModel, ValidationError
 
@@ -22,7 +22,6 @@ CONN_CHECK_INTERVAL = 1
 
 STAGE_INGRESS = "ingress"
 STAGE_EGRESS = "egress"
-STAGE_INTERNAL = "x"
 
 
 class Coordinator:
@@ -33,15 +32,15 @@ class Coordinator:
 
     def __init__(
         self,
-        worker: Worker,
+        worker: Type[Worker],
         max_batch_size: int,
         stage: str,
         shutdown: Event,
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
-        req_schema: BaseModel,
-        resp_schema: BaseModel,
+        req_schema: Type[BaseModel],
+        resp_schema: Type[BaseModel],
     ):
         """Initialize the mosec coordinator
 
@@ -49,15 +48,16 @@ class Coordinator:
             worker (Worker): subclass of `mosec.Worker` implemented by users.
             max_batch_size (int): maximum batch size for this worker.
             stage (str): identifier to distinguish the first and last stages.
-            shutdown (Event): `multiprocessing.synchronize.Event` for shutdown IPC.
+            shutdown (Event): `multiprocessing.synchronize.Event` object for shutdown
+                IPC.
             socket_prefix (str): prefix for the socket addresses.
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
                 stage.
-            req_schema ([BaseModel]): subclass of `pydantic.BaseModel` to define
-                input schema for validation if needed
-            resp_schema ([BaseModel]): subclass of `pydantic.BaseModel` to define
-                output schema for validation if needed
+            req_schema (BaseModel): subclass of `pydantic.BaseModel` to define
+                input schema for validation, `None` if not required.
+            resp_schema (BaseModel): subclass of `pydantic.BaseModel` to define
+                output schema for validation, `None` if not required.
         """
         self.worker = worker()
         self.worker._set_mbs(max_batch_size)
@@ -132,7 +132,7 @@ class Coordinator:
             self.exit()
 
     def get_decoder(self) -> Callable:
-        if self.worker._stage == STAGE_INGRESS:
+        if STAGE_INGRESS in self.worker._stage:
             decoder = self.worker.deserialize
 
             def validate_decoder(data):
@@ -143,7 +143,7 @@ class Coordinator:
         return self.worker._deserialize_ipc
 
     def get_encoder(self) -> Callable:
-        if self.worker._stage == STAGE_EGRESS:
+        if STAGE_EGRESS in self.worker._stage:
             encoder = self.worker.serialize
 
             def validate_encoder(data):
