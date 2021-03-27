@@ -5,6 +5,7 @@ import random
 import shutil
 import socket
 import struct
+import time
 from contextlib import ContextDecorator
 from os.path import join
 
@@ -221,6 +222,10 @@ def test_echo(mocker, base_test_config, test_data, serialization):
                     for x, y in zip(got_payloads, sent_payloads)
                 ]
             )
+            shutdown.set()
+            # socket timeout period, make the client happy (not reading
+            # closed socket)
+            time.sleep(2)
         except Exception as e:
             shutdown.set()
-            raise Exception(e)
+            assert False, e
