@@ -43,6 +43,7 @@ setup(
             "black>=20.8b1",
             "isort>=5.6",
             "autoflake>=1.4",
+            "msgpack>=1.0.2",
         ],
     },
     zip_safe=False,

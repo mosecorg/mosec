@@ -2,37 +2,19 @@ import json
 import pickle
 import random
 import struct
-from typing import Any, List
 
 import pytest
 
 from mosec.protocol import Protocol
 
 from .mock_socket import socket
-
-
-def prepare_buffer(p: Protocol, l_data: List[Any]):
-    # explicit byte format here for sanity check
-    # placeholder flag, should be discarded by receiver
-    header = struct.pack("!H", 0) + struct.pack("!H", len(l_data))
-    body = b""
-    sent_ids = []
-    sent_payloads = []
-    for data in l_data:
-        tid = struct.pack("!I", random.randint(1, 100))
-        sent_ids.append(tid)
-        payloads = pickle.dumps(data)
-        sent_payloads.append(payloads)
-        length = struct.pack("!I", len(payloads))
-        body += tid + length + payloads
-    p.socket.buffer += header + body  # type: ignore
-    return sent_ids, sent_payloads
+from .utils import imitate_controller_send
 
 
 def echo(p: Protocol, datum: list):
     sent_status = random.choice([1, 2, 4, 8])
 
-    sent_ids, sent_payloads = prepare_buffer(p, datum)
+    sent_ids, sent_payloads = imitate_controller_send(p.socket, datum)
 
     _, got_ids, got_payloads = p.receive()  # client recv
     assert len(p.socket.buffer) == 0  # type: ignore
@@ -74,5 +56,5 @@ def mock_protocol(mocker):
 )
 def test_echo(mock_protocol, test_data):
     mock_protocol.open()
-    echo(mock_protocol, test_data)
+    echo(mock_protocol, [pickle.dumps(x) for x in test_data])
     mock_protocol.close()

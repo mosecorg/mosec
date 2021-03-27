@@ -91,17 +91,21 @@ class Coordinator:
             try:
                 self.protocol.open()
                 return
-            except ConnectionRefusedError as err:
-                logger.error(f"{self.name} socket connection refused: {err}")
-                break
             except FileNotFoundError:
                 retry_count += 1
                 logger.debug(
-                    f"{self.name} trying to find the socket file: {self.protocol.addr} "
-                    f"({retry_count}/{self.protocol_conn_retry})"
+                    f"{self.name} trying to find the socket file: {self.protocol.addr}"
+                    f" ({retry_count}/{CONN_MAX_RETRY})"
                 )
                 time.sleep(CONN_CHECK_INTERVAL)
                 continue
+            except (ConnectionRefusedError, OSError) as err:
+                logger.error(f"{self.name} socket connection error: {err}")
+                break
+        else:
+            logger.error(
+                f"{self.name} cannot find the socket file: {self.protocol.addr}"
+            )
         self.exit()
 
     def run(self):
@@ -172,7 +176,7 @@ class Coordinator:
             try:
                 data = [decoder(item) for item in payloads]
                 data = (
-                    self.worker(data)
+                    self.worker.forward(data)
                     if self.worker._max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
