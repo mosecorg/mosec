@@ -41,6 +41,6 @@ class Worker:
         """Define service egress pack method, overridable"""
         return json.dumps(data, indent=2, default=pydantic_encoder).encode()
 
-    def forward(self):
+    def forward(self, data):
         """Define worker's computation, must be overridden by all subclasses"""
         raise NotImplementedError

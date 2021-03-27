@@ -7,7 +7,7 @@ install:
 	pip install -e .[dev]
 
 test:
-	pytest tests -vv
+	pytest tests -vv -s
 	export RUST_BACKTRACE=1 && cargo test -vv
 
 doc:

@@ -72,7 +72,7 @@ def mock_protocol(mocker):
         * random.randint(1, 20),
     ],
 )
-def test_protocol(mock_protocol, test_data):
+def test_echo(mock_protocol, test_data):
     mock_protocol.open()
     echo(mock_protocol, test_data)
     mock_protocol.close()
