@@ -31,15 +31,13 @@ class Worker:
     def _set_mbs(self, mbs):
         self._max_batch_size = mbs
 
-    @staticmethod
-    def deserialize(data):
-        """Define service ingress unpack method, overridable"""
-        return json.loads(data) if data else {}
-
-    @staticmethod
-    def serialize(data):
+    def serialize(self, data):
         """Define service egress pack method, overridable"""
         return json.dumps(data, indent=2, default=pydantic_encoder).encode()
+
+    def deserialize(self, data):
+        """Define service ingress unpack method, overridable"""
+        return json.loads(data) if data else {}
 
     def forward(self, data):
         """Define worker's computation, must be overridden by all subclasses"""
