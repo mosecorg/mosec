@@ -57,14 +57,13 @@ class Server:
 
     def _start_controller(self):
         """Subprocess to start controller program"""
-        with SettingCtx():
-            path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
-            self._controller_process = subprocess.Popen([path])
+        if not self._server_shutdown:
+            with SettingCtx():
+                path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
+                self._controller_process = subprocess.Popen([path])
 
     def _terminate(self, signum, framestack):
-        """Graceful shutdown"""
         logger.info(f"[{signum}] terminating server [{framestack}] ...")
-        # terminate controller first and wait for a waittime
         self._server_shutdown = True
 
     @staticmethod
@@ -135,6 +134,8 @@ class Server:
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
+        """Graceful shutdown"""
+        # terminate controller first and wait for a graceful period
         if self._controller_process:
             self._controller_process.terminate()
             graceful_period = monotonic() + self._configs.timeout  # TODO: str -> int
