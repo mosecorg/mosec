@@ -1,10 +1,19 @@
-from typing import get_type_hints
+from contextlib import ContextDecorator
+
+from pydantic import BaseSettings
 
 
-def validate_input(obj, **kwargs):
-    hints = get_type_hints(obj)
-    for attr_name, attr_type in hints.items():
-        if attr_name == "return":
-            continue
-        if not isinstance(kwargs[attr_name], attr_type):
-            raise TypeError("Argument %r is not of type %s" % (attr_name, attr_type))
+class Settings(BaseSettings):
+    socket_prefix: str = "/tmp/mosec/"
+    waitUtil: str = "10ms"
+    timeout: str = "3s"
+
+
+class SettingCtx(ContextDecorator):
+    def __enter__(self):
+        # export envs here
+        return self
+
+    def __exit__(self, *exc):
+        # unset envs
+        return False

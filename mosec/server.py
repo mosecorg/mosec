@@ -4,7 +4,7 @@ import signal
 import subprocess
 from multiprocessing.synchronize import Event
 from pathlib import Path
-from time import sleep
+from time import monotonic, sleep
 from typing import List, Tuple, Type, Union
 
 import pkg_resources
@@ -53,7 +53,7 @@ class Server:
     def _parse_args(self):
         # directly update self._configs
         # serialize configs into env for controller to read
-        pass
+        pass  # TODO
 
     def _start_controller(self):
         """Subprocess to start controller program"""
@@ -63,7 +63,7 @@ class Server:
 
     def _terminate(self, signum, framestack):
         """Graceful shutdown"""
-        logger.info(f"[{signum}] terminates server [{framestack}]")
+        logger.info(f"[{signum}] terminating server [{framestack}] ...")
         # terminate controller first and wait for a waittime
         self._server_shutdown = True
 
@@ -78,7 +78,7 @@ class Server:
                 events[i] = None
         return (processes, events)
 
-    def _spawn_coordinators_guard(self):
+    def _manage_coordinators(self):
         while not self._server_shutdown:
             for stage_id, (w_cls, w_num, w_mbs, c_ctx) in enumerate(
                 zip(
@@ -131,11 +131,30 @@ class Server:
                     self._coordinator_shutdown[stage_id][worker_id] = shutdown
             ctr_exitcode = self._controller_process.poll()
             if ctr_exitcode:
-                self._terminate(ctr_exitcode, "serving service is dead")
+                self._terminate(ctr_exitcode, "mosec controller exited")
             sleep(GUARD_CHECK_INTERVAL)
 
+    def _halt(self):
+        if self._controller_process:
+            self._controller_process.terminate()
+            graceful_period = monotonic() + self._configs.timeout  # TODO: str -> int
+            while monotonic() < graceful_period:
+                ctr_exitcode = self._controller_process.poll()
+                if ctr_exitcode:
+                    self._terminate(
+                        ctr_exitcode, f"mosec controller exited: {ctr_exitcode}"
+                    )
+                    break
+                sleep(0.1)
+
+        for l_sd in self._coordinator_shutdown:
+            for sd in l_sd:
+                sd.set()
+        logger.info("mosec server exited. see you.")
+
     def _combine_workers(self, workers: List[Type[Worker]]) -> Type[Worker]:
-        pass
+        """Combine workers of adjacent stages to reduce IPC with less pipelining"""
+        pass  # TODO
 
     @validate_arguments
     def append_worker(
@@ -145,6 +164,7 @@ class Server:
         max_batch_size: AtLeastOne = 1,  # type: ignore
         start_method: str = "spawn",
     ):
+        """Sequentially add workers to be invoked in a pipelined manner"""
         assert start_method in {
             "spawn",
             "fork",
@@ -160,7 +180,9 @@ class Server:
         self._coordinator_shutdown.append([None] * num)
 
     def run(self):
+        """Serve the mosec model server!"""
         self._validate()
         self._parse_args()
         self._start_controller()
-        self._spawn_coordinators_guard()
+        self._manage_coordinators()
+        self._halt()

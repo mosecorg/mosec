@@ -2,6 +2,7 @@ import json
 import pickle
 import random
 import struct
+from typing import List
 
 import pytest
 
@@ -11,7 +12,7 @@ from .mock_socket import socket
 from .utils import imitate_controller_send
 
 
-def echo(p: Protocol, datum: list):
+def echo(p: Protocol, datum: List[bytes]):
     sent_status = random.choice([1, 2, 4, 8])
 
     sent_ids, sent_payloads = imitate_controller_send(p.socket, datum)

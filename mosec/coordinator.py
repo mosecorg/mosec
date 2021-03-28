@@ -1,12 +1,11 @@
 import logging
+import os
 import signal
 import socket
 import struct
 import time
 import traceback
-from errno import EISCONN
 from multiprocessing.synchronize import Event
-from os.path import join
 from typing import Callable, Type
 
 from pydantic import BaseModel, ValidationError
@@ -72,7 +71,7 @@ class Coordinator:
 
         self.protocol = Protocol(
             name=self.name,
-            addr=join(socket_prefix, f"{worker.__name__}.sock"),
+            addr=os.path.join(socket_prefix, f"{worker.__name__}.sock"),
             timeout=PROTOCOL_TIMEOUT,
         )
 
@@ -82,6 +81,7 @@ class Coordinator:
         self.shutdown = shutdown
 
         self.init_protocol()
+        self.init_worker()
         self.run()
 
     def exit(self):
@@ -89,28 +89,26 @@ class Coordinator:
         self.shutdown.set()
 
     def init_protocol(self):
-        """Establish protocol connection and returns status"""
+        """Check socket readiness"""
         retry_count = 0
-        while retry_count < CONN_MAX_RETRY:
-            try:
-                self.protocol.open()
+        while retry_count < CONN_MAX_RETRY and not self.shutdown.is_set():
+            if os.path.exists(self.protocol.addr):
                 return
-            except FileNotFoundError:
-                retry_count += 1
-                logger.debug(
-                    f"{self.name} trying to find the socket file: {self.protocol.addr}"
-                    f" ({retry_count}/{CONN_MAX_RETRY})"
-                )
-                time.sleep(CONN_CHECK_INTERVAL)
-                continue
-            except (ConnectionRefusedError, OSError) as err:
-                logger.error(f"{self.name} socket connection error: {err}")
-                break
-        else:
-            logger.error(
-                f"{self.name} cannot find the socket file: {self.protocol.addr}"
+            retry_count += 1
+            logger.debug(
+                f"{self.name} trying to find the socket file: {self.protocol.addr}"
+                f" ({retry_count}/{CONN_MAX_RETRY})"
             )
+            time.sleep(CONN_CHECK_INTERVAL)
+            continue
+
+        logger.error(f"{self.name} cannot find the socket file: {self.protocol.addr}")
         self.exit()
+
+    def init_worker(self):
+        """Optional warmup to allocate resources (useful for GPU workload)"""
+        if not self.shutdown.is_set():
+            pass  # TODO
 
     def run(self):
         """Maintain the protocol connection and run the coordination"""
@@ -119,9 +117,8 @@ class Coordinator:
             try:
                 self.protocol.open()
             except OSError as err:
-                if err.errno != EISCONN:  # ignore "Socket is already connected"
-                    logger.error(f"{self.name} socket connection error: {err}")
-                    break
+                logger.error(f"{self.name} socket connection error: {err}")
+                break
             except ConnectionRefusedError as err:
                 logger.error(f"{self.name} socket connection refused: {err}")
                 break
@@ -209,3 +206,4 @@ class Coordinator:
                 break
 
         self.protocol.close()
+        time.sleep(CONN_CHECK_INTERVAL)
