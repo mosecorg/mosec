@@ -23,6 +23,8 @@ CONN_CHECK_INTERVAL = 1
 STAGE_INGRESS = "ingress"
 STAGE_EGRESS = "egress"
 
+PROTOCOL_TIMEOUT = 2.0
+
 
 class Coordinator:
     """
@@ -69,7 +71,9 @@ class Coordinator:
         self.name = f"<{stage_id+1}|{worker.__name__}|{worker_id+1}>"
 
         self.protocol = Protocol(
-            name=self.name, addr=join(socket_prefix, f"{worker.__name__}.sock")
+            name=self.name,
+            addr=join(socket_prefix, f"{worker.__name__}.sock"),
+            timeout=PROTOCOL_TIMEOUT,
         )
 
         # ignore termination & interruption signal
@@ -131,6 +135,7 @@ class Coordinator:
     def notify_readiness(self):
         try:
             self.protocol.send(self.protocol.FLAG_OK, [], [])
+            logger.debug(f"{self.name} sent empty task for readiness notification")
         except OSError as err:
             logger.error(f"{self.name} socket send error: {err}")
             self.exit()

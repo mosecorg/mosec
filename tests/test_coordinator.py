@@ -12,7 +12,7 @@ from os.path import join
 import msgpack  # type: ignore
 import pytest
 
-from mosec.coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from mosec.protocol import Protocol, _recv_all
 from mosec.worker import Worker
 
@@ -223,9 +223,8 @@ def test_echo(mocker, base_test_config, test_data, serialization):
                 ]
             )
             shutdown.set()
-            # socket timeout period, make the client happy (not reading
-            # closed socket)
-            time.sleep(2)
+            # wait for socket timeout, make the client not read closed socket
+            time.sleep(PROTOCOL_TIMEOUT)
         except Exception as e:
             shutdown.set()
             assert False, e

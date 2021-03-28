@@ -35,7 +35,7 @@ class Protocol:
         self,
         name: str,
         addr: str,
-        timeout=2.0,
+        timeout: float = 2.0,
     ):
         """Initialize the protocol client
 
@@ -68,7 +68,7 @@ class Protocol:
             ids.append(id_bytes)
             payloads.append(payload)
 
-        logger.debug(f"{self.name} received {ids}")
+        logger.debug(f"{self.name} received {len(ids)} tasks with ids: {ids}")
         return flag, ids, payloads
 
     def send(self, flag, ids, payloads):
@@ -85,7 +85,7 @@ class Protocol:
                 data.extend(payload)
 
         self.socket.sendall(data)
-        logger.debug(f"{self.name} sent {ids}")
+        logger.debug(f"{self.name} sent {len(ids)} tasks with ids: {ids}")
 
     def open(self):
         """Open the socket connection"""
