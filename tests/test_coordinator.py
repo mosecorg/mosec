@@ -117,7 +117,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
         # create non-socket file
         open(sock_addr, "w").close()
 
-        with pytest.raises(RuntimeError, match=r".*non-socket.*"):
+        with pytest.raises(RuntimeError, match=r".*connection error*"):
             _ = Coordinator(
                 EchoWorkerJSON,
                 stage=stage,
