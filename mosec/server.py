@@ -11,7 +11,7 @@ import pkg_resources
 from pydantic import BaseModel, BaseSettings, conint, validate_arguments
 
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
-from .utils import SettingCtx, Settings
+from .utils import Settings
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -58,9 +58,8 @@ class Server:
     def _start_controller(self):
         """Subprocess to start controller program"""
         if not self._server_shutdown:
-            with SettingCtx():
-                path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
-                self._controller_process = subprocess.Popen([path])
+            path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
+            self._controller_process = subprocess.Popen([path])
 
     def _terminate(self, signum, framestack):
         logger.info(f"[{signum}] terminating server [{framestack}] ...")
@@ -75,7 +74,7 @@ class Server:
             if p is None or p.exitcode is not None:
                 processes[i] = None
                 events[i] = None
-        return (processes, events)
+        return processes, events
 
     def _manage_coordinators(self):
         while not self._server_shutdown:
@@ -98,13 +97,19 @@ class Server:
 
                 if None not in self._coordinator_pools[stage_id]:
                     continue
+
                 stage = ""
-                stage += STAGE_INGRESS if stage_id == 0 else ""
-                stage += STAGE_EGRESS if stage_id == len(self._worker_cls) - 1 else ""
-                req_schema = self._req_schema if stage_id == 0 else None
-                resp_schema = (
-                    self._resp_schema if stage_id == len(self._worker_cls) - 1 else None
-                )
+                if stage_id == 0:
+                    stage += STAGE_INGRESS
+                    req_schema = self._req_schema
+                else:
+                    req_schema = None
+                if stage_id == len(self._worker_cls) - 1:
+                    stage += STAGE_EGRESS
+                    resp_schema = self._resp_schema
+                else:
+                    resp_schema = None
+
                 for worker_id in range(len(w_num)):
                     # for every worker in each stage
                     if self._coordinator_pools[stage_id][worker_id] is not None:
