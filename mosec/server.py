@@ -158,14 +158,10 @@ class Server:
                 sd.set()
         logger.info("mosec server exited. see you.")
 
-    def _combine_workers(self, workers: List[Type[Worker]]) -> Type[Worker]:
-        """Combine workers of adjacent stages to reduce IPC with less pipelining"""
-        pass  # TODO
-
     @validate_arguments
     def append_worker(
         self,
-        worker: Union[Type[Worker], List[Type[Worker]]],
+        worker: Type[Worker],
         num: AtLeastOne = 1,  # type: ignore
         max_batch_size: AtLeastOne = 1,  # type: ignore
         start_method: str = "spawn",
@@ -176,8 +172,6 @@ class Server:
             "fork",
         }, "start method needs to be one of {'spawn', 'fork'}"
 
-        if isinstance(worker, list):
-            worker = self._combine_workers(worker)
         self._worker_cls.append(worker)
         self._worker_num.append(num)
         self._worker_mbs.append(max_batch_size)
@@ -186,7 +180,7 @@ class Server:
         self._coordinator_shutdown.append([None] * num)
 
     def run(self):
-        """Serve the mosec model server!"""
+        """Run the mosec model server!"""
         self._validate()
         self._parse_args()
         self._start_controller()
