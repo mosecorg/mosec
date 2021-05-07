@@ -143,43 +143,38 @@ def test_incorrect_socket_file(mocker, base_test_config):
 
 
 @pytest.mark.parametrize(
-    "test_data,serialization",
+    "test_data,worker,deserializer",
     [
         (
             [json.dumps({"rid": "147982364", "data": "im_b64_str"}).encode()]
             * random.randint(1, 20),
-            "json",
+            EchoWorkerJSON,
+            json.loads,
         ),
         (
             [
                 json.dumps({"rid": "147982364", "data": "im_b64_str"}).encode(),
                 json.dumps({"rid": "147982831", "data": "another_im_b64_str"}).encode(),
             ],
-            "json",
+            EchoWorkerJSON,
+            json.loads,
         ),
         (
             [
-                msgpack.packb({"rid": "147982364", "data": "im_b64_str"}),
-                msgpack.packb({"rid": "147982831", "data": "another_im_b64_str"}),
+                msgpack.packb({"rid": "147982364", "data": b"im_bytes"}),
+                msgpack.packb({"rid": "147982831", "data": b"another_im_bytes"}),
             ],
-            "msgpack",
+            EchoWorkerMSGPACK,
+            msgpack.unpackb,
         ),
     ],
 )
-def test_echo(mocker, base_test_config, test_data, serialization):
+def test_echo(mocker, base_test_config, test_data, worker, deserializer):
     mocker.patch("mosec.coordinator.logger", MockLogger())
     c_ctx = base_test_config.pop("c_ctx")
     base_test_config["max_batch_size"] = 8
-    if serialization == "msgpack":
-        deserializer = msgpack.unpackb
-        MyWorker = EchoWorkerMSGPACK
-    elif serialization == "json":
-        deserializer = json.loads
-        MyWorker = EchoWorkerJSON
-    else:
-        assert False, f"invalid serialization method: {serialization}"
 
-    sock_addr = join(socket_prefix, f"{MyWorker.__name__}.sock")
+    sock_addr = join(socket_prefix, f"{worker.__name__}.sock")
     shutdown = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
@@ -190,7 +185,7 @@ def test_echo(mocker, base_test_config, test_data, serialization):
         sock.listen()
 
         coordinator_process = make_coordinator_process(
-            MyWorker, c_ctx, shutdown, base_test_config
+            worker, c_ctx, shutdown, base_test_config
         )
         coordinator_process.start()
 

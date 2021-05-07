@@ -8,20 +8,18 @@ class Worker:
     """
     This public class defines the mosec worker interface. It provides
     default IPC de/serialize methods, stores the worker stage and
-    maximum batch size, and implements the forward pass pipeline.
+    maximum batch size, and implements the forward pass computation.
     """
 
     def __init__(self):
         self._stage = None
         self._max_batch_size = 1
 
-    @staticmethod
-    def _serialize_ipc(data):
+    def _serialize_ipc(self, data):
         """Define IPC serialize method"""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
-    @staticmethod
-    def _deserialize_ipc(data):
+    def _deserialize_ipc(self, data):
         """Define IPC deserialize method"""
         return pickle.loads(data)
 

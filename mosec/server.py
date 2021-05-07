@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 AtLeastOne: Type[int] = conint(strict=True, ge=1)
 
 GUARD_CHECK_INTERVAL = 1
+NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 
 class Server:
@@ -95,8 +96,17 @@ class Server:
                     self._coordinator_shutdown[stage_id],
                 )
 
-                if None not in self._coordinator_pools[stage_id]:
+                if all(self._coordinator_pools[stage_id]):
+                    # this stage is healthy
                     continue
+
+                if not any(self._coordinator_pools):
+                    # this stage might contain bugs
+                    self._terminate(
+                        1,
+                        f"all workers at stage {stage_id+1} exited; please check for bugs",
+                    )
+                    break
 
                 stage = ""
                 if stage_id == 0:
@@ -135,7 +145,9 @@ class Server:
                     self._coordinator_shutdown[stage_id][worker_id] = shutdown
             ctr_exitcode = self._controller_process.poll()
             if ctr_exitcode:
-                self._terminate(ctr_exitcode, "mosec controller exited")
+                self._terminate(
+                    ctr_exitcode, f"mosec controller exited on error: {ctr_exitcode}"
+                )
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
@@ -148,7 +160,8 @@ class Server:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode:
                     self._terminate(
-                        ctr_exitcode, f"mosec controller exited: {ctr_exitcode}"
+                        ctr_exitcode,
+                        f"mosec controller halted on error: {ctr_exitcode}",
                     )
                     break
                 sleep(0.1)
@@ -167,10 +180,9 @@ class Server:
         start_method: str = "spawn",
     ):
         """Sequentially add workers to be invoked in a pipelined manner"""
-        assert start_method in {
-            "spawn",
-            "fork",
-        }, "start method needs to be one of {'spawn', 'fork'}"
+        assert (
+            start_method in NEW_PROCESS_METHOD
+        ), f"start method needs to be one of {NEW_PROCESS_METHOD}"
 
         self._worker_cls.append(worker)
         self._worker_num.append(num)
