@@ -104,7 +104,8 @@ class Server:
                     # this stage might contain bugs
                     self._terminate(
                         1,
-                        f"all workers at stage {stage_id+1} exited; please check for bugs",
+                        f"all workers at stage {stage_id+1} exited;"
+                        " please check for bugs",
                     )
                     break
 
