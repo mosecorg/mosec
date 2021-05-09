@@ -1,29 +1,26 @@
 import json
 import pickle
 
+from pydantic.json import pydantic_encoder
+
 
 class Worker:
     """
     This public class defines the mosec worker interface. It provides
     default IPC de/serialize methods, stores the worker stage and
-    maximum batch size, and implements the forward pass pipeline.
+    maximum batch size, and implements the forward pass computation.
     """
 
     def __init__(self):
-        self._stage = "x"  # {"ingress", "x", "egress"}
+        self._stage = None
         self._max_batch_size = 1
 
-    def __str__(self):
-        return self.__class__.__name__
-
-    @staticmethod
-    def _serialize(data):
-        """Defines IPC serialize method"""
+    def _serialize_ipc(self, data):
+        """Define IPC serialize method"""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
-    @staticmethod
-    def _deserialize(data):
-        """Defines IPC deserialize method"""
+    def _deserialize_ipc(self, data):
+        """Define IPC deserialize method"""
         return pickle.loads(data)
 
     def _set_stage(self, stage):
@@ -32,16 +29,14 @@ class Worker:
     def _set_mbs(self, mbs):
         self._max_batch_size = mbs
 
-    @staticmethod
-    def unpack(data):
-        """Defines service ingress unpack method, overridable"""
-        return json.loads(data)
+    def serialize(self, data):
+        """Define service egress pack method, overridable"""
+        return json.dumps(data, indent=2, default=pydantic_encoder).encode()
 
-    @staticmethod
-    def pack(data):
-        """Defines service egress pack method, overridable"""
-        return json.dumps()
+    def deserialize(self, data):
+        """Define service ingress unpack method, overridable"""
+        return json.loads(data) if data else {}
 
-    def forward(self):
-        """Defines worker's computation, must be overridden by all subclasses"""
+    def forward(self, data):
+        """Define worker's computation, must be overridden by all subclasses"""
         raise NotImplementedError
