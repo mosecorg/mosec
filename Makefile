@@ -1,13 +1,13 @@
 check: lint test
 
-PY_SOURCE_FILES=mosec setup.py
+PY_SOURCE_FILES=mosec tests setup.py 
 RUST_SOURCE_FILES=src/*
 
 install:
 	pip install -e .[dev]
 
 test:
-	pytest tests -vv
+	pytest tests -vv -s
 	export RUST_BACKTRACE=1 && cargo test -vv
 
 doc:
@@ -26,14 +26,15 @@ publish: package
 
 format:
 	autoflake --in-place --recursive ${PY_SOURCE_FILES}
-	isort --project=spectree ${PY_SOURCE_FILES}
+	isort --project=mosec ${PY_SOURCE_FILES}
 	black ${PY_SOURCE_FILES}
 	rustfmt ${RUST_SOURCE_FILES}
 
 lint:
-	isort --check --diff --project=spectree ${PY_SOURCE_FILES}
+	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
+	mypy ${PY_SOURCE_FILES}
 	rustfmt --check ${RUST_SOURCE_FILES}
 
 .PHONY: test doc
