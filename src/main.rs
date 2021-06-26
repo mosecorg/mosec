@@ -1,4 +1,12 @@
-use actix_web::{get, middleware, post, App, HttpResponse, HttpServer, Responder};
+mod errors;
+mod protocol;
+
+use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use errors::MosecError;
+use protocol::{Protocol, Task, TaskCode};
+use tokio::{sync::oneshot, time::timeout};
+
+use std::{time::Duration, vec};
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
@@ -13,14 +21,31 @@ async fn metrics() -> impl Responder {
 }
 
 #[post("/inference")]
-async fn inference(req: String) -> impl Responder {
-    HttpResponse::Ok().body(req)
+async fn inference(
+    req: web::Bytes,
+    protocol: web::Data<Protocol>,
+) -> Result<HttpResponse, MosecError> {
+    let (tx, rx) = oneshot::channel();
+    let task = Task::new(req, tx);
+    protocol.add_new_task(&task);
+    if let Err(_) = timeout(Duration::from_millis(3000), rx).await {
+        return Err(MosecError::Timeout);
+    }
+
+    match task.code {
+        TaskCode::Normal => Ok(HttpResponse::Ok().body(task.data)),
+        TaskCode::ValidationError => Err(MosecError::ValidationError),
+        TaskCode::InternalError => Err(MosecError::InternalError),
+        TaskCode::UnknownError => Err(MosecError::UnknownError),
+    }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    let p = Protocol::new(vec![1, 8, 1]);
+    HttpServer::new(move || {
         App::new()
+            .app_data(p.clone())
             .wrap(
                 middleware::DefaultHeaders::new()
                     .header("Server", format!("{} v{}", "MOSEC", VERSION)),
