@@ -23,16 +23,17 @@ async fn metrics() -> impl Responder {
 #[post("/inference")]
 async fn inference(
     req: web::Bytes,
-    protocol: web::Data<Protocol<'_>>,
+    protocol: web::Data<Protocol>,
 ) -> Result<HttpResponse, MosecError> {
     let (tx, rx) = oneshot::channel();
-    let task = protocol.add_new_task(req, tx);
+    let task_id = protocol.add_new_task(req, tx).await;
     if let Err(_) = timeout(Duration::from_millis(3000), rx).await {
         return Err(MosecError::Timeout);
     }
 
-    match task.code {
-        TaskCode::Normal => Ok(HttpResponse::Ok().body(task.data.clone())),
+    let task_info = protocol.get_task_info(task_id).await;
+    match task_info.code {
+        TaskCode::Normal => Ok(HttpResponse::Ok().body(task_info.data.clone())),
         TaskCode::ValidationError => Err(MosecError::ValidationError),
         TaskCode::InternalError => Err(MosecError::InternalError),
         TaskCode::UnknownError => Err(MosecError::UnknownError),
