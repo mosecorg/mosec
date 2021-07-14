@@ -3,7 +3,7 @@ mod protocol;
 
 use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use errors::MosecError;
-use protocol::{Protocol, Task, TaskCode};
+use protocol::{Protocol, TaskCode};
 use tokio::{sync::oneshot, time::timeout};
 
 use std::{time::Duration, vec};
@@ -23,17 +23,16 @@ async fn metrics() -> impl Responder {
 #[post("/inference")]
 async fn inference(
     req: web::Bytes,
-    protocol: web::Data<Protocol>,
+    protocol: web::Data<Protocol<'_>>,
 ) -> Result<HttpResponse, MosecError> {
     let (tx, rx) = oneshot::channel();
-    let task = Task::new(req, tx);
-    protocol.add_new_task(&task);
+    let task = protocol.add_new_task(req, tx);
     if let Err(_) = timeout(Duration::from_millis(3000), rx).await {
         return Err(MosecError::Timeout);
     }
 
     match task.code {
-        TaskCode::Normal => Ok(HttpResponse::Ok().body(task.data)),
+        TaskCode::Normal => Ok(HttpResponse::Ok().body(task.data.clone())),
         TaskCode::ValidationError => Err(MosecError::ValidationError),
         TaskCode::InternalError => Err(MosecError::InternalError),
         TaskCode::UnknownError => Err(MosecError::UnknownError),
@@ -42,7 +41,12 @@ async fn inference(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let p = Protocol::new(vec![1, 8, 1]);
+    let p = Protocol::new(
+        vec![1, 8, 1],
+        "/tmp/mosec",
+        1024,
+        Duration::from_millis(3000),
+    );
     HttpServer::new(move || {
         App::new()
             .app_data(p.clone())
