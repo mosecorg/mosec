@@ -1,7 +1,7 @@
 from io import open
 from os import path
 
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup  # type: ignore
 
 here = path.abspath(path.dirname(__file__))
 
@@ -37,10 +37,13 @@ setup(
     extras_require={
         "dev": [
             "pytest>=6",
+            "pytest-mock>=3.5",
+            "mypy>=0.812",
             "flake8>=3.8",
             "black>=20.8b1",
             "isort>=5.6",
             "autoflake>=1.4",
+            "msgpack>=1.0.2",
         ],
     },
     zip_safe=False,
