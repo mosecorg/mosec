@@ -20,6 +20,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           make install
+          rustup toolchain install nightly
       - name: Lint
         run: make lint
 
