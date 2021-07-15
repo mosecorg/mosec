@@ -1,14 +1,14 @@
 mod errors;
 mod protocol;
 
+use std::{net::SocketAddr, time::Duration, vec};
+
 use errors::{error_handler, MosecError};
 use hyper::{body::to_bytes, Body, Request, Response, Server};
 use protocol::{Protocol, TaskCode};
 use routerify::prelude::*;
 use routerify::{Router, RouterService};
 use tokio::{sync::oneshot, time::timeout};
-
-use std::{net::SocketAddr, time::Duration, vec};
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, MosecError> {
     Ok(Response::new(Body::from("MOSEC service")))
@@ -28,7 +28,7 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, MosecError> {
     }
 
     let task_id = protocol.add_new_task(data, tx).await;
-    if let Err(_) = timeout(Duration::from_millis(3000), rx).await {
+    if let Err(_) = timeout(protocol.timeout, rx).await {
         return Err(MosecError::Timeout);
     }
 

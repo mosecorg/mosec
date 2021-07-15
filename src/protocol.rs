@@ -84,7 +84,7 @@ struct TaskHub {
 
 #[derive(Debug, Clone)]
 pub struct Protocol {
-    timeout: Duration,
+    pub timeout: Duration,
     tasks: Arc<Mutex<TaskHub>>,
 }
 
