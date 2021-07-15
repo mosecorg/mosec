@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use actix_web::web::Bytes;
 use async_channel::{bounded, Receiver, Sender};
+use bytes::Bytes;
 use tokio::net::UnixListener;
 use tokio::sync::{oneshot, Mutex};
 

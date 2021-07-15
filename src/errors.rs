@@ -1,12 +1,6 @@
-use actix_web::{
-    dev::HttpResponseBuilder,
-    error,
-    http::{header, StatusCode},
-    HttpResponse,
-};
 use derive_more::{Display, Error};
-
-const TEXT_TYPE: &'static str = "text/html; charset=utf-8";
+use hyper::{Body, Response, StatusCode};
+use routerify::RouteError;
 
 #[derive(Debug, Display, Error)]
 pub enum MosecError {
@@ -23,19 +17,17 @@ pub enum MosecError {
     UnknownError,
 }
 
-impl error::ResponseError for MosecError {
-    fn error_response(&self) -> HttpResponse {
-        HttpResponseBuilder::new(self.status_code())
-            .set_header(header::CONTENT_TYPE, TEXT_TYPE)
-            .body(self.to_string())
-    }
+pub async fn error_handler(err: RouteError) -> Response<Body> {
+    let mosec_err = err.downcast::<MosecError>().unwrap();
+    let status = match mosec_err.as_ref() {
+        MosecError::Timeout => StatusCode::REQUEST_TIMEOUT,
+        MosecError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
+        MosecError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+        MosecError::UnknownError => StatusCode::NOT_IMPLEMENTED,
+    };
 
-    fn status_code(&self) -> StatusCode {
-        match *self {
-            MosecError::Timeout => StatusCode::REQUEST_TIMEOUT,
-            MosecError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
-            MosecError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-            MosecError::UnknownError => StatusCode::NOT_IMPLEMENTED,
-        }
-    }
+    Response::builder()
+        .status(status)
+        .body(Body::from(mosec_err.to_string()))
+        .unwrap()
 }

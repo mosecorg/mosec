@@ -7,7 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = "3"
+hyper = "0.14"
+routerify = "2"
+bytes = "1"
 tokio = { version="1", features=["full"] }
 derive_more = { version="0.99.0", features=["display", "error"] }
 async-channel = { version="1.6.1" }
