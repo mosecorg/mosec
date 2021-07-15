@@ -129,7 +129,13 @@ impl Protocol {
     }
 
     pub async fn get_task_info(&self, id: usize) -> Info {
-        let tasks = self.tasks.lock().await;
-        tasks.table.get(&id).unwrap().info.clone()
+        let mut tasks = self.tasks.lock().await;
+        match tasks.table.remove(&id) {
+            Some(task) => task.info.clone(),
+            None => Info {
+                code: TaskCode::UnknownError,
+                data: Bytes::from(""),
+            },
+        }
     }
 }
