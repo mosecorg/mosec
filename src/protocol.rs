@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use std::usize;
 
 use async_channel::{bounded, Receiver, Sender};
 use bytes::Bytes;
@@ -44,6 +45,7 @@ impl Task {
 
 #[derive(Debug)]
 struct Processor {
+    tasks: Arc<Mutex<TaskHub>>,
     batch_size: u32,
     listener: UnixListener,
     receiver: Receiver<usize>,
@@ -52,6 +54,7 @@ struct Processor {
 
 impl Processor {
     fn new(
+        tasks: Arc<Mutex<TaskHub>>,
         batch_size: u32,
         path: &PathBuf,
         receiver: Receiver<usize>,
@@ -59,6 +62,7 @@ impl Processor {
     ) -> Self {
         let listener = UnixListener::bind(path).unwrap();
         Processor {
+            tasks,
             batch_size,
             listener,
             receiver,
@@ -68,9 +72,31 @@ impl Processor {
 
     async fn run(&self) {
         loop {
+            let tasks_clone = self.tasks.clone();
+            let input_clone = self.receiver.clone();
+            let output_clone = self.sender.clone();
             match self.listener.accept().await {
-                Ok((stream, addr)) => {}
-                Err(e) => {}
+                Ok((stream, addr)) => {
+                    println!("Accepted connection from {:?}", addr);
+                    tokio::spawn(async move {
+                        loop {
+                            let task_id = input_clone.recv().await;
+                            match task_id {
+                                Ok(task_id) => {
+                                    let tasks = tasks_clone.lock().await;
+                                    let task = tasks.table.get(&task_id);
+                                }
+                                Err(_) => {
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                }
+                Err(e) => {
+                    eprintln!("Error accepting connection: {:?}", e);
+                    break;
+                }
             }
         }
     }
@@ -84,32 +110,24 @@ struct TaskHub {
 
 #[derive(Debug, Clone)]
 pub struct Protocol {
+    capacity: usize,
+    batches: Vec<u32>,
+    path: String,
+    sender: Sender<usize>,
+    receiver: Receiver<usize>,
     pub timeout: Duration,
     tasks: Arc<Mutex<TaskHub>>,
 }
 
 impl Protocol {
     pub fn new<'a>(batches: Vec<u32>, unix_dir: &str, capacity: usize, timeout: Duration) -> Self {
-        let mut senders = Vec::new();
-        let mut receivers = Vec::new();
-        let mut processors = Vec::new();
-
-        let (s, r) = bounded(capacity);
-        senders.push(s);
-        receivers.push(r);
-        for (i, batch) in batches.iter().enumerate() {
-            let (s, r) = bounded(capacity);
-            processors.push(Processor::new(
-                *batch,
-                &Path::new(unix_dir).join(i.to_string()),
-                receivers.last().unwrap().clone(),
-                s.clone(),
-            ));
-            senders.push(s);
-            receivers.push(r);
-        }
-
+        let (sender, receiver) = bounded::<usize>(capacity);
         Protocol {
+            capacity,
+            batches,
+            path: unix_dir.to_string(),
+            sender,
+            receiver,
             timeout,
             tasks: Arc::new(Mutex::new(TaskHub {
                 table: HashMap::with_capacity(capacity),
@@ -118,7 +136,25 @@ impl Protocol {
         }
     }
 
-    pub async fn run(&self) {}
+    pub async fn run(&mut self) {
+        let mut last_receiver = self.receiver.clone();
+
+        for (i, batch) in self.batches.iter().enumerate() {
+            let (sender, receiver) = bounded::<usize>(self.capacity);
+            let processor = Processor::new(
+                self.tasks.clone(),
+                *batch,
+                &Path::new(&self.path).join(i.to_string()),
+                last_receiver.clone(),
+                sender.clone(),
+            );
+            tokio::spawn(async move {
+                processor.run().await;
+            });
+            last_receiver = receiver.clone();
+        }
+        self.receiver = last_receiver.clone();
+    }
 
     pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> usize {
         let mut tasks = self.tasks.lock().await;
