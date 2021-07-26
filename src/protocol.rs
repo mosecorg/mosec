@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -60,6 +61,7 @@ impl Processor {
         receiver: Receiver<usize>,
         sender: Sender<usize>,
     ) -> Self {
+        println!("listen on {:?}", path);
         let listener = UnixListener::bind(path).unwrap();
         Processor {
             tasks,
@@ -138,13 +140,17 @@ impl Protocol {
 
     pub async fn run(&mut self) {
         let mut last_receiver = self.receiver.clone();
+        let folder = Path::new(&self.path);
+        if !folder.is_dir() {
+            fs::create_dir(folder).unwrap();
+        }
 
         for (i, batch) in self.batches.iter().enumerate() {
             let (sender, receiver) = bounded::<usize>(self.capacity);
             let processor = Processor::new(
                 self.tasks.clone(),
                 *batch,
-                &Path::new(&self.path).join(i.to_string()),
+                &folder.join(format!("ipc_{:?}.socket", i)),
                 last_receiver.clone(),
                 sender.clone(),
             );
