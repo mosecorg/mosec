@@ -43,14 +43,18 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, MosecError> {
 
 #[tokio::main]
 async fn main() {
-    let p = Protocol::new(
+    let protocol = Protocol::new(
         vec![1, 8, 1],
         "/tmp/mosec",
         1024,
         Duration::from_millis(3000),
     );
+    let mut protocol_runner = protocol.clone();
+    tokio::spawn(async move {
+        protocol_runner.run().await;
+    });
     let state_router = Router::builder()
-        .data(p.clone())
+        .data(protocol.clone())
         .post("/", inference)
         .build()
         .unwrap();
