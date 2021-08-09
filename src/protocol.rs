@@ -1,46 +1,55 @@
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::usize;
+use std::{fs, u32};
 
 use async_channel::{bounded, Receiver, Sender};
 use bytes::Bytes;
-use tokio::net::UnixListener;
+use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
+
+use crate::errors::ProtocolError;
+
+const FLAG_U8_SIZE: usize = 2;
+const NUM_U8_SIZE: usize = 2;
+const TASK_ID_U8_SIZE: usize = 4;
+const LENGTH_U8_SIZE: usize = 4;
+
+const BIT_STATUS_OK: u16 = 0b1;
+const BIT_STATUS_BAD_REQ: u16 = 0b10;
+const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
+const BIT_STATUS_INTERNAL_ERR: u16 = 0b1000;
 
 #[derive(Debug, Clone, Copy)]
 pub enum TaskCode {
     UnknownError,
     Normal,
+    BadRequestError,
     ValidationError,
     InternalError,
 }
 
 #[derive(Debug, Clone)]
-pub struct Info {
+pub struct Task {
     pub code: TaskCode,
     pub data: Bytes,
-}
-
-#[derive(Debug)]
-struct Task {
-    info: Info,
-    notifier: oneshot::Sender<()>,
     create_at: Instant,
 }
 
 impl Task {
-    pub fn new(data: Bytes, notifier: oneshot::Sender<()>) -> Self {
+    pub fn new(data: Bytes) -> Self {
         Task {
-            notifier,
+            code: TaskCode::UnknownError,
+            data: data,
             create_at: Instant::now(),
-            info: Info {
-                code: TaskCode::UnknownError,
-                data,
-            },
         }
+    }
+
+    pub fn update(&mut self, code: TaskCode, data: &Bytes) {
+        self.code = code;
+        self.data = data.clone();
     }
 }
 
@@ -82,15 +91,8 @@ impl Processor {
                     println!("Accepted connection from {:?}", addr);
                     tokio::spawn(async move {
                         loop {
-                            let task_id = input_clone.recv().await;
-                            match task_id {
-                                Ok(task_id) => {
-                                    let tasks = tasks_clone.lock().await;
-                                    let task = tasks.table.get(&task_id);
-                                }
-                                Err(_) => {
-                                    break;
-                                }
+                            if receive(&stream, &tasks_clone).await.is_err() {
+                                break;
                             }
                         }
                     });
@@ -105,9 +107,104 @@ impl Processor {
 }
 
 #[derive(Debug)]
+struct Message {
+    code: TaskCode,
+    ids: Vec<u32>,
+    data: Vec<Bytes>,
+}
+
+async fn read_exact(stream: &UnixStream, buf: &mut [u8]) -> Result<(), ProtocolError> {
+    loop {
+        match stream.try_read(buf) {
+            Ok(0) => return Err(ProtocolError::SocketClosed),
+            Ok(n) if n != buf.len() => return Err(ProtocolError::ReadIncomplete),
+            Ok(_) => return Ok(()),
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
+            Err(e) => {
+                eprintln!("read socket err: {}", &e);
+                return Err(ProtocolError::ReadError);
+            }
+        }
+    }
+}
+
+async fn receive(
+    stream: &UnixStream,
+    tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
+) -> Result<(), ProtocolError> {
+    stream.readable().await.unwrap();
+    let mut flag_buf = [0u8; FLAG_U8_SIZE];
+    let mut num_buf = [0u8; NUM_U8_SIZE];
+    read_exact(stream, &mut flag_buf).await?;
+    read_exact(stream, &mut num_buf).await?;
+    let flag = u16::from_be_bytes(flag_buf);
+    let num = u16::from_be_bytes(num_buf);
+
+    let code = if flag & BIT_STATUS_OK > 0 {
+        TaskCode::Normal
+    } else if flag & BIT_STATUS_BAD_REQ > 0 {
+        TaskCode::BadRequestError
+    } else if flag & BIT_STATUS_VALIDATION_ERR > 0 {
+        TaskCode::ValidationError
+    } else if flag & BIT_STATUS_INTERNAL_ERR > 0 {
+        TaskCode::InternalError
+    } else {
+        TaskCode::UnknownError
+    };
+
+    let mut id_buf = [0u8; TASK_ID_U8_SIZE];
+    let mut length_buf = [0u8; LENGTH_U8_SIZE];
+    let mut ids: Vec<u32> = Vec::new();
+    let mut data: Vec<Bytes> = Vec::new();
+    for _ in 0..num {
+        read_exact(stream, &mut id_buf).await?;
+        read_exact(stream, &mut length_buf).await?;
+        let id = u32::from_be_bytes(id_buf);
+        let length = u32::from_be_bytes(length_buf);
+        let mut data_buf = vec![0u8; length as usize];
+        read_exact(stream, &mut data_buf).await?;
+        ids.push(id);
+        data.push(data_buf.into());
+    }
+
+    {
+        let mut tasks = tasks.lock().await;
+        tasks.update_from_message(code, ids, data);
+    }
+    Ok(())
+}
+
+#[derive(Debug)]
 struct TaskHub {
-    table: HashMap<usize, Task>,
-    current_id: usize,
+    table: HashMap<u32, Task>,
+    notifiers: HashMap<u32, oneshot::Sender<()>>,
+    current_id: u32,
+}
+
+impl TaskHub {
+    pub fn update_from_message(&mut self, code: TaskCode, ids: Vec<u32>, data: Vec<Bytes>) {
+        for i in 0..ids.len() {
+            let task = self.table.get_mut(&ids[i]);
+            match task {
+                Some(task) => {
+                    task.update(code, &data[i]);
+                    match code {
+                        TaskCode::Normal => {}
+                        _ => {
+                            if let Some(s) = self.notifiers.remove(&ids[i]) {
+                                s.send(()).unwrap();
+                            } else {
+                                eprintln!("no notifier for task {}", &ids[i]);
+                            }
+                        }
+                    }
+                }
+                None => {
+                    eprintln!("cannot find id: {}", ids[i]);
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -133,6 +230,7 @@ impl Protocol {
             timeout,
             tasks: Arc::new(Mutex::new(TaskHub {
                 table: HashMap::with_capacity(capacity),
+                notifiers: HashMap::with_capacity(capacity),
                 current_id: 0,
             })),
         }
@@ -162,22 +260,17 @@ impl Protocol {
         self.receiver = last_receiver.clone();
     }
 
-    pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> usize {
+    pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> u32 {
         let mut tasks = self.tasks.lock().await;
         let id = tasks.current_id;
-        tasks.table.insert(id, Task::new(data, notifier));
+        tasks.table.insert(id, Task::new(data));
+        tasks.notifiers.insert(id, notifier);
         let _ = tasks.current_id.wrapping_add(1);
         id
     }
 
-    pub async fn get_task_info(&self, id: usize) -> Info {
+    pub async fn get_task(&self, id: u32) -> Option<Task> {
         let mut tasks = self.tasks.lock().await;
-        match tasks.table.remove(&id) {
-            Some(task) => task.info.clone(),
-            None => Info {
-                code: TaskCode::UnknownError,
-                data: Bytes::from(""),
-            },
-        }
+        tasks.table.remove(&id)
     }
 }

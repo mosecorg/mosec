@@ -3,22 +3,22 @@ mod protocol;
 
 use std::{net::SocketAddr, time::Duration, vec};
 
-use errors::{error_handler, MosecError};
+use errors::{error_handler, ServiceError};
 use hyper::{body::to_bytes, Body, Request, Response, Server};
 use protocol::{Protocol, TaskCode};
 use routerify::prelude::*;
 use routerify::{Router, RouterService};
 use tokio::{sync::oneshot, time::timeout};
 
-async fn index(_: Request<Body>) -> Result<Response<Body>, MosecError> {
+async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     Ok(Response::new(Body::from("MOSEC service")))
 }
 
-async fn metrics(_: Request<Body>) -> Result<Response<Body>, MosecError> {
+async fn metrics(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     Ok(Response::new(Body::from("TODO: metrics")))
 }
 
-async fn inference(req: Request<Body>) -> Result<Response<Body>, MosecError> {
+async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     let protocol = req.data::<Protocol>().unwrap().clone();
     let (tx, rx) = oneshot::channel();
     let data = to_bytes(req.into_body()).await.unwrap();
@@ -29,15 +29,20 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, MosecError> {
 
     let task_id = protocol.add_new_task(data, tx).await;
     if let Err(_) = timeout(protocol.timeout, rx).await {
-        return Err(MosecError::Timeout);
+        return Err(ServiceError::Timeout);
     }
 
-    let task_info = protocol.get_task_info(task_id).await;
-    match task_info.code {
-        TaskCode::Normal => Ok(Response::new(Body::from(task_info.data.clone()))),
-        TaskCode::ValidationError => Err(MosecError::ValidationError),
-        TaskCode::InternalError => Err(MosecError::InternalError),
-        TaskCode::UnknownError => Err(MosecError::UnknownError),
+    if let Some(task) = protocol.get_task(task_id).await {
+        match task.code {
+            TaskCode::Normal => Ok(Response::new(Body::from(task.data.clone()))),
+            TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
+            TaskCode::ValidationError => Err(ServiceError::ValidationError),
+            TaskCode::InternalError => Err(ServiceError::InternalError),
+            TaskCode::UnknownError => Err(ServiceError::UnknownError),
+        }
+    } else {
+        eprintln!("cannot find this task: {}", &task_id);
+        return Err(ServiceError::UnknownError);
     }
 }
 
