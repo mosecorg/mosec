@@ -6,7 +6,7 @@ use std::time::Duration;
 const TIME_DOWNSCALE: u64 = 10;
 
 #[test]
-fn test_batching() {
+fn batching() {
     let (web_tx, web_rx) = crossbeam_channel::unbounded();
     let (s1_tx, s1_rx) = crossbeam_channel::unbounded();
     let (s2_tx, s2_rx) = crossbeam_channel::unbounded();
