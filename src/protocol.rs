@@ -7,6 +7,7 @@ use std::{fs, u32};
 
 use async_channel::{bounded, Receiver, Sender};
 use bytes::Bytes;
+use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
 
@@ -58,8 +59,8 @@ struct Processor {
     tasks: Arc<Mutex<TaskHub>>,
     batch_size: u32,
     listener: UnixListener,
-    receiver: Receiver<usize>,
-    sender: Sender<usize>,
+    receiver: Receiver<u32>,
+    sender: Sender<u32>,
 }
 
 impl Processor {
@@ -67,8 +68,8 @@ impl Processor {
         tasks: Arc<Mutex<TaskHub>>,
         batch_size: u32,
         path: &Path,
-        receiver: Receiver<usize>,
-        sender: Sender<usize>,
+        receiver: Receiver<u32>,
+        sender: Sender<u32>,
     ) -> Self {
         println!("listen on {:?}", path);
         let listener = UnixListener::bind(path).unwrap();
@@ -86,12 +87,22 @@ impl Processor {
             let tasks_clone = self.tasks.clone();
             let input_clone = self.receiver.clone();
             let output_clone = self.sender.clone();
+            let batch_size = self.batch_size;
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     println!("Accepted connection from {:?}", addr);
                     tokio::spawn(async move {
                         loop {
-                            if receive(&stream, &tasks_clone).await.is_err() {
+                            if receive_message(&stream, &tasks_clone, &output_clone)
+                                .await
+                                .is_err()
+                            {
+                                break;
+                            }
+                            if send_message(&stream, &tasks_clone, &input_clone, batch_size)
+                                .await
+                                .is_err()
+                            {
                                 break;
                             }
                         }
@@ -104,13 +115,6 @@ impl Processor {
             }
         }
     }
-}
-
-#[derive(Debug)]
-struct Message {
-    code: TaskCode,
-    ids: Vec<u32>,
-    data: Vec<Bytes>,
 }
 
 async fn read_exact(stream: &UnixStream, buf: &mut [u8]) -> Result<(), ProtocolError> {
@@ -128,11 +132,14 @@ async fn read_exact(stream: &UnixStream, buf: &mut [u8]) -> Result<(), ProtocolE
     }
 }
 
-async fn receive(
+async fn receive_message(
     stream: &UnixStream,
     tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
+    sender: &Sender<u32>,
 ) -> Result<(), ProtocolError> {
-    stream.readable().await.unwrap();
+    if stream.readable().await.is_err() {
+        return Err(ProtocolError::ReadError);
+    }
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
     let mut num_buf = [0u8; NUM_U8_SIZE];
     read_exact(stream, &mut flag_buf).await?;
@@ -167,10 +174,83 @@ async fn receive(
         data.push(data_buf.into());
     }
 
+    // update tasks received from the stream
     {
         let mut tasks = tasks.lock().await;
-        tasks.update_from_message(code, ids, data);
+        tasks.update_multi_tasks(code, &ids, &data);
     }
+
+    // send normal tasks to the next channel
+    match code {
+        TaskCode::Normal => {
+            for id in ids {
+                if sender.send(id).await.is_err() {
+                    return Err(ProtocolError::SendError);
+                }
+            }
+        }
+        _ => {
+            println!("abnormal tasks: {:?}", &ids);
+        }
+    }
+    Ok(())
+}
+
+async fn get_batch(receiver: &Receiver<u32>, batch_size: usize, batch_vec: &mut Vec<u32>) {
+    loop {
+        match receiver.recv().await {
+            Ok(id) => {
+                batch_vec.push(id);
+            }
+            Err(err) => {
+                eprintln!("receive from channel error: {}", err);
+            }
+        }
+        if batch_vec.len() == batch_size {
+            break;
+        }
+    }
+}
+
+async fn send_message(
+    stream: &UnixStream,
+    tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
+    receiver: &Receiver<u32>,
+    batch_size: u32,
+) -> Result<(), ProtocolError> {
+    // get batch from the channel
+    let mut batch: Vec<u32> = Vec::new();
+
+    match receiver.recv().await {
+        Ok(id) => {
+            batch.push(id);
+            // timing from receiving the first item
+            if tokio::time::timeout(
+                tokio::time::Duration::from_millis(10),
+                get_batch(receiver, batch_size as usize, &mut batch),
+            )
+            .await
+            .is_err()
+            {
+                println!(
+                    "timeout before the batch is full: {}/{}",
+                    batch.len(),
+                    batch_size
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!("receive from channel error: {}", e);
+            return Err(ProtocolError::ReceiveError);
+        }
+    }
+
+    // send the batch tasks to the stream
+    if stream.writable().await.is_err() {
+        return Err(ProtocolError::WriteError);
+    }
+    
+
     Ok(())
 }
 
@@ -182,7 +262,7 @@ struct TaskHub {
 }
 
 impl TaskHub {
-    pub fn update_from_message(&mut self, code: TaskCode, ids: Vec<u32>, data: Vec<Bytes>) {
+    pub fn update_multi_tasks(&mut self, code: TaskCode, ids: &Vec<u32>, data: &Vec<Bytes>) {
         for i in 0..ids.len() {
             let task = self.table.get_mut(&ids[i]);
             match task {
@@ -212,15 +292,15 @@ pub struct Protocol {
     capacity: usize,
     batches: Vec<u32>,
     path: String,
-    sender: Sender<usize>,
-    receiver: Receiver<usize>,
+    sender: Sender<u32>,
+    receiver: Receiver<u32>,
     pub timeout: Duration,
     tasks: Arc<Mutex<TaskHub>>,
 }
 
 impl Protocol {
     pub fn new(batches: Vec<u32>, unix_dir: &str, capacity: usize, timeout: Duration) -> Self {
-        let (sender, receiver) = bounded::<usize>(capacity);
+        let (sender, receiver) = bounded::<u32>(capacity);
         Protocol {
             capacity,
             batches,
@@ -244,7 +324,7 @@ impl Protocol {
         }
 
         for (i, batch) in self.batches.iter().enumerate() {
-            let (sender, receiver) = bounded::<usize>(self.capacity);
+            let (sender, receiver) = bounded::<u32>(self.capacity);
             let processor = Processor::new(
                 self.tasks.clone(),
                 *batch,

@@ -41,6 +41,8 @@ pub enum ProtocolError {
     SocketClosed,
     ReadIncomplete,
     ReadError,
+    ReceiveError,
     WriteIncomplete,
     WriteError,
+    SendError,
 }
