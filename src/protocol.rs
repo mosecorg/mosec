@@ -330,6 +330,8 @@ impl Protocol {
         let folder = Path::new(&self.path);
         if !folder.is_dir() {
             fs::create_dir(folder).unwrap();
+        } else if folder.is_dir() {
+            fs::remove_dir_all(folder).unwrap();
         }
 
         for (i, batch) in self.batches.iter().enumerate() {
