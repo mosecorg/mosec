@@ -9,6 +9,8 @@ use protocol::{Protocol, TaskCode};
 use routerify::prelude::*;
 use routerify::{Router, RouterService};
 use tokio::{sync::oneshot, time::timeout};
+use tracing::error;
+use tracing_subscriber::EnvFilter;
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     Ok(Response::new(Body::from("MOSEC service")))
@@ -41,13 +43,17 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
             TaskCode::UnknownError => Err(ServiceError::UnknownError),
         }
     } else {
-        eprintln!("cannot find this task: {}", &task_id);
+        error!(%task_id, "cannot find this task");
         Err(ServiceError::UnknownError)
     }
 }
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     let protocol = Protocol::new(
         vec![1, 8, 1],
         "/tmp/mosec",
@@ -77,6 +83,6 @@ async fn main() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let server = Server::bind(&addr).serve(service);
     if let Err(err) = server.await {
-        eprintln!("Server error: {}", err);
+        tracing::error!(%err, "server error");
     }
 }

@@ -10,6 +10,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
+use tracing::{debug, error, info};
 
 use crate::errors::ProtocolError;
 
@@ -74,13 +75,13 @@ impl TaskHub {
                             if let Some(s) = self.notifiers.remove(&ids[i]) {
                                 s.send(()).unwrap();
                             } else {
-                                eprintln!("no notifier for task {}", &ids[i]);
+                                error!(id=%ids[i], "no notifier for task");
                             }
                         }
                     }
                 }
                 None => {
-                    eprintln!("cannot find id: {}", ids[i]);
+                    error!(id=%ids[i], "cannot find id");
                 }
             }
         }
@@ -102,7 +103,7 @@ async fn communicate(
         let receiver_clone = receiver.clone();
         match listener.accept().await {
             Ok((mut stream, addr)) => {
-                println!("Accepted connection from {:?}", addr);
+                info!(?addr, "accepted connection from");
                 tokio::spawn(async move {
                     loop {
                         if receive_message(&mut stream, &tasks_clone, &sender_clone)
@@ -126,8 +127,8 @@ async fn communicate(
                     }
                 });
             }
-            Err(e) => {
-                eprintln!("Error accepting connection: {:?}", e);
+            Err(err) => {
+                error!(error=%err, "Error accepting connection");
                 break;
             }
         }
@@ -175,6 +176,7 @@ async fn receive_message(
         ids.push(id);
         data.push(data_buf.into());
     }
+    debug!(?ids, "received tasks from the stream");
 
     // update tasks received from the stream
     {
@@ -192,7 +194,7 @@ async fn receive_message(
             }
         }
         _ => {
-            println!("abnormal tasks: {:?}", &ids);
+            info!(?ids, "abnormal tasks");
         }
     }
     Ok(())
@@ -205,13 +207,14 @@ async fn get_batch(receiver: &Receiver<u32>, batch_size: usize, batch_vec: &mut 
                 batch_vec.push(id);
             }
             Err(err) => {
-                eprintln!("receive from channel error: {}", err);
+                error!(%err, "receive from channel error");
             }
         }
         if batch_vec.len() == batch_size {
             break;
         }
     }
+    info!(batch_size=?batch_vec.len(), "received batch size from channel");
 }
 
 async fn send_message(
@@ -235,15 +238,15 @@ async fn send_message(
             .await
             .is_err()
             {
-                println!(
+                info!(
                     "timeout before the batch is full: {}/{}",
                     batch.len(),
                     batch_size
                 );
             }
         }
-        Err(e) => {
-            eprintln!("receive from channel error: {}", e);
+        Err(err) => {
+            error!(%err, "receive from channel error");
             return Err(ProtocolError::ReceiveError);
         }
     }
@@ -259,7 +262,7 @@ async fn send_message(
         }
     }
     if data.len() != batch.len() {
-        eprintln!(
+        error!(
             "cannot get all the data from table: {}/{}",
             data.len(),
             batch.len()
@@ -279,6 +282,7 @@ async fn send_message(
         buffer.put(data[i].clone());
     }
     stream.write_all(&buffer).await.unwrap();
+    debug!(batch_size=%batch.len(), byte_size=%buffer.len(), "send data to the stream");
 
     Ok(())
 }
@@ -353,6 +357,7 @@ impl Protocol {
         tasks.table.insert(id, Task::new(data));
         tasks.notifiers.insert(id, notifier);
         let _ = tasks.current_id.wrapping_add(1);
+        debug!(%id, "add a new task");
         id
     }
 
