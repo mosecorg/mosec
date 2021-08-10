@@ -37,7 +37,7 @@ class Server:
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
         self._coordinator_shutdown: List[List[Union[Event, None]]] = []
 
-        self._controller_process: mp.Process
+        self._controller_process: mp.Process = None
 
         self._configs: BaseSettings = Settings()
 
@@ -121,7 +121,7 @@ class Server:
                 else:
                     resp_schema = None
 
-                for worker_id in range(len(w_num)):
+                for worker_id in range(w_num):
                     # for every worker in each stage
                     if self._coordinator_pools[stage_id][worker_id] is not None:
                         continue
@@ -144,11 +144,12 @@ class Server:
                     coordinator_process.start()
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
                     self._coordinator_shutdown[stage_id][worker_id] = shutdown
-            ctr_exitcode = self._controller_process.poll()
-            if ctr_exitcode:
-                self._terminate(
-                    ctr_exitcode, f"mosec controller exited on error: {ctr_exitcode}"
-                )
+            if self._controller_process:
+                ctr_exitcode = self._controller_process.poll()
+                if ctr_exitcode:
+                    self._terminate(
+                        ctr_exitcode, f"mosec controller exited on error: {ctr_exitcode}"
+                    )
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
