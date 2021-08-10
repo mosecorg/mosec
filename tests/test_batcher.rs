@@ -9,17 +9,13 @@ const TIME_DOWNSCALE: u64 = 10;
 fn batching() {
     let (web_tx, web_rx) = crossbeam_channel::unbounded();
     let (s1_tx, s1_rx) = crossbeam_channel::unbounded();
-    let (s2_tx, s2_rx) = crossbeam_channel::unbounded();
-    let mut txs = Vec::new();
-    txs.push(s1_tx);
-    txs.push(s2_tx);
 
     let b = batcher::Batcher {
         limit: 2,
         wait: Duration::from_millis(3000 / TIME_DOWNSCALE),
         interval: Duration::from_millis(50 / TIME_DOWNSCALE),
         inbound: web_rx,
-        outbound: txs,
+        outbound: s1_tx,
     };
 
     thread::spawn(move || b.run());
@@ -27,7 +23,7 @@ fn batching() {
     web_tx.send(22).unwrap();
     web_tx.send(33).unwrap();
     assert_eq!(s1_rx.recv(), Ok(vec![11, 22]));
-    assert_eq!(s2_rx.recv(), Ok(vec![33]));
+    assert_eq!(s1_rx.recv(), Ok(vec![33]));
 
     thread::sleep(Duration::from_secs(1));
     for i in 100..106 {
@@ -43,8 +39,8 @@ fn batching() {
         }
     }
     assert_eq!(s1_rx.recv(), Ok(vec![100, 101]));
-    assert_eq!(s2_rx.recv(), Ok(vec![102]));
+    assert_eq!(s1_rx.recv(), Ok(vec![102]));
     assert_eq!(s1_rx.recv(), Ok(vec![103]));
-    assert_eq!(s2_rx.recv(), Ok(vec![104, 105]));
+    assert_eq!(s1_rx.recv(), Ok(vec![104, 105]));
     // no thread join, destroy the txs thus exit batcher
 }
