@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::usize;
@@ -42,7 +42,7 @@ impl Task {
     pub fn new(data: Bytes) -> Self {
         Task {
             code: TaskCode::UnknownError,
-            data: data,
+            data,
             create_at: Instant::now(),
         }
     }
@@ -66,7 +66,7 @@ impl Processor {
     fn new(
         tasks: Arc<Mutex<TaskHub>>,
         batch_size: u32,
-        path: &PathBuf,
+        path: &Path,
         receiver: Receiver<usize>,
         sender: Sender<usize>,
     ) -> Self {
@@ -219,7 +219,7 @@ pub struct Protocol {
 }
 
 impl Protocol {
-    pub fn new<'a>(batches: Vec<u32>, unix_dir: &str, capacity: usize, timeout: Duration) -> Self {
+    pub fn new(batches: Vec<u32>, unix_dir: &str, capacity: usize, timeout: Duration) -> Self {
         let (sender, receiver) = bounded::<usize>(capacity);
         Protocol {
             capacity,
@@ -257,7 +257,7 @@ impl Protocol {
             });
             last_receiver = receiver.clone();
         }
-        self.receiver = last_receiver.clone();
+        self.receiver = last_receiver;
     }
 
     pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> u32 {

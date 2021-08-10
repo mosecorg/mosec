@@ -28,13 +28,13 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     }
 
     let task_id = protocol.add_new_task(data, tx).await;
-    if let Err(_) = timeout(protocol.timeout, rx).await {
+    if timeout(protocol.timeout, rx).await.is_err() {
         return Err(ServiceError::Timeout);
     }
 
     if let Some(task) = protocol.get_task(task_id).await {
         match task.code {
-            TaskCode::Normal => Ok(Response::new(Body::from(task.data.clone()))),
+            TaskCode::Normal => Ok(Response::new(Body::from(task.data))),
             TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
             TaskCode::ValidationError => Err(ServiceError::ValidationError),
             TaskCode::InternalError => Err(ServiceError::InternalError),
@@ -42,7 +42,7 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
         }
     } else {
         eprintln!("cannot find this task: {}", &task_id);
-        return Err(ServiceError::UnknownError);
+        Err(ServiceError::UnknownError)
     }
 }
 
