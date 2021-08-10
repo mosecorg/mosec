@@ -7,7 +7,6 @@ use std::{fs, u32};
 
 use async_channel::{bounded, Receiver, Sender};
 use bytes::Bytes;
-use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
 
@@ -58,6 +57,7 @@ impl Task {
 struct Processor {
     tasks: Arc<Mutex<TaskHub>>,
     batch_size: u32,
+    wait_time: Duration,
     listener: UnixListener,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
@@ -67,6 +67,7 @@ impl Processor {
     fn new(
         tasks: Arc<Mutex<TaskHub>>,
         batch_size: u32,
+        wait_time: Duration,
         path: &Path,
         receiver: Receiver<u32>,
         sender: Sender<u32>,
@@ -76,6 +77,7 @@ impl Processor {
         Processor {
             tasks,
             batch_size,
+            wait_time,
             listener,
             receiver,
             sender,
@@ -88,6 +90,7 @@ impl Processor {
             let input_clone = self.receiver.clone();
             let output_clone = self.sender.clone();
             let batch_size = self.batch_size;
+            let wait_time = self.wait_time;
             match self.listener.accept().await {
                 Ok((stream, addr)) => {
                     println!("Accepted connection from {:?}", addr);
@@ -99,9 +102,15 @@ impl Processor {
                             {
                                 break;
                             }
-                            if send_message(&stream, &tasks_clone, &input_clone, batch_size)
-                                .await
-                                .is_err()
+                            if send_message(
+                                &stream,
+                                &tasks_clone,
+                                &input_clone,
+                                batch_size,
+                                wait_time,
+                            )
+                            .await
+                            .is_err()
                             {
                                 break;
                             }
@@ -217,6 +226,7 @@ async fn send_message(
     tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
     receiver: &Receiver<u32>,
     batch_size: u32,
+    wait_time: Duration,
 ) -> Result<(), ProtocolError> {
     // get batch from the channel
     let mut batch: Vec<u32> = Vec::new();
@@ -226,7 +236,7 @@ async fn send_message(
             batch.push(id);
             // timing from receiving the first item
             if tokio::time::timeout(
-                tokio::time::Duration::from_millis(10),
+                wait_time,
                 get_batch(receiver, batch_size as usize, &mut batch),
             )
             .await
@@ -249,7 +259,6 @@ async fn send_message(
     if stream.writable().await.is_err() {
         return Err(ProtocolError::WriteError);
     }
-    
 
     Ok(())
 }
@@ -290,29 +299,37 @@ impl TaskHub {
 #[derive(Debug, Clone)]
 pub struct Protocol {
     capacity: usize,
-    batches: Vec<u32>,
     path: String,
+    batches: Vec<u32>,
     sender: Sender<u32>,
     receiver: Receiver<u32>,
-    pub timeout: Duration,
     tasks: Arc<Mutex<TaskHub>>,
+    wait_time: Duration,
+    pub timeout: Duration,
 }
 
 impl Protocol {
-    pub fn new(batches: Vec<u32>, unix_dir: &str, capacity: usize, timeout: Duration) -> Self {
+    pub fn new(
+        batches: Vec<u32>,
+        unix_dir: &str,
+        capacity: usize,
+        timeout: Duration,
+        wait_time: Duration,
+    ) -> Self {
         let (sender, receiver) = bounded::<u32>(capacity);
         Protocol {
             capacity,
-            batches,
             path: unix_dir.to_string(),
+            batches,
             sender,
             receiver,
-            timeout,
             tasks: Arc::new(Mutex::new(TaskHub {
                 table: HashMap::with_capacity(capacity),
                 notifiers: HashMap::with_capacity(capacity),
                 current_id: 0,
             })),
+            timeout,
+            wait_time,
         }
     }
 
@@ -328,6 +345,7 @@ impl Protocol {
             let processor = Processor::new(
                 self.tasks.clone(),
                 *batch,
+                self.wait_time,
                 &folder.join(format!("ipc_{:?}.socket", i)),
                 last_receiver.clone(),
                 sender.clone(),

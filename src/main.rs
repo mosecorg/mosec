@@ -53,6 +53,7 @@ async fn main() {
         "/tmp/mosec",
         1024,
         Duration::from_millis(3000),
+        Duration::from_millis(10),
     );
     let mut protocol_runner = protocol.clone();
     tokio::spawn(async move {
