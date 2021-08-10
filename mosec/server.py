@@ -148,7 +148,8 @@ class Server:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode:
                     self._terminate(
-                        ctr_exitcode, f"mosec controller exited on error: {ctr_exitcode}"
+                        ctr_exitcode,
+                        f"mosec controller exited on error: {ctr_exitcode}",
                     )
             sleep(GUARD_CHECK_INTERVAL)
 
