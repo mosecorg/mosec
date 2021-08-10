@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::usize;
@@ -55,73 +55,80 @@ impl Task {
 }
 
 #[derive(Debug)]
-struct Processor {
+struct TaskHub {
+    table: HashMap<u32, Task>,
+    notifiers: HashMap<u32, oneshot::Sender<()>>,
+    current_id: u32,
+}
+
+impl TaskHub {
+    pub fn update_multi_tasks(&mut self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
+        for i in 0..ids.len() {
+            let task = self.table.get_mut(&ids[i]);
+            match task {
+                Some(task) => {
+                    task.update(code, &data[i]);
+                    match code {
+                        TaskCode::Normal => {}
+                        _ => {
+                            if let Some(s) = self.notifiers.remove(&ids[i]) {
+                                s.send(()).unwrap();
+                            } else {
+                                eprintln!("no notifier for task {}", &ids[i]);
+                            }
+                        }
+                    }
+                }
+                None => {
+                    eprintln!("cannot find id: {}", ids[i]);
+                }
+            }
+        }
+    }
+}
+
+async fn communicate(
+    path: PathBuf,
     tasks: Arc<Mutex<TaskHub>>,
     batch_size: u32,
     wait_time: Duration,
-    listener: UnixListener,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
-}
-
-impl Processor {
-    fn new(
-        tasks: Arc<Mutex<TaskHub>>,
-        batch_size: u32,
-        wait_time: Duration,
-        path: &Path,
-        receiver: Receiver<u32>,
-        sender: Sender<u32>,
-    ) -> Self {
-        println!("listen on {:?}", path);
-        let listener = UnixListener::bind(path).unwrap();
-        Processor {
-            tasks,
-            batch_size,
-            wait_time,
-            listener,
-            receiver,
-            sender,
-        }
-    }
-
-    async fn run(&self) {
-        loop {
-            let tasks_clone = self.tasks.clone();
-            let input_clone = self.receiver.clone();
-            let output_clone = self.sender.clone();
-            let batch_size = self.batch_size;
-            let wait_time = self.wait_time;
-            match self.listener.accept().await {
-                Ok((mut stream, addr)) => {
-                    println!("Accepted connection from {:?}", addr);
-                    tokio::spawn(async move {
-                        loop {
-                            if receive_message(&mut stream, &tasks_clone, &output_clone)
-                                .await
-                                .is_err()
-                            {
-                                break;
-                            }
-                            if send_message(
-                                &mut stream,
-                                &tasks_clone,
-                                &input_clone,
-                                batch_size,
-                                wait_time,
-                            )
+) {
+    let listener = UnixListener::bind(path).unwrap();
+    loop {
+        let tasks_clone = tasks.clone();
+        let sender_clone = sender.clone();
+        let receiver_clone = receiver.clone();
+        match listener.accept().await {
+            Ok((mut stream, addr)) => {
+                println!("Accepted connection from {:?}", addr);
+                tokio::spawn(async move {
+                    loop {
+                        if receive_message(&mut stream, &tasks_clone, &sender_clone)
                             .await
                             .is_err()
-                            {
-                                break;
-                            }
+                        {
+                            break;
                         }
-                    });
-                }
-                Err(e) => {
-                    eprintln!("Error accepting connection: {:?}", e);
-                    break;
-                }
+                        if send_message(
+                            &mut stream,
+                            &tasks_clone,
+                            &receiver_clone,
+                            batch_size,
+                            wait_time,
+                        )
+                        .await
+                        .is_err()
+                        {
+                            break;
+                        }
+                    }
+                });
+            }
+            Err(e) => {
+                eprintln!("Error accepting connection: {:?}", e);
+                break;
             }
         }
     }
@@ -276,39 +283,6 @@ async fn send_message(
     Ok(())
 }
 
-#[derive(Debug)]
-struct TaskHub {
-    table: HashMap<u32, Task>,
-    notifiers: HashMap<u32, oneshot::Sender<()>>,
-    current_id: u32,
-}
-
-impl TaskHub {
-    pub fn update_multi_tasks(&mut self, code: TaskCode, ids: &Vec<u32>, data: &Vec<Bytes>) {
-        for i in 0..ids.len() {
-            let task = self.table.get_mut(&ids[i]);
-            match task {
-                Some(task) => {
-                    task.update(code, &data[i]);
-                    match code {
-                        TaskCode::Normal => {}
-                        _ => {
-                            if let Some(s) = self.notifiers.remove(&ids[i]) {
-                                s.send(()).unwrap();
-                            } else {
-                                eprintln!("no notifier for task {}", &ids[i]);
-                            }
-                        }
-                    }
-                }
-                None => {
-                    eprintln!("cannot find id: {}", ids[i]);
-                }
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Protocol {
     capacity: usize,
@@ -348,6 +322,7 @@ impl Protocol {
 
     pub async fn run(&mut self) {
         let mut last_receiver = self.receiver.clone();
+        let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
         if !folder.is_dir() {
             fs::create_dir(folder).unwrap();
@@ -355,17 +330,18 @@ impl Protocol {
 
         for (i, batch) in self.batches.iter().enumerate() {
             let (sender, receiver) = bounded::<u32>(self.capacity);
-            let processor = Processor::new(
-                self.tasks.clone(),
-                *batch,
-                self.wait_time,
-                &folder.join(format!("ipc_{:?}.socket", i)),
+            let path = folder.join(format!("ipc_{:?}.socket", i));
+            let tasks_clone = self.tasks.clone();
+
+            let batch_size = *batch;
+            tokio::spawn(communicate(
+                path,
+                tasks_clone,
+                batch_size,
+                wait_time,
                 last_receiver.clone(),
                 sender.clone(),
-            );
-            tokio::spawn(async move {
-                processor.run().await;
-            });
+            ));
             last_receiver = receiver.clone();
         }
         self.receiver = last_receiver;
