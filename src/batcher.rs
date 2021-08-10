@@ -42,8 +42,10 @@ impl Batcher {
                     deadline = Instant::now().add(self.wait);
                 }
             }
-            self.outbound[choice].send(batch.clone()).unwrap();
-            println!("batched {:?} for downstream-{}", batch, choice);
+            if batch.len() > 1 {
+                println!("batched {:?} for downstream-{}", &batch, choice);
+            }
+            self.outbound[choice].send(batch).unwrap();
             // round robin
             choice += 1;
             if choice >= num_outbound {

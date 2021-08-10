@@ -10,8 +10,8 @@ const CONCURRENCY: usize = 20;
 fn add_new_task() {
     let tp = pool::TaskPool::new();
     let (cancel_tx, cancel_rx) = bounded(1);
-    let (id, result_rx) = pool::init_task(&tp, Bytes::from("my_task"), cancel_rx);
-    let res = pool::get_task(&tp, id.unwrap()).unwrap();
+    let (id, result_rx) = pool::init_task(&tp, Bytes::from("my_task"), cancel_rx).unwrap();
+    let res = pool::get_task(&tp, id).unwrap();
     assert_eq!(res.data, Bytes::from("my_task"));
 }
 
@@ -30,7 +30,7 @@ fn add_new_task_multi_thread() {
             let mut data = String::new();
             data.push_str("task");
             data.push_str(&i.to_string());
-            let (id, result_rx) = pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx);
+            let (id, result_rx) = pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx).unwrap();
             let mut map = ids.lock().unwrap();
             map.push(id);
             let mut map = datum.lock().unwrap();
@@ -44,7 +44,7 @@ fn add_new_task_multi_thread() {
 
     let datum = datum.lock().unwrap();
     for (i, &id) in ids.lock().unwrap().iter().enumerate() {
-        let task = pool::get_task(&tp, id.unwrap()).unwrap();
+        let task = pool::get_task(&tp, id).unwrap();
         assert_eq!(task.data, Bytes::from(datum[i].clone()));
     }
     println!("{:?}", tp);
@@ -65,9 +65,9 @@ fn update_task_multi_thread() {
             let mut data = String::new();
             data.push_str("task");
             data.push_str(&i.to_string());
-            let (id, result_rx) = pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx);
+            let (id, result_rx) = pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx).unwrap();
             let mut map = ids.lock().unwrap();
-            map.push(id.unwrap());
+            map.push(id);
             let mut map = datum.lock().unwrap();
             map.push(data);
         });

@@ -19,7 +19,7 @@ pub struct Task {
     pub data: Bytes,
 
     // notifiers
-    pub complete: Sender<()>,
+    pub complete: Sender<usize>,
     pub cancel: Receiver<()>,
 }
 
@@ -41,7 +41,7 @@ impl TaskPool {
         &mut self,
         tid: usize,
         data: Bytes,
-        complete: Sender<()>,
+        complete: Sender<usize>,
         cancel: Receiver<()>,
     ) -> Result<usize, errors::MosecError> {
         let mut id = tid;
@@ -78,17 +78,20 @@ pub fn init_task(
     tp: &Arc<Mutex<TaskPool>>,
     data: Bytes,
     cancel: Receiver<()>,
-) -> (Result<usize, errors::MosecError>, Receiver<()>) {
+) -> Result<(usize, Receiver<usize>), errors::MosecError> {
     let mut tp = tp.lock().unwrap();
     let (final_tx, result_rx) = bounded(1);
-    (tp.put(0, data, final_tx, cancel), result_rx)
+    match tp.put(0, data, final_tx, cancel) {
+        Ok(id) => Ok((id, result_rx)),
+        Err(error) => Err(error),
+    }
 }
 
 pub fn update_task(
     tp: &Arc<Mutex<TaskPool>>,
     tid: usize,
     data: Bytes,
-    complete: Sender<()>,
+    complete: Sender<usize>,
     cancel: Receiver<()>,
 ) -> Result<usize, errors::MosecError> {
     let mut tp = tp.lock().unwrap();
