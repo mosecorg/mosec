@@ -38,11 +38,8 @@ pub async fn error_handler(err: RouteError) -> Response<Body> {
 
 #[derive(Debug)]
 pub enum ProtocolError {
-    SocketClosed,
-    ReadIncomplete,
     ReadError,
     ReceiveError,
-    WriteIncomplete,
     WriteError,
     SendError,
 }

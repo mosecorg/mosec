@@ -6,7 +6,8 @@ use std::usize;
 use std::{fs, u32};
 
 use async_channel::{bounded, Receiver, Sender};
-use bytes::Bytes;
+use bytes::{BufMut, Bytes, BytesMut};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
 
@@ -92,18 +93,18 @@ impl Processor {
             let batch_size = self.batch_size;
             let wait_time = self.wait_time;
             match self.listener.accept().await {
-                Ok((stream, addr)) => {
+                Ok((mut stream, addr)) => {
                     println!("Accepted connection from {:?}", addr);
                     tokio::spawn(async move {
                         loop {
-                            if receive_message(&stream, &tasks_clone, &output_clone)
+                            if receive_message(&mut stream, &tasks_clone, &output_clone)
                                 .await
                                 .is_err()
                             {
                                 break;
                             }
                             if send_message(
-                                &stream,
+                                &mut stream,
                                 &tasks_clone,
                                 &input_clone,
                                 batch_size,
@@ -126,23 +127,8 @@ impl Processor {
     }
 }
 
-async fn read_exact(stream: &UnixStream, buf: &mut [u8]) -> Result<(), ProtocolError> {
-    loop {
-        match stream.try_read(buf) {
-            Ok(0) => return Err(ProtocolError::SocketClosed),
-            Ok(n) if n != buf.len() => return Err(ProtocolError::ReadIncomplete),
-            Ok(_) => return Ok(()),
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => continue,
-            Err(e) => {
-                eprintln!("read socket err: {}", &e);
-                return Err(ProtocolError::ReadError);
-            }
-        }
-    }
-}
-
 async fn receive_message(
-    stream: &UnixStream,
+    stream: &mut UnixStream,
     tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
     sender: &Sender<u32>,
 ) -> Result<(), ProtocolError> {
@@ -151,8 +137,8 @@ async fn receive_message(
     }
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
     let mut num_buf = [0u8; NUM_U8_SIZE];
-    read_exact(stream, &mut flag_buf).await?;
-    read_exact(stream, &mut num_buf).await?;
+    stream.read_exact(&mut flag_buf).await.unwrap();
+    stream.read_exact(&mut num_buf).await.unwrap();
     let flag = u16::from_be_bytes(flag_buf);
     let num = u16::from_be_bytes(num_buf);
 
@@ -173,12 +159,12 @@ async fn receive_message(
     let mut ids: Vec<u32> = Vec::new();
     let mut data: Vec<Bytes> = Vec::new();
     for _ in 0..num {
-        read_exact(stream, &mut id_buf).await?;
-        read_exact(stream, &mut length_buf).await?;
+        stream.read_exact(&mut id_buf).await.unwrap();
+        stream.read_exact(&mut length_buf).await.unwrap();
         let id = u32::from_be_bytes(id_buf);
         let length = u32::from_be_bytes(length_buf);
         let mut data_buf = vec![0u8; length as usize];
-        read_exact(stream, &mut data_buf).await?;
+        stream.read_exact(&mut data_buf).await.unwrap();
         ids.push(id);
         data.push(data_buf.into());
     }
@@ -222,7 +208,7 @@ async fn get_batch(receiver: &Receiver<u32>, batch_size: usize, batch_vec: &mut 
 }
 
 async fn send_message(
-    stream: &UnixStream,
+    stream: &mut UnixStream,
     tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
     receiver: &Receiver<u32>,
     batch_size: u32,
@@ -256,9 +242,36 @@ async fn send_message(
     }
 
     // send the batch tasks to the stream
+    let mut data: Vec<Bytes> = Vec::with_capacity(batch.len());
+    {
+        let tasks = tasks.lock().await;
+        for id in batch.iter() {
+            if let Some(task) = tasks.table.get(id) {
+                data.push(task.data.clone());
+            }
+        }
+    }
+    if data.len() != batch.len() {
+        eprintln!(
+            "cannot get all the data from table: {}/{}",
+            data.len(),
+            batch.len()
+        );
+        return Err(ProtocolError::SendError);
+    }
+
     if stream.writable().await.is_err() {
         return Err(ProtocolError::WriteError);
     }
+    let mut buffer = BytesMut::new();
+    buffer.put_u16(0); // flag
+    buffer.put_u16(batch.len() as u16);
+    for i in 0..batch.len() {
+        buffer.put_u32(batch[i]);
+        buffer.put_u32(data[i].len() as u32);
+        buffer.put(data[i].clone());
+    }
+    stream.write_all(&buffer).await.unwrap();
 
     Ok(())
 }
