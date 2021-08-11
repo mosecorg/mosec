@@ -5,7 +5,7 @@ import subprocess
 from multiprocessing.synchronize import Event
 from pathlib import Path
 from time import monotonic, sleep
-from typing import List, Tuple, Type, Union
+from typing import List, Optional, Tuple, Type, Union
 
 import pkg_resources
 from pydantic import BaseModel, BaseSettings, conint, validate_arguments
@@ -37,7 +37,7 @@ class Server:
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
         self._coordinator_shutdown: List[List[Union[Event, None]]] = []
 
-        self._controller_process: mp.Process = None
+        self._controller_process: Optional[mp.Process] = None
 
         self._configs: BaseSettings = Settings()
 
