@@ -34,7 +34,7 @@ lint:
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
-	mypy ${PY_SOURCE_FILES}
+	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	rustfmt --check ${RUST_SOURCE_FILES}
 
 .PHONY: test doc
