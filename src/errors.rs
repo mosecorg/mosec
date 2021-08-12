@@ -1,4 +1,4 @@
-use derive_more::{Display, Error};
+use derive_more::Display;
 use hyper::{Body, Response, StatusCode};
 use routerify::RouteError;
 
@@ -6,6 +6,9 @@ use routerify::RouteError;
 pub enum WebError {
     #[display(fmt = "inference timeout")]
     Timeout,
+
+    #[display(fmt = "bad request")]
+    BadRequestError,
 
     #[display(fmt = "bad request: validation error")]
     ValidationError,
@@ -39,4 +42,12 @@ pub async fn error_handler(err: RouteError) -> Response<Body> {
         .status(status)
         .body(Body::from(web_err.to_string()))
         .unwrap()
+}
+
+#[derive(Debug)]
+pub enum ProtocolError {
+    ReadError,
+    ReceiveError,
+    WriteError,
+    SendError,
 }

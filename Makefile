@@ -35,10 +35,6 @@ lint:
 	black --check --diff ${PY_SOURCE_FILES}
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
-<<<<<<< HEAD
-	cargo +nightly fmt -- --check 
-=======
 	rustfmt --check ${RUST_SOURCE_FILES}
->>>>>>> origin/main
 
 .PHONY: test doc
