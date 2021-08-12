@@ -287,6 +287,24 @@ async fn send_message(
     Ok(())
 }
 
+async fn finish_task(receiver: Receiver<u32>, tasks: Arc<tokio::sync::Mutex<TaskHub>>) {
+    loop {
+        match receiver.recv().await {
+            Ok(id) => {
+                let mut tasks = tasks.lock().await;
+                if let Some(notifier) = tasks.notifiers.remove(&id) {
+                    notifier.send(()).unwrap();
+                } else {
+                    error!(%id, "cannot find the notifier");
+                }
+            },
+            Err(err) => {
+                error!(%err, "receive from the last channel error");
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Protocol {
     capacity: usize,
@@ -350,7 +368,10 @@ impl Protocol {
             ));
             last_receiver = receiver.clone();
         }
+        let tasks_clone = self.tasks.clone();
         self.receiver = last_receiver;
+        let receiver_clone = self.receiver.clone();
+        tokio::spawn(finish_task(receiver_clone, tasks_clone));
     }
 
     pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> u32 {
