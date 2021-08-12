@@ -293,7 +293,9 @@ async fn finish_task(receiver: Receiver<u32>, tasks: Arc<tokio::sync::Mutex<Task
             Ok(id) => {
                 let mut tasks = tasks.lock().await;
                 if let Some(notifier) = tasks.notifiers.remove(&id) {
-                    notifier.send(()).unwrap();
+                    if !notifier.is_closed() {
+                        notifier.send(()).unwrap();
+                    }
                 } else {
                     error!(%id, "cannot find the notifier");
                 }
