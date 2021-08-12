@@ -96,7 +96,7 @@ async fn communicate(
     receiver: Receiver<u32>,
     sender: Sender<u32>,
 ) {
-    let listener = UnixListener::bind(path).unwrap();
+    let listener = UnixListener::bind(&path).expect(&path.to_string_lossy());
     loop {
         let tasks_clone = tasks.clone();
         let sender_clone = sender.clone();
@@ -176,7 +176,7 @@ async fn receive_message(
         ids.push(id);
         data.push(data_buf.into());
     }
-    debug!(?ids, "received tasks from the stream");
+    debug!(?ids, ?code, ?num, ?flag, "received tasks from the stream");
 
     // update tasks received from the stream
     {
@@ -328,11 +328,11 @@ impl Protocol {
         let mut last_receiver = self.receiver.clone();
         let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
-        if !folder.is_dir() {
-            fs::create_dir(folder).unwrap();
-        } else if folder.is_dir() {
+        if folder.is_dir() {
+            info!(?folder, "path already exist, try to remove it");
             fs::remove_dir_all(folder).unwrap();
         }
+        fs::create_dir(folder).unwrap();
 
         for (i, batch) in self.batches.iter().enumerate() {
             let (sender, receiver) = bounded::<u32>(self.capacity);
@@ -360,11 +360,13 @@ impl Protocol {
         tasks.notifiers.insert(id, notifier);
         let _ = tasks.current_id.wrapping_add(1);
         debug!(%id, "add a new task");
+        self.sender.send(id).await.unwrap();
         id
     }
 
     pub async fn get_task(&self, id: u32) -> Option<Task> {
         let mut tasks = self.tasks.lock().await;
+        debug!(%id, "remove task from table");
         tasks.table.remove(&id)
     }
 }
