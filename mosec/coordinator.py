@@ -71,7 +71,7 @@ class Coordinator:
 
         self.protocol = Protocol(
             name=self.name,
-            addr=os.path.join(socket_prefix, f"{stage_id}.sock"),
+            addr=os.path.join(socket_prefix, f"ipc_{stage_id}.socket"),
             timeout=PROTOCOL_TIMEOUT,
         )
 
@@ -193,7 +193,7 @@ class Coordinator:
                 err_msg = str(err).replace("\n", " - ")
                 logger.info(f"{self.name} validation error: {err_msg}")
                 status = self.protocol.FLAG_VALIDATION_ERROR
-                payloads = (self.worker.pack(err.errors()),)
+                payloads = (self.worker.serialize(err.errors()),)
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
                 status = self.protocol.FLAG_INTERNAL_ERROR
