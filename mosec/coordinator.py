@@ -71,7 +71,7 @@ class Coordinator:
 
         self.protocol = Protocol(
             name=self.name,
-            addr=os.path.join(socket_prefix, f"{worker.__name__}.sock"),
+            addr=os.path.join(socket_prefix, f"{stage_id}.sock"),
             timeout=PROTOCOL_TIMEOUT,
         )
 
