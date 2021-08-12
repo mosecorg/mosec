@@ -297,7 +297,7 @@ async fn finish_task(receiver: Receiver<u32>, tasks: Arc<tokio::sync::Mutex<Task
                 } else {
                     error!(%id, "cannot find the notifier");
                 }
-            },
+            }
             Err(err) => {
                 error!(%err, "receive from the last channel error");
             }

@@ -8,7 +8,8 @@ from mosec import Server, Worker
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
-    "%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s - %(message)s")
+    "%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
+)
 sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
