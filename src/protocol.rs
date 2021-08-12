@@ -137,7 +137,7 @@ async fn communicate(
 
 async fn receive_message(
     stream: &mut UnixStream,
-    tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
+    tasks: &Arc<Mutex<TaskHub>>,
     sender: &Sender<u32>,
 ) -> Result<(), ProtocolError> {
     if stream.readable().await.is_err() {
@@ -219,7 +219,7 @@ async fn get_batch(receiver: &Receiver<u32>, batch_size: usize, batch_vec: &mut 
 
 async fn send_message(
     stream: &mut UnixStream,
-    tasks: &Arc<tokio::sync::Mutex<TaskHub>>,
+    tasks: &Arc<Mutex<TaskHub>>,
     receiver: &Receiver<u32>,
     batch_size: u32,
     wait_time: Duration,
@@ -287,7 +287,7 @@ async fn send_message(
     Ok(())
 }
 
-async fn finish_task(receiver: Receiver<u32>, tasks: Arc<tokio::sync::Mutex<TaskHub>>) {
+async fn finish_task(receiver: Receiver<u32>, tasks: Arc<Mutex<TaskHub>>) {
     loop {
         match receiver.recv().await {
             Ok(id) => {
@@ -349,7 +349,7 @@ impl Protocol {
         let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
         if folder.is_dir() {
-            info!(?folder, "path already exist, try to remove it");
+            info!(path=?folder, "path already exist, try to remove it");
             fs::remove_dir_all(folder).unwrap();
         }
         fs::create_dir(folder).unwrap();
