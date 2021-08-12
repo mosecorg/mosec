@@ -109,7 +109,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
     mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.1)
 
-    sock_addr = join(socket_prefix, f"{EchoWorkerJSON.__name__}.sock")
+    sock_addr = join(socket_prefix, f"{base_test_config.get('stage_id')}.sock")
     shutdown = mp.get_context(base_test_config.pop("c_ctx")).Event()
 
     with CleanDirContext():
@@ -174,7 +174,7 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
     c_ctx = base_test_config.pop("c_ctx")
     base_test_config["max_batch_size"] = 8
 
-    sock_addr = join(socket_prefix, f"{worker.__name__}.sock")
+    sock_addr = join(socket_prefix, f"{base_test_config.get('stage_id')}.sock")
     shutdown = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
