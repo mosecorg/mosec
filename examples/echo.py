@@ -36,7 +36,7 @@ class Inference(Worker):
 
 class Postprocess(Worker):
     def forward(self, data) -> EchoResp:
-        logger.debug("post received {data}")
+        logger.debug(f"post received {data}")
         return EchoResp(msg=f"sleep {data} seconds")
 
 
