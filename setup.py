@@ -38,7 +38,7 @@ setup(
         "dev": [
             "pytest>=6",
             "pytest-mock>=3.5",
-            "mypy>=0.812",
+            "mypy>=0.910",
             "flake8>=3.8",
             "black>=20.8b1",
             "isort>=5.6",

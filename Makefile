@@ -28,13 +28,13 @@ format:
 	autoflake --in-place --recursive ${PY_SOURCE_FILES}
 	isort --project=mosec ${PY_SOURCE_FILES}
 	black ${PY_SOURCE_FILES}
-	rustfmt ${RUST_SOURCE_FILES}
+	cargo +nightly fmt --all
 
 lint:
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
-	rustfmt --check ${RUST_SOURCE_FILES}
+	cargo +nightly fmt -- --check 
 
 .PHONY: test doc
