@@ -1,7 +1,8 @@
-use bytes::Bytes;
-use mosec::protocol;
 use std::os::unix::net::{SocketAddr, UnixListener, UnixStream};
 use std::{fs, thread};
+
+use bytes::Bytes;
+use mosec::protocol;
 
 const TEST_PATH: &str = "/tmp/mosec_test";
 const TEST_FLAG: u16 = protocol::FLAG_OK;

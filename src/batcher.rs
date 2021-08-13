@@ -1,14 +1,15 @@
-use crossbeam_channel::{select, tick, Receiver, Sender};
 use std::ops::Add;
 use std::process;
 use std::time::{Duration, Instant};
 
+use crossbeam_channel::{select, tick, Receiver, Sender};
+
 pub struct Batcher {
-    pub limit: usize,       // batch size limit
-    pub wait: Duration,     // wait time for batching
-    pub interval: Duration, // interval time for ticker
-    pub inbound: Receiver<usize>,
-    pub outbound: Sender<Vec<usize>>,
+    pub limit: usize,                 // batch size limit
+    pub wait: Duration,               // wait time for batching
+    pub interval: Duration,           // interval time for ticker
+    pub inbound: Receiver<usize>,     // symmetrical to coordinator.rs
+    pub outbound: Sender<Vec<usize>>, // single input, (maybe) multiple output
 }
 
 impl Batcher {

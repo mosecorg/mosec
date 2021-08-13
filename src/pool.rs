@@ -1,8 +1,10 @@
-use crate::errors;
-use bytes::Bytes;
-use crossbeam_channel::{bounded, Receiver, Sender};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
+use bytes::Bytes;
+use crossbeam_channel::{bounded, Receiver, Sender};
+
+use crate::errors;
 
 #[derive(Debug, Clone, Copy)]
 pub enum TaskStatusCode {
@@ -41,6 +43,7 @@ impl TaskPool {
         &mut self,
         tid: usize,
         data: Bytes,
+        status: TaskStatusCode,
         complete: Sender<usize>,
         cancel: Receiver<()>,
     ) -> Result<usize, errors::MosecError> {
@@ -56,7 +59,7 @@ impl TaskPool {
         match self.tasks.insert(
             id,
             Task {
-                status: TaskStatusCode::UnknownError,
+                status,
                 data,
                 complete,
                 cancel,
@@ -81,7 +84,7 @@ pub fn init_task(
 ) -> Result<(usize, Receiver<usize>), errors::MosecError> {
     let mut tp = tp.lock().unwrap();
     let (final_tx, result_rx) = bounded(1);
-    match tp.put(0, data, final_tx, cancel) {
+    match tp.put(0, data, TaskStatusCode::UnknownError, final_tx, cancel) {
         Ok(id) => Ok((id, result_rx)),
         Err(error) => Err(error),
     }
@@ -91,11 +94,12 @@ pub fn update_task(
     tp: &Arc<Mutex<TaskPool>>,
     tid: usize,
     data: Bytes,
+    status: TaskStatusCode,
     complete: Sender<usize>,
     cancel: Receiver<()>,
 ) -> Result<usize, errors::MosecError> {
     let mut tp = tp.lock().unwrap();
-    tp.put(tid, data, complete, cancel)
+    tp.put(tid, data, status, complete, cancel)
 }
 
 pub fn get_task(tp: &Arc<Mutex<TaskPool>>, id: usize) -> Result<Task, errors::MosecError> {

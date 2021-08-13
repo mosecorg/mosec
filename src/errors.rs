@@ -27,6 +27,9 @@ pub enum MosecError {
 
     #[display(fmt = "task already exists in task pool")]
     TaskAlreadyExistsError,
+
+    #[display(fmt = "broken pipe between threads")]
+    BrokenPipeError,
 }
 
 pub async fn error_handler(err: RouteError) -> Response<Body> {

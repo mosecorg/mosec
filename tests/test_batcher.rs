@@ -1,7 +1,8 @@
-use crossbeam_channel;
-use mosec::batcher;
 use std::thread;
 use std::time::Duration;
+
+use crossbeam_channel;
+use mosec::batcher;
 
 const TIME_DOWNSCALE: u64 = 10;
 

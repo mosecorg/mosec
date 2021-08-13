@@ -1,7 +1,8 @@
-use bytes::Bytes;
 use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::usize;
+
+use bytes::Bytes;
 
 const LENGTH_TASK_FLAG: usize = 2;
 const LENGTH_TASK_BATCH: usize = 2;

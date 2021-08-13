@@ -98,7 +98,8 @@ class Server:
 
                 if self._coordinator_pools and all(self._coordinator_pools[stage_id]):
                     # this stage is healthy
-                    # logger.info("dead loop")
+                    print(self._coordinator_pools[stage_id])
+                    print("healthy")
                     continue
 
                 if self._coordinator_pools and not any(self._coordinator_pools):
@@ -200,6 +201,6 @@ class Server:
         """Run the mosec model server!"""
         self._validate()
         self._parse_args()
-        self._start_controller()
+        # self._start_controller()
         self._manage_coordinators()
         self._halt()

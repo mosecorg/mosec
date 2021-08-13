@@ -1,8 +1,9 @@
+use std::sync::{Arc, Mutex};
+use std::thread;
+
 use bytes::Bytes;
 use crossbeam_channel::bounded;
 use mosec::pool;
-use std::sync::{Arc, Mutex};
-use std::thread;
 
 const CONCURRENCY: usize = 20;
 
@@ -30,7 +31,8 @@ fn add_new_task_multi_thread() {
             let mut data = String::new();
             data.push_str("task");
             data.push_str(&i.to_string());
-            let (id, result_rx) = pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx).unwrap();
+            let (id, result_rx) =
+                pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx).unwrap();
             let mut map = ids.lock().unwrap();
             map.push(id);
             let mut map = datum.lock().unwrap();
@@ -65,7 +67,8 @@ fn update_task_multi_thread() {
             let mut data = String::new();
             data.push_str("task");
             data.push_str(&i.to_string());
-            let (id, result_rx) = pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx).unwrap();
+            let (id, result_rx) =
+                pool::init_task(&tp, Bytes::from(data.clone()), cancel_rx).unwrap();
             let mut map = ids.lock().unwrap();
             map.push(id);
             let mut map = datum.lock().unwrap();
