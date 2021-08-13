@@ -96,11 +96,12 @@ class Server:
                     self._coordinator_shutdown[stage_id],
                 )
 
-                if all(self._coordinator_pools[stage_id]):
+                if self._coordinator_pools and all(self._coordinator_pools[stage_id]):
                     # this stage is healthy
+                    # logger.info("dead loop")
                     continue
 
-                if not any(self._coordinator_pools):
+                if self._coordinator_pools and not any(self._coordinator_pools):
                     # this stage might contain bugs
                     self._terminate(
                         1,
@@ -144,6 +145,7 @@ class Server:
                     coordinator_process.start()
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
                     self._coordinator_shutdown[stage_id][worker_id] = shutdown
+
             if self._controller_process:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode:

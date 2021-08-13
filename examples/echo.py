@@ -5,9 +5,11 @@ from pydantic import BaseModel
 
 from mosec import Server, Worker
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
+)
 sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
