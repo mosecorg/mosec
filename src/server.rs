@@ -8,7 +8,7 @@ use std::{
 
 use bytes::Bytes;
 use crossbeam_channel::{bounded, Receiver, RecvTimeoutError, Sender};
-use tracing::{debug, error, info};
+use tracing::info;
 
 use crate::{
     batcher, coordinator,

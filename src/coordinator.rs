@@ -7,7 +7,6 @@ use std::{
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use tracing::{debug, info, warn};
-use tracing_subscriber::field::debug;
 
 use crate::{
     pool::{self, TaskPool, TaskStatusCode},

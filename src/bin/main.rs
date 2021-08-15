@@ -24,7 +24,6 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     }
 
     let (result, cancel) = mosec_server.submit(req_data).unwrap();
-    println!("{:?}", mosec_server.task_pool);
     match mosec_server.retrieve(result, cancel) {
         Ok(resp_data) => Ok(Response::new(Body::from(resp_data))),
         Err(error) => {
