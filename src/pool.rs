@@ -102,6 +102,27 @@ pub fn update_task(
     tp.put(tid, data, status, complete, cancel)
 }
 
+pub fn update_task_batch(
+    tp: &Arc<Mutex<TaskPool>>,
+    ids: &Vec<usize>,
+    datum: Vec<Bytes>,
+    status: TaskStatusCode,
+    completes: &Vec<Sender<usize>>,
+    cancels: Vec<Receiver<()>>,
+) -> Result<(), errors::MosecError> {
+    for i in 0..ids.len() {
+        let tid = ids[i];
+        let data = datum[i].clone();
+        let complete = completes[i].clone();
+        let cancel = cancels[i].clone();
+        match update_task(tp, tid, data, status, complete, cancel) {
+            Ok(_) => continue,
+            Err(error) => return Err(error),
+        };
+    }
+    Ok(())
+}
+
 pub fn get_task(tp: &Arc<Mutex<TaskPool>>, id: usize) -> Result<Task, errors::MosecError> {
     let mut tp = tp.lock().unwrap();
     tp.get(id)

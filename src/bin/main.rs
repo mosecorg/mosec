@@ -1,20 +1,21 @@
-use std::{net::SocketAddr, path::PathBuf, sync::Arc, thread, time::Duration};
+use std::{env, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
-use hyper::{body::to_bytes, Body, Request, Response, Server};
-use mosec::errors::{error_handler, WebError};
-use mosec::server::{self, MServer};
-use routerify::{prelude::*, Router, RouterService};
+use hyper::{body::to_bytes, Body, Request, Response, Server, StatusCode};
+use mosec::{errors::ServiceError, server};
+use routerify::{prelude::*, RouteError, Router, RouterService};
+use tracing::error;
+use tracing_subscriber::{fmt, EnvFilter};
 
-async fn index(_: Request<Body>) -> Result<Response<Body>, WebError> {
+async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     Ok(Response::new(Body::from("MOSEC service")))
 }
 
-async fn metrics(_: Request<Body>) -> Result<Response<Body>, WebError> {
+async fn metrics(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     Ok(Response::new(Body::from("TODO: metrics")))
 }
 
-async fn inference(req: Request<Body>) -> Result<Response<Body>, WebError> {
-    let mosec_server = req.data::<Arc<MServer>>().unwrap().clone();
+async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
+    let mosec_server = req.data::<Arc<server::MServer>>().unwrap().clone();
 
     let req_data = to_bytes(req.into_body()).await.unwrap();
 
@@ -24,33 +25,53 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, WebError> {
 
     let (result, cancel) = mosec_server.submit(req_data).unwrap();
     println!("{:?}", mosec_server.task_pool);
-    match result.recv_timeout(mosec_server.service_timeout) {
-        Ok(id) => match mosec_server.retrieve(id) {
-            Ok(resp_data) => Ok(Response::new(Body::from(resp_data))),
-            Err(_) => Err(WebError::UnknownError), // TODO more detailed error
-        },
-        Err(_) => {
-            cancel.send(()).unwrap();
-            Err(WebError::Timeout)
+    match mosec_server.retrieve(result, cancel) {
+        Ok(resp_data) => Ok(Response::new(Body::from(resp_data))),
+        Err(error) => {
+            error!("service error: {:?}", error);
+            Err(error)
         }
     }
 }
 
+async fn error_handler(err: RouteError) -> Response<Body> {
+    let web_err = err.downcast::<ServiceError>().unwrap();
+    let status = match web_err.as_ref() {
+        ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
+        ServiceError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
+        ServiceError::BadRequestError => StatusCode::BAD_REQUEST,
+        ServiceError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+        ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
+    };
+
+    Response::builder()
+        .status(status)
+        .body(Body::from(web_err.to_string()))
+        .unwrap()
+}
+
 #[tokio::main]
 async fn main() {
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info")
+    }
+
+    fmt::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     let mosec_server = server::MServer::new(
-        vec![2, 1],
+        vec![1, 8, 1],
         Duration::from_millis(50),
         Duration::from_millis(10),
-        PathBuf::from("/tmp/mosec"),
-        vec![1, 2],
+        String::from("/tmp/mosec"),
         1024,
         Duration::from_secs(3),
     );
-    server::run(&mosec_server);
+    server::run(mosec_server.clone());
 
     let state_router = Router::builder()
-        .data(Arc::clone(&mosec_server))
+        .data(mosec_server)
         .post("/", inference)
         .build()
         .unwrap();
@@ -67,6 +88,6 @@ async fn main() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let server = Server::bind(&addr).serve(service);
     if let Err(err) = server.await {
-        eprintln!("Server error: {}", err);
+        error!("Server error: {}", err);
     }
 }

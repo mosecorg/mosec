@@ -3,18 +3,18 @@ use std::process;
 use std::time::{Duration, Instant};
 
 use crossbeam_channel::{select, tick, Receiver, Sender};
+use tracing::info;
 
-pub struct Batcher {
-    pub limit: usize,                 // batch size limit
-    pub wait: Duration,               // wait time for batching
-    pub interval: Duration,           // interval time for ticker
-    pub inbound: Receiver<usize>,     // symmetrical to coordinator.rs
-    pub outbound: Sender<Vec<usize>>, // single input, (maybe) multiple output
+struct Batcher {
+    limit: usize,                 // batch size limit
+    wait: Duration,               // wait time for batching
+    interval: Duration,           // interval time for ticker
+    inbound: Receiver<usize>,     // symmetrical to coordinator.rs
+    outbound: Sender<Vec<usize>>, // single input, (maybe) multiple output
 }
 
 impl Batcher {
     pub fn run(&self) {
-        println!("running batcher...");
         let mut deadline = Instant::now().add(self.wait);
         let ticker = tick(self.interval);
         loop {
@@ -45,4 +45,23 @@ impl Batcher {
                 .expect("Batcher error: unable to send");
         }
     }
+}
+
+pub fn start_batcher(
+    stage_id: usize,
+    limit: usize,
+    wait: Duration,
+    interval: Duration,
+    inbound: Receiver<usize>,
+    outbound: Sender<Vec<usize>>,
+) {
+    info!("start batcher @ stage-{} with size {}", stage_id, limit);
+    let b = Batcher {
+        limit,
+        wait,
+        interval,
+        inbound,
+        outbound,
+    };
+    b.run();
 }

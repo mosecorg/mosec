@@ -1,9 +1,7 @@
-use derive_more::Display;
-use hyper::{Body, Response, StatusCode};
-use routerify::RouteError;
+use derive_more::{Display, Error};
 
 #[derive(Debug, Display, Error)]
-pub enum WebError {
+pub enum ServiceError {
     #[display(fmt = "inference timeout")]
     Timeout,
 
@@ -30,21 +28,6 @@ pub enum MosecError {
 
     #[display(fmt = "broken pipe between threads")]
     BrokenPipeError,
-}
-
-pub async fn error_handler(err: RouteError) -> Response<Body> {
-    let web_err = err.downcast::<WebError>().unwrap();
-    let status = match web_err.as_ref() {
-        WebError::Timeout => StatusCode::REQUEST_TIMEOUT,
-        WebError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
-        WebError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-        WebError::UnknownError => StatusCode::NOT_IMPLEMENTED,
-    };
-
-    Response::builder()
-        .status(status)
-        .body(Body::from(web_err.to_string()))
-        .unwrap()
 }
 
 #[derive(Debug)]

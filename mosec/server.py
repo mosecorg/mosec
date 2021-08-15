@@ -96,10 +96,8 @@ class Server:
                     self._coordinator_shutdown[stage_id],
                 )
 
-                if self._coordinator_pools and all(self._coordinator_pools[stage_id]):
+                if all(self._coordinator_pools[stage_id]):
                     # this stage is healthy
-                    print(self._coordinator_pools[stage_id])
-                    print("healthy")
                     continue
 
                 if self._coordinator_pools and not any(self._coordinator_pools):

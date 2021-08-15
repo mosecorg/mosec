@@ -103,6 +103,7 @@ fn update_task_multi_thread() {
                 &tp,
                 tid,
                 Bytes::from(update_data),
+                pool::TaskStatusCode::Normal,
                 task.complete,
                 task.cancel,
             )
