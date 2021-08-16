@@ -17,8 +17,8 @@ struct Coordinator {
     stage_id: usize,
     task_pool: Arc<Mutex<TaskPool>>,
     protocol_server: Protocol,     // server side of unix stream
-    inbound: Receiver<Vec<usize>>, // symmetrical to batcher.rs
-    outbound: Sender<usize>,       // (maybe) multiple input, single output
+    inbound: Receiver<Vec<usize>>, // - symmetrical to batcher.rs,
+    outbound: Sender<usize>,       //   (maybe) multiple input, single output
     put_back: Sender<Vec<usize>>,  // recycle tasks when disconnection
     last: bool,                    // indication of last stage
 }

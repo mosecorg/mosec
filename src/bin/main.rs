@@ -1,4 +1,4 @@
-use std::{env, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{env, net::SocketAddr, sync::Arc, time::Duration};
 
 use hyper::{body::to_bytes, Body, Request, Response, Server, StatusCode};
 use mosec::{errors::ServiceError, server};

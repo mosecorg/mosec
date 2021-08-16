@@ -1,6 +1,8 @@
-use std::io::{self, Read, Write};
-use std::os::unix::net::UnixStream;
-use std::usize;
+use std::{
+    io::{self, Read, Write},
+    os::unix::net::UnixStream,
+    usize,
+};
 
 use bytes::Bytes;
 

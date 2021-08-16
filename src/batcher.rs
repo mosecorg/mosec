@@ -1,6 +1,8 @@
-use std::ops::Add;
-use std::process;
-use std::time::{Duration, Instant};
+use std::{
+    ops::Add,
+    process,
+    time::{Duration, Instant},
+};
 
 use crossbeam_channel::{select, tick, Receiver, Sender};
 use tracing::info;

@@ -1,5 +1,7 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use bytes::Bytes;
 use crossbeam_channel::{bounded, Receiver, Sender};
