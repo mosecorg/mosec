@@ -25,7 +25,7 @@ const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
 const BIT_STATUS_INTERNAL_ERR: u16 = 0b1000;
 
 #[derive(Debug, Clone, Copy)]
-pub enum TaskCode {
+pub(crate) enum TaskCode {
     UnknownError,
     Normal,
     BadRequestError,
@@ -34,14 +34,14 @@ pub enum TaskCode {
 }
 
 #[derive(Debug, Clone)]
-pub struct Task {
-    pub code: TaskCode,
-    pub data: Bytes,
+pub(crate) struct Task {
+    pub(crate) code: TaskCode,
+    pub(crate) data: Bytes,
     create_at: Instant,
 }
 
 impl Task {
-    pub fn new(data: Bytes) -> Self {
+    pub(crate) fn new(data: Bytes) -> Self {
         Task {
             code: TaskCode::UnknownError,
             data,
@@ -49,7 +49,7 @@ impl Task {
         }
     }
 
-    pub fn update(&mut self, code: TaskCode, data: &Bytes) {
+    pub(crate) fn update(&mut self, code: TaskCode, data: &Bytes) {
         self.code = code;
         self.data = data.clone();
     }
@@ -63,7 +63,7 @@ struct TaskHub {
 }
 
 impl TaskHub {
-    pub fn update_multi_tasks(&mut self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
+    pub(crate) fn update_multi_tasks(&mut self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
         for i in 0..ids.len() {
             let task = self.table.get_mut(&ids[i]);
             match task {
@@ -308,7 +308,7 @@ async fn finish_task(receiver: Receiver<u32>, tasks: Arc<Mutex<TaskHub>>) {
 }
 
 #[derive(Debug, Clone)]
-pub struct Protocol {
+pub(crate) struct Protocol {
     capacity: usize,
     path: String,
     batches: Vec<u32>,
@@ -316,11 +316,11 @@ pub struct Protocol {
     receiver: Receiver<u32>,
     tasks: Arc<Mutex<TaskHub>>,
     wait_time: Duration,
-    pub timeout: Duration,
+    pub(crate) timeout: Duration,
 }
 
 impl Protocol {
-    pub fn new(
+    pub(crate) fn new(
         batches: Vec<u32>,
         unix_dir: &str,
         capacity: usize,
@@ -344,7 +344,7 @@ impl Protocol {
         }
     }
 
-    pub async fn run(&mut self) {
+    pub(crate) async fn run(&mut self) {
         let mut last_receiver = self.receiver.clone();
         let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
@@ -376,7 +376,7 @@ impl Protocol {
         tokio::spawn(finish_task(receiver_clone, tasks_clone));
     }
 
-    pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> u32 {
+    pub(crate) async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> u32 {
         let mut tasks = self.tasks.lock().await;
         let id = tasks.current_id;
         tasks.table.insert(id, Task::new(data));
@@ -387,7 +387,7 @@ impl Protocol {
         id
     }
 
-    pub async fn get_task(&self, id: u32) -> Option<Task> {
+    pub(crate) async fn get_task(&self, id: u32) -> Option<Task> {
         let mut tasks = self.tasks.lock().await;
         debug!(%id, "remove task from table");
         tasks.table.remove(&id)

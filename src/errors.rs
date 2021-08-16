@@ -3,7 +3,7 @@ use hyper::{Body, Response, StatusCode};
 use routerify::RouteError;
 
 #[derive(Debug, Display, derive_more::Error)]
-pub enum ServiceError {
+pub(crate) enum ServiceError {
     #[display(fmt = "inference timeout")]
     Timeout,
 
@@ -20,7 +20,7 @@ pub enum ServiceError {
     UnknownError,
 }
 
-pub async fn error_handler(err: RouteError) -> Response<Body> {
+pub(crate) async fn error_handler(err: RouteError) -> Response<Body> {
     let mosec_err = err.downcast::<ServiceError>().unwrap();
     let status = match mosec_err.as_ref() {
         ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
