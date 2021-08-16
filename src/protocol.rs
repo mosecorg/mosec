@@ -368,14 +368,17 @@ impl Protocol {
         &self,
         data: Bytes,
         notifier: oneshot::Sender<()>,
-    ) -> Result<u32, async_channel::SendError<u32>> {
+    ) -> Result<u32, io::Error> {
         let mut tasks = self.tasks.lock().await;
         let id = tasks.current_id;
         tasks.table.insert(id, Task::new(data));
         tasks.notifiers.insert(id, notifier);
         let _ = tasks.current_id.wrapping_add(1);
         debug!(%id, "add a new task");
-        self.sender.send(id).await?;
+        self.sender.try_send(id).or(Err(io::Error::new(
+            io::ErrorKind::WouldBlock,
+            "the first channel is full",
+        )))?;
         Ok(id)
     }
 
