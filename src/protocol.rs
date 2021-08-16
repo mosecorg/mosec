@@ -5,14 +5,13 @@ use std::time::{Duration, Instant};
 use std::usize;
 use std::{fs, u32};
 
+use anyhow::{anyhow, Context};
 use async_channel::{bounded, Receiver, Sender};
 use bytes::{BufMut, Bytes, BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
 use tracing::{debug, error, info};
-
-use crate::errors::ProtocolError;
 
 const FLAG_U8_SIZE: usize = 2;
 const NUM_U8_SIZE: usize = 2;
@@ -139,10 +138,8 @@ async fn receive_message(
     stream: &mut UnixStream,
     tasks: &Arc<Mutex<TaskHub>>,
     sender: &Sender<u32>,
-) -> Result<(), ProtocolError> {
-    if stream.readable().await.is_err() {
-        return Err(ProtocolError::ReadError);
-    }
+) -> Result<(), anyhow::Error> {
+    stream.readable().await.context("read await failed")?;
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
     let mut num_buf = [0u8; NUM_U8_SIZE];
     stream.read_exact(&mut flag_buf).await.unwrap();
@@ -188,9 +185,10 @@ async fn receive_message(
     match code {
         TaskCode::Normal => {
             for id in ids {
-                if sender.send(id).await.is_err() {
-                    return Err(ProtocolError::SendError);
-                }
+                sender
+                    .send(id)
+                    .await
+                    .context("failed to send task id to the next channel")?;
             }
         }
         _ => {
@@ -223,7 +221,7 @@ async fn send_message(
     receiver: &Receiver<u32>,
     batch_size: u32,
     wait_time: Duration,
-) -> Result<(), ProtocolError> {
+) -> Result<(), anyhow::Error> {
     // get batch from the channel
     let mut batch: Vec<u32> = Vec::new();
 
@@ -247,7 +245,7 @@ async fn send_message(
         }
         Err(err) => {
             error!(%err, "receive from channel error");
-            return Err(ProtocolError::ReceiveError);
+            return Err(anyhow!(err));
         }
     }
 
@@ -267,12 +265,10 @@ async fn send_message(
             data.len(),
             batch.len()
         );
-        return Err(ProtocolError::SendError);
+        return Err(anyhow!("some data in this batch is lost"));
     }
 
-    if stream.writable().await.is_err() {
-        return Err(ProtocolError::WriteError);
-    }
+    stream.writable().await.context("write await error")?;
     let mut buffer = BytesMut::new();
     buffer.put_u16(0); // flag
     buffer.put_u16(batch.len() as u16);

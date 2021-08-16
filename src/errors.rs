@@ -35,11 +35,3 @@ pub async fn error_handler(err: RouteError) -> Response<Body> {
         .body(Body::from(mosec_err.to_string()))
         .unwrap()
 }
-
-#[derive(Debug)]
-pub enum ProtocolError {
-    ReadError,
-    ReceiveError,
-    WriteError,
-    SendError,
-}
