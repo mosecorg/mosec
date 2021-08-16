@@ -12,7 +12,6 @@ routerify = "2"
 bytes = "1"
 tracing = "0.1"
 tracing-subscriber = "0.2"
-tokio = { version="1", features=["full"] }
-derive_more = { version="0.99.0", features=["display", "error"] }
-async-channel = { version="1.6.1" }
-anyhow = "1.0"
+tokio = { version = "1", features = ["full"] }
+derive_more = { version = "0.99.0", features = ["display", "error"] }
+async-channel = { version = "1.6.1" }

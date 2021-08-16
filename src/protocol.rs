@@ -5,10 +5,9 @@ use std::time::{Duration, Instant};
 use std::usize;
 use std::{fs, u32};
 
-use anyhow::{anyhow, Context};
 use async_channel::{bounded, Receiver, Sender};
 use bytes::{BufMut, Bytes, BytesMut};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{oneshot, Mutex};
 use tracing::{debug, error, info};
@@ -138,12 +137,12 @@ async fn receive_message(
     stream: &mut UnixStream,
     tasks: &Arc<Mutex<TaskHub>>,
     sender: &Sender<u32>,
-) -> Result<(), anyhow::Error> {
-    stream.readable().await.context("read await failed")?;
+) -> Result<(), io::Error> {
+    stream.readable().await?;
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
     let mut num_buf = [0u8; NUM_U8_SIZE];
-    stream.read_exact(&mut flag_buf).await.unwrap();
-    stream.read_exact(&mut num_buf).await.unwrap();
+    stream.read_exact(&mut flag_buf).await?;
+    stream.read_exact(&mut num_buf).await?;
     let flag = u16::from_be_bytes(flag_buf);
     let num = u16::from_be_bytes(num_buf);
 
@@ -164,12 +163,12 @@ async fn receive_message(
     let mut ids: Vec<u32> = Vec::new();
     let mut data: Vec<Bytes> = Vec::new();
     for _ in 0..num {
-        stream.read_exact(&mut id_buf).await.unwrap();
-        stream.read_exact(&mut length_buf).await.unwrap();
+        stream.read_exact(&mut id_buf).await?;
+        stream.read_exact(&mut length_buf).await?;
         let id = u32::from_be_bytes(id_buf);
         let length = u32::from_be_bytes(length_buf);
         let mut data_buf = vec![0u8; length as usize];
-        stream.read_exact(&mut data_buf).await.unwrap();
+        stream.read_exact(&mut data_buf).await?;
         ids.push(id);
         data.push(data_buf.into());
     }
@@ -185,10 +184,7 @@ async fn receive_message(
     match code {
         TaskCode::Normal => {
             for id in ids {
-                sender
-                    .send(id)
-                    .await
-                    .context("failed to send task id to the next channel")?;
+                sender.send(id).await.expect("next channel is closed");
             }
         }
         _ => {
@@ -221,32 +217,25 @@ async fn send_message(
     receiver: &Receiver<u32>,
     batch_size: u32,
     wait_time: Duration,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), io::Error> {
     // get batch from the channel
     let mut batch: Vec<u32> = Vec::new();
 
-    match receiver.recv().await {
-        Ok(id) => {
-            batch.push(id);
-            // timing from receiving the first item
-            if tokio::time::timeout(
-                wait_time,
-                get_batch(receiver, batch_size as usize, &mut batch),
-            )
-            .await
-            .is_err()
-            {
-                info!(
-                    "timeout before the batch is full: {}/{}",
-                    batch.len(),
-                    batch_size
-                );
-            }
-        }
-        Err(err) => {
-            error!(%err, "receive from channel error");
-            return Err(anyhow!(err));
-        }
+    let id = receiver.recv().await.expect("receiver is closed");
+    batch.push(id);
+    // timing from receiving the first item
+    if tokio::time::timeout(
+        wait_time,
+        get_batch(receiver, batch_size as usize, &mut batch),
+    )
+    .await
+    .is_err()
+    {
+        info!(
+            "timeout before the batch is full: {}/{}",
+            batch.len(),
+            batch_size
+        );
     }
 
     // send the batch tasks to the stream
@@ -265,10 +254,13 @@ async fn send_message(
             data.len(),
             batch.len()
         );
-        return Err(anyhow!("some data in this batch is lost"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "incomplete data",
+        ));
     }
 
-    stream.writable().await.context("write await error")?;
+    stream.writable().await?;
     let mut buffer = BytesMut::new();
     buffer.put_u16(0); // flag
     buffer.put_u16(batch.len() as u16);
@@ -277,7 +269,7 @@ async fn send_message(
         buffer.put_u32(data[i].len() as u32);
         buffer.put(data[i].clone());
     }
-    stream.write_all(&buffer).await.unwrap();
+    stream.write_all(&buffer).await?;
     debug!(batch_size=%batch.len(), byte_size=%buffer.len(), "send data to the stream");
 
     Ok(())
@@ -372,15 +364,19 @@ impl Protocol {
         tokio::spawn(finish_task(receiver_clone, tasks_clone));
     }
 
-    pub async fn add_new_task(&self, data: Bytes, notifier: oneshot::Sender<()>) -> u32 {
+    pub async fn add_new_task(
+        &self,
+        data: Bytes,
+        notifier: oneshot::Sender<()>,
+    ) -> Result<u32, async_channel::SendError<u32>> {
         let mut tasks = self.tasks.lock().await;
         let id = tasks.current_id;
         tasks.table.insert(id, Task::new(data));
         tasks.notifiers.insert(id, notifier);
         let _ = tasks.current_id.wrapping_add(1);
         debug!(%id, "add a new task");
-        self.sender.send(id).await.unwrap();
-        id
+        self.sender.send(id).await?;
+        Ok(id)
     }
 
     pub async fn get_task(&self, id: u32) -> Option<Task> {
