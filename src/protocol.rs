@@ -382,7 +382,7 @@ impl Protocol {
             return Err(io::Error::new(
                 io::ErrorKind::WouldBlock,
                 "the first channel is full",
-            ));            
+            ));
         }
         Ok(id)
     }
