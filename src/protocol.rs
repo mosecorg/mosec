@@ -104,13 +104,13 @@ async fn communicate(
                 info!(?addr, "accepted connection from");
                 tokio::spawn(async move {
                     loop {
-                        if receive_message(&mut stream, &tasks_clone, &sender_clone)
-                            .await
-                            .is_err()
+                        if let Err(err) =
+                            receive_message(&mut stream, &tasks_clone, &sender_clone).await
                         {
+                            error!(%err, "receive message error");
                             break;
                         }
-                        if send_message(
+                        if let Err(err) = send_message(
                             &mut stream,
                             &tasks_clone,
                             &receiver_clone,
@@ -118,8 +118,8 @@ async fn communicate(
                             wait_time,
                         )
                         .await
-                        .is_err()
                         {
+                            error!(%err, "send message error");
                             break;
                         }
                     }
