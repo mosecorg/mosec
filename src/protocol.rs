@@ -375,10 +375,15 @@ impl Protocol {
         tasks.notifiers.insert(id, notifier);
         let _ = tasks.current_id.wrapping_add(1);
         debug!(%id, "add a new task");
-        self.sender.try_send(id).or(Err(io::Error::new(
-            io::ErrorKind::WouldBlock,
-            "the first channel is full",
-        )))?;
+        if self.sender.try_send(id).is_err() {
+            error!(%id, "the first channel is full, delete task");
+            tasks.table.remove(&id);
+            tasks.notifiers.remove(&id);
+            return Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "the first channel is full",
+            ));            
+        }
         Ok(id)
     }
 
