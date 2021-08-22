@@ -373,10 +373,10 @@ impl Protocol {
         let id = tasks.current_id;
         tasks.table.insert(id, Task::new(data));
         tasks.notifiers.insert(id, notifier);
-        let _ = tasks.current_id.wrapping_add(1);
+        tasks.current_id = tasks.current_id.wrapping_add(1);
         debug!(%id, "add a new task");
         if self.sender.try_send(id).is_err() {
-            error!(%id, "the first channel is full, delete task");
+            error!(%id, "the first channel is full, delete this task");
             tasks.table.remove(&id);
             tasks.notifiers.remove(&id);
             return Err(io::Error::new(
