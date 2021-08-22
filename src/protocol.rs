@@ -223,19 +223,21 @@ async fn send_message(
 
     let id = receiver.recv().await.expect("receiver is closed");
     batch.push(id);
-    // timing from receiving the first item
-    if tokio::time::timeout(
-        wait_time,
-        get_batch(receiver, batch_size as usize, &mut batch),
-    )
-    .await
-    .is_err()
-    {
-        info!(
-            "timeout before the batch is full: {}/{}",
-            batch.len(),
-            batch_size
-        );
+    if batch_size > 1 {
+        // timing from receiving the first item
+        if tokio::time::timeout(
+            wait_time,
+            get_batch(receiver, batch_size as usize, &mut batch),
+        )
+        .await
+        .is_err()
+        {
+            info!(
+                "timeout before the batch is full: {}/{}",
+                batch.len(),
+                batch_size
+            );
+        }
     }
 
     // send the batch tasks to the stream
