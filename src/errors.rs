@@ -16,6 +16,9 @@ pub(crate) enum ServiceError {
     #[display(fmt = "inference internal error")]
     InternalError,
 
+    #[display(fmt = "too many request: channel is full")]
+    TooManyRequests,
+
     #[display(fmt = "mosec unknown error")]
     UnknownError,
 }
@@ -25,6 +28,7 @@ pub(crate) async fn error_handler(err: RouteError) -> Response<Body> {
     let status = match mosec_err.as_ref() {
         ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
         ServiceError::BadRequestError => StatusCode::BAD_REQUEST,
+        ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
         ServiceError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
         ServiceError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
@@ -34,12 +38,4 @@ pub(crate) async fn error_handler(err: RouteError) -> Response<Body> {
         .status(status)
         .body(Body::from(mosec_err.to_string()))
         .unwrap()
-}
-
-#[derive(Debug)]
-pub enum ProtocolError {
-    ReadError,
-    ReceiveError,
-    WriteError,
-    SendError,
 }

@@ -29,7 +29,10 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
         return Ok(Response::new(Body::from("No data provided")));
     }
 
-    let task_id = protocol.add_new_task(data, tx).await;
+    let task_id = match protocol.add_new_task(data, tx).await {
+        Ok(id) => id,
+        Err(_) => return Err(ServiceError::TooManyRequests),
+    };
     if timeout(protocol.timeout, rx).await.is_err() {
         return Err(ServiceError::Timeout);
     }
