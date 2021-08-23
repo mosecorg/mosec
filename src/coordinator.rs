@@ -26,7 +26,7 @@ struct Coordinator {
 impl Coordinator {
     pub fn run(&mut self) {
         loop {
-            // get ids from batcher, fetch data, send to workload
+            // get ids from batcher, fetch data, send to workload if not canceled
             let recv_ids = self.inbound.recv().expect("coordinator inbound recv error");
             let mut req_ids = Vec::new();
             let mut req_payloads = Vec::new();
@@ -49,6 +49,9 @@ impl Coordinator {
                         cancels.push(task.cancel.clone());
                     }
                 }
+            }
+            if req_ids.len() == 0 {
+                continue;
             }
             match self
                 .protocol_server

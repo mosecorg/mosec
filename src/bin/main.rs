@@ -84,7 +84,7 @@ async fn main() {
         .unwrap();
 
     let service = RouterService::new(router).unwrap();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     let server = Server::bind(&addr).serve(service);
     if let Err(err) = server.await {
         error!("Server error: {}", err);
