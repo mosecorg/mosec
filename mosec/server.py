@@ -97,7 +97,7 @@ class Server:
                     self._coordinator_shutdown[stage_id],
                 )
 
-                if self._coordinator_pools and all(self._coordinator_pools[stage_id]):
+                if all(self._coordinator_pools[stage_id]):
                     # this stage is healthy
                     continue
 
@@ -171,10 +171,10 @@ class Server:
                     break
                 sleep(0.1)
 
-        for l_sd in self._coordinator_shutdown:
-            for sd in l_sd:
-                if sd:
-                    sd.set()
+        for shutdown_events in self._coordinator_shutdown:
+            for event in shutdown_events:
+                if event:
+                    event.set()
         logger.info("mosec server exited. see you.")
 
     @validate_arguments
