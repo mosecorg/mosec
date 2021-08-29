@@ -78,6 +78,7 @@ class Server:
         return processes, events
 
     def _manage_coordinators(self):
+        first = True
         while not self._server_shutdown:
             for stage_id, (w_cls, w_num, w_mbs, c_ctx) in enumerate(
                 zip(
@@ -98,15 +99,14 @@ class Server:
 
                 if self._coordinator_pools and all(self._coordinator_pools[stage_id]):
                     # this stage is healthy
-                    # logger.info("dead loop")
                     continue
 
-                if self._coordinator_pools and not any(self._coordinator_pools):
+                if not first and not any(self._coordinator_pools[stage_id]):
                     # this stage might contain bugs
                     self._terminate(
                         1,
                         f"all workers at stage {stage_id+1} exited;"
-                        " please check for bugs",
+                        " please check for bugs or socket connection issues",
                     )
                     break
 
@@ -145,7 +145,7 @@ class Server:
                     coordinator_process.start()
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
                     self._coordinator_shutdown[stage_id][worker_id] = shutdown
-
+            first = False
             if self._controller_process:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode:
@@ -173,7 +173,8 @@ class Server:
 
         for l_sd in self._coordinator_shutdown:
             for sd in l_sd:
-                sd.set()
+                if sd:
+                    sd.set()
         logger.info("mosec server exited. see you.")
 
     @validate_arguments
