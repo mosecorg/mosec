@@ -1,15 +1,19 @@
+mod args;
+mod coordinator;
 mod errors;
 mod protocol;
+mod tasks;
 
-use std::{net::SocketAddr, time::Duration, vec};
+use std::net::SocketAddr;
 
-use errors::{error_handler, ServiceError};
+use crate::args::Opts;
+use crate::coordinator::Coordinator;
+use crate::errors::{error_handler, ServiceError};
+use crate::tasks::{TaskCode, TaskManager};
+use clap::Clap;
 use hyper::{body::to_bytes, Body, Request, Response, Server};
-use protocol::{Protocol, TaskCode};
-use routerify::prelude::*;
 use routerify::{Router, RouterService};
-use tokio::{sync::oneshot, time::timeout};
-use tracing::error;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
@@ -21,23 +25,22 @@ async fn metrics(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
 }
 
 async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
-    let protocol = req.data::<Protocol>().unwrap().clone();
-    let (tx, rx) = oneshot::channel();
+    let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
 
     if data.is_empty() {
         return Ok(Response::new(Body::from("No data provided")));
     }
 
-    let task_id = match protocol.add_new_task(data, tx).await {
+    let task_id = match task_manager.add_new_task(data).await {
         Ok(id) => id,
         Err(_) => return Err(ServiceError::TooManyRequests),
     };
-    if timeout(protocol.timeout, rx).await.is_err() {
+    if task_manager.wait_task_done(task_id).await.is_err() {
         return Err(ServiceError::Timeout);
     }
 
-    if let Some(task) = protocol.get_task(task_id).await {
+    if let Some(task) = task_manager.pop_task(task_id) {
         match task.code {
             TaskCode::Normal => Ok(Response::new(Body::from(task.data))),
             TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
@@ -51,8 +54,7 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn init_env() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info")
     }
@@ -60,28 +62,23 @@ async fn main() {
     tracing_subscriber::fmt::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
+}
 
-    let protocol = Protocol::new(
-        vec![1, 8, 1],
-        "/tmp/mosec",
-        1024,
-        Duration::from_millis(3000),
-        Duration::from_millis(10),
-    );
-    let mut protocol_runner = protocol.clone();
+#[tokio::main]
+async fn main() {
+    init_env();
+    let opts: Opts = Opts::parse();
+    info!(?opts, "parse arguments");
+
+    let mut coordinator = Coordinator::init_from_opts(&opts);
     tokio::spawn(async move {
-        protocol_runner.run().await;
+        coordinator.run().await;
     });
-    let state_router = Router::builder()
-        .data(protocol.clone())
-        .post("/", inference)
-        .build()
-        .unwrap();
 
     let router = Router::builder()
         .get("/", index)
         .get("/metrics", metrics)
-        .scope("/inference", state_router)
+        .post("/inference", inference)
         .err_handler(error_handler)
         .build()
         .unwrap();
