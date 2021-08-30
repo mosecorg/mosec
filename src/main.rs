@@ -6,15 +6,16 @@ mod tasks;
 
 use std::net::SocketAddr;
 
-use crate::args::Opts;
-use crate::coordinator::Coordinator;
-use crate::errors::{error_handler, ServiceError};
-use crate::tasks::{TaskCode, TaskManager};
 use clap::Clap;
 use hyper::{body::to_bytes, Body, Request, Response, Server};
 use routerify::{Router, RouterService};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
+
+use crate::args::Opts;
+use crate::coordinator::Coordinator;
+use crate::errors::{error_handler, ServiceError};
+use crate::tasks::{TaskCode, TaskManager};
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     Ok(Response::new(Body::from("MOSEC service")))

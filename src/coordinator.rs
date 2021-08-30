@@ -1,7 +1,8 @@
-use async_channel::{bounded, Receiver, Sender};
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
+
+use async_channel::{bounded, Receiver, Sender};
 use tracing::{error, info};
 
 use crate::args::Opts;
