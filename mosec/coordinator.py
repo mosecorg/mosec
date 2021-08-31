@@ -126,16 +126,7 @@ class Coordinator:
                 logger.error(f"{self.name} socket file not found")
                 break
 
-            self.notify_readiness()
             self.coordinate()
-
-    def notify_readiness(self):
-        try:
-            self.protocol.send(self.protocol.FLAG_OK, [], [])
-            logger.debug(f"{self.name} sent empty task for readiness notification")
-        except OSError as err:
-            logger.error(f"{self.name} socket send error: {err}")
-            self.exit()
 
     def get_decoder(self) -> Callable:
         if STAGE_INGRESS in self.worker._stage:
