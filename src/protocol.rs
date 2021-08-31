@@ -27,7 +27,7 @@ pub(crate) async fn communicate(
     receiver: Receiver<u32>,
     sender: Sender<u32>,
 ) {
-    let listener = UnixListener::bind(&path).expect(&path.to_string_lossy());
+    let listener = UnixListener::bind(&path).expect("failed to bind to socket");
     loop {
         let sender_clone = sender.clone();
         let receiver_clone = receiver.clone();

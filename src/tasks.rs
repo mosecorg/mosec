@@ -70,7 +70,7 @@ impl TaskManager {
 
     pub(crate) async fn add_new_task(&self, data: Bytes) -> Result<u32, io::Error> {
         let mut current_id = self.current_id.lock();
-        let id = current_id.clone();
+        let id = *current_id;
         let (tx, rx) = oneshot::channel();
         let mut table = self.table.write();
         let mut senders = self.senders.lock();
@@ -132,11 +132,11 @@ impl TaskManager {
         }
     }
 
-    pub(crate) fn get_multi_tasks_data(&self, ids: &Vec<u32>) -> Vec<Bytes> {
+    pub(crate) fn get_multi_tasks_data(&self, ids: &[u32]) -> Vec<Bytes> {
         let mut data: Vec<Bytes> = Vec::with_capacity(ids.len());
         let table = self.table.read();
         for id in ids {
-            if let Some(task) = table.get(&id) {
+            if let Some(task) = table.get(id) {
                 data.push(task.data.clone());
             }
         }
