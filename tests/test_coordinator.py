@@ -190,11 +190,7 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
         coordinator_process.start()
 
         try:
-            conn, addr = sock.accept()  # blocking
-
-            # explicit byte format and data length below for sanity check
-            # 0) init notification via OK flag, and no data
-            _ = conn.recv(2 + 2)
+            conn, _ = sock.accept()  # blocking
 
             # 1) prepare task datum
             sent_ids, sent_payloads = imitate_controller_send(conn, test_data)
