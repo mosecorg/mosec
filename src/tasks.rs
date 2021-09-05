@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -23,7 +23,6 @@ pub(crate) enum TaskCode {
 pub(crate) struct Task {
     pub(crate) code: TaskCode,
     pub(crate) data: Bytes,
-    create_at: Instant,
 }
 
 impl Task {
@@ -31,7 +30,6 @@ impl Task {
         Self {
             code: TaskCode::UnknownError,
             data,
-            create_at: Instant::now(),
         }
     }
 
