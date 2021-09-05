@@ -22,27 +22,42 @@ const BIT_STATUS_INTERNAL_ERR: u16 = 0b1000;
 
 pub(crate) async fn communicate(
     path: PathBuf,
-    batch_size: u32,
+    batch_size: usize,
     wait_time: Duration,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
+    last_sender: Sender<u32>,
 ) {
-    let listener = UnixListener::bind(&path).expect("failed to bind to socket");
+    let listener = UnixListener::bind(&path).expect("failed to bind to the socket");
     loop {
         let sender_clone = sender.clone();
+        let last_sender_clone = last_sender.clone();
         let receiver_clone = receiver.clone();
         match listener.accept().await {
             Ok((mut stream, addr)) => {
                 info!(?addr, "accepted connection from");
                 tokio::spawn(async move {
+                    let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
+                    let task_manager = TaskManager::global();
                     loop {
-                        if let Err(err) =
-                            send_message(&mut stream, &receiver_clone, batch_size, wait_time).await
-                        {
+                        ids.clear();
+                        get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
+                        let data = task_manager.get_multi_tasks_data(&mut ids);
+                        if data.is_empty() {
+                            // if all the ids in this batch are timeout, the data will be empty
+                            continue;
+                        }
+                        if let Err(err) = send_message(&mut stream, &ids, &data).await {
                             error!(%err, "send message error");
+                            info!(
+                                "write to stream error, try to send task_ids to the last channel"
+                            );
+                            for id in &ids {
+                                last_sender_clone.send(*id).await.expect("sender is closed");
+                            }
                             break;
                         }
-                        if let Err(err) = receive_message(&mut stream, &sender_clone).await {
+                        if let Err(err) = read_message(&mut stream, &sender_clone).await {
                             error!(%err, "receive message error");
                             break;
                         }
@@ -50,14 +65,14 @@ pub(crate) async fn communicate(
                 });
             }
             Err(err) => {
-                error!(error=%err, "Error accepting connection");
+                error!(error=%err, "accept connection error");
                 break;
             }
         }
     }
 }
 
-async fn receive_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Result<(), io::Error> {
+async fn read_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Result<(), io::Error> {
     stream.readable().await?;
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
     let mut num_buf = [0u8; NUM_U8_SIZE];
@@ -96,7 +111,7 @@ async fn receive_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Resul
 
     // update tasks received from the stream
     let task_manager = TaskManager::global();
-    task_manager.update_multi_tasks(code, &ids, &data);
+    task_manager.update_multi_tasks(code, &mut ids, &data);
 
     // send normal tasks to the next channel
     match code {
@@ -112,77 +127,61 @@ async fn receive_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Resul
     Ok(())
 }
 
-async fn get_batch(receiver: &Receiver<u32>, batch_size: usize, batch_vec: &mut Vec<u32>) {
+async fn inner_batch(receiver: &Receiver<u32>, ids: &mut Vec<u32>, limit: usize) {
     loop {
         match receiver.recv().await {
             Ok(id) => {
-                batch_vec.push(id);
+                ids.push(id);
             }
             Err(err) => {
                 error!(%err, "receive from channel error");
             }
         }
-        if batch_vec.len() == batch_size {
+        if ids.len() == limit {
             break;
         }
     }
-    info!(batch_size=?batch_vec.len(), "received batch size from channel");
+    info!(batch_size=?ids.len(), "received batch size from channel");
 }
 
-async fn send_message(
-    stream: &mut UnixStream,
+async fn get_batch(
     receiver: &Receiver<u32>,
-    batch_size: u32,
+    batch_size: usize,
+    ids: &mut Vec<u32>,
     wait_time: Duration,
-) -> Result<(), io::Error> {
-    // get batch from the channel
-    let mut batch: Vec<u32> = Vec::new();
-
+) {
     let id = receiver.recv().await.expect("receiver is closed");
-    batch.push(id);
+    ids.push(id);
     if batch_size > 1 {
-        // timing from receiving the first item
-        if tokio::time::timeout(
-            wait_time,
-            get_batch(receiver, batch_size as usize, &mut batch),
-        )
-        .await
-        .is_err()
+        if tokio::time::timeout(wait_time, inner_batch(receiver, ids, batch_size))
+            .await
+            .is_err()
         {
-            info!(
+            debug!(
                 "timeout before the batch is full: {}/{}",
-                batch.len(),
+                ids.len(),
                 batch_size
             );
         }
     }
+}
 
-    // send the batch tasks to the stream
-    let task_manager = TaskManager::global();
-    let data = task_manager.get_multi_tasks_data(&batch);
-    if data.len() != batch.len() {
-        error!(
-            "cannot get all the data from table: {}/{}",
-            data.len(),
-            batch.len()
-        );
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "incomplete data",
-        ));
-    }
-
+async fn send_message(
+    stream: &mut UnixStream,
+    ids: &[u32],
+    data: &[Bytes],
+) -> Result<(), io::Error> {
     stream.writable().await?;
     let mut buffer = BytesMut::new();
     buffer.put_u16(0); // flag
-    buffer.put_u16(batch.len() as u16);
-    for i in 0..batch.len() {
-        buffer.put_u32(batch[i]);
+    buffer.put_u16(ids.len() as u16);
+    for i in 0..ids.len() {
+        buffer.put_u32(ids[i]);
         buffer.put_u32(data[i].len() as u32);
         buffer.put(data[i].clone());
     }
     stream.write_all(&buffer).await?;
-    debug!(?batch, batch_size=%batch.len(), byte_size=%buffer.len(), "send data to the stream");
+    debug!(?ids, batch_size=%ids.len(), byte_size=%buffer.len(), "send data to the stream");
 
     Ok(())
 }

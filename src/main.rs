@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use clap::Clap;
 use hyper::{body::to_bytes, Body, Request, Response, Server};
 use routerify::{Router, RouterService};
-use tracing::{error, info};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use crate::args::Opts;
@@ -33,25 +33,13 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
         return Ok(Response::new(Body::from("No data provided")));
     }
 
-    let task_id = match task_manager.add_new_task(data).await {
-        Ok(id) => id,
-        Err(_) => return Err(ServiceError::TooManyRequests),
-    };
-    if task_manager.wait_task_done(task_id).await.is_err() {
-        return Err(ServiceError::Timeout);
-    }
-
-    if let Some(task) = task_manager.pop_task(task_id) {
-        match task.code {
-            TaskCode::Normal => Ok(Response::new(Body::from(task.data))),
-            TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
-            TaskCode::ValidationError => Err(ServiceError::ValidationError),
-            TaskCode::InternalError => Err(ServiceError::InternalError),
-            TaskCode::UnknownError => Err(ServiceError::UnknownError),
-        }
-    } else {
-        error!(%task_id, "cannot find this task");
-        Err(ServiceError::UnknownError)
+    let task = task_manager.submit_task(data).await?;
+    match task.code {
+        TaskCode::Normal => Ok(Response::new(Body::from(task.data))),
+        TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
+        TaskCode::ValidationError => Err(ServiceError::ValidationError),
+        TaskCode::InternalError => Err(ServiceError::InternalError),
+        TaskCode::UnknownError => Err(ServiceError::UnknownError),
     }
 }
 

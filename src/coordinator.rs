@@ -42,6 +42,7 @@ impl Coordinator {
 
     pub(crate) async fn run(&mut self) {
         let mut last_receiver = self.receiver.clone();
+        let mut last_sender = self.sender.clone();
         let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
         if folder.is_dir() {
@@ -57,12 +58,14 @@ impl Coordinator {
             let batch_size = *batch;
             tokio::spawn(communicate(
                 path,
-                batch_size,
+                batch_size as usize,
                 wait_time,
                 last_receiver.clone(),
                 sender.clone(),
+                last_sender.clone(),
             ));
-            last_receiver = receiver.clone();
+            last_receiver = receiver;
+            last_sender = sender;
         }
         self.receiver = last_receiver;
         tokio::spawn(finish_task(self.receiver.clone()));
