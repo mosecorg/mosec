@@ -120,8 +120,7 @@ impl TaskManager {
         }
     }
 
-    pub(crate) fn get_multi_tasks_data(&self, ids: &mut Vec<u32>) -> Vec<Bytes> {
-        let mut data: Vec<Bytes> = Vec::with_capacity(ids.len());
+    pub(crate) fn get_multi_tasks_data(&self, ids: &mut Vec<u32>, data: &mut Vec<Bytes>) {
         let table = self.table.read();
         // delete the task_id if the task_id doesn't exist in the table
         ids.retain(|&id| match table.get(&id) {
@@ -131,7 +130,6 @@ impl TaskManager {
             }
             None => false,
         });
-        data
     }
 
     pub(crate) fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {

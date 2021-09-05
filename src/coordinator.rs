@@ -40,7 +40,7 @@ impl Coordinator {
         }
     }
 
-    pub(crate) async fn run(&mut self) {
+    pub(crate) async fn run(&self) {
         let mut last_receiver = self.receiver.clone();
         let mut last_sender = self.sender.clone();
         let wait_time = self.wait_time;
@@ -67,8 +67,7 @@ impl Coordinator {
             last_receiver = receiver;
             last_sender = sender;
         }
-        self.receiver = last_receiver;
-        tokio::spawn(finish_task(self.receiver.clone()));
+        tokio::spawn(finish_task(last_receiver.clone()));
     }
 }
 

@@ -59,7 +59,7 @@ async fn main() {
     let opts: Opts = Opts::parse();
     info!(?opts, "parse arguments");
 
-    let mut coordinator = Coordinator::init_from_opts(&opts);
+    let coordinator = Coordinator::init_from_opts(&opts);
     tokio::spawn(async move {
         coordinator.run().await;
     });

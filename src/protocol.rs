@@ -37,12 +37,15 @@ pub(crate) async fn communicate(
             Ok((mut stream, addr)) => {
                 info!(?addr, "accepted connection from");
                 tokio::spawn(async move {
+                    let mut code: TaskCode = TaskCode::UnknownError;
                     let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
+                    let mut data: Vec<Bytes> = Vec::with_capacity(batch_size);
                     let task_manager = TaskManager::global();
                     loop {
                         ids.clear();
+                        data.clear();
                         get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
-                        let data = task_manager.get_multi_tasks_data(&mut ids);
+                        task_manager.get_multi_tasks_data(&mut ids, &mut data);
                         if data.is_empty() {
                             // if all the ids in this batch are timeout, the data will be empty
                             continue;
@@ -57,9 +60,27 @@ pub(crate) async fn communicate(
                             }
                             break;
                         }
-                        if let Err(err) = read_message(&mut stream, &sender_clone).await {
+                        ids.clear();
+                        data.clear();
+                        if let Err(err) =
+                            read_message(&mut stream, &mut code, &mut ids, &mut data).await
+                        {
                             error!(%err, "receive message error");
                             break;
+                        }
+                        task_manager.update_multi_tasks(code, &mut ids, &data);
+                        match code {
+                            TaskCode::Normal => {
+                                for id in &ids {
+                                    sender_clone
+                                        .send(*id)
+                                        .await
+                                        .expect("next channel is closed");
+                                }
+                            }
+                            _ => {
+                                info!(?ids, ?code, "abnormal tasks");
+                            }
                         }
                     }
                 });
@@ -72,7 +93,12 @@ pub(crate) async fn communicate(
     }
 }
 
-async fn read_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Result<(), io::Error> {
+async fn read_message(
+    stream: &mut UnixStream,
+    code: &mut TaskCode,
+    ids: &mut Vec<u32>,
+    data: &mut Vec<Bytes>,
+) -> Result<(), io::Error> {
     stream.readable().await?;
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
     let mut num_buf = [0u8; NUM_U8_SIZE];
@@ -81,7 +107,7 @@ async fn read_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Result<(
     let flag = u16::from_be_bytes(flag_buf);
     let num = u16::from_be_bytes(num_buf);
 
-    let code = if flag & BIT_STATUS_OK > 0 {
+    *code = if flag & BIT_STATUS_OK > 0 {
         TaskCode::Normal
     } else if flag & BIT_STATUS_BAD_REQ > 0 {
         TaskCode::BadRequestError
@@ -95,8 +121,6 @@ async fn read_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Result<(
 
     let mut id_buf = [0u8; TASK_ID_U8_SIZE];
     let mut length_buf = [0u8; LENGTH_U8_SIZE];
-    let mut ids: Vec<u32> = Vec::new();
-    let mut data: Vec<Bytes> = Vec::new();
     for _ in 0..num {
         stream.read_exact(&mut id_buf).await?;
         stream.read_exact(&mut length_buf).await?;
@@ -108,22 +132,6 @@ async fn read_message(stream: &mut UnixStream, sender: &Sender<u32>) -> Result<(
         data.push(data_buf.into());
     }
     debug!(?ids, ?code, ?num, ?flag, "received tasks from the stream");
-
-    // update tasks received from the stream
-    let task_manager = TaskManager::global();
-    task_manager.update_multi_tasks(code, &mut ids, &data);
-
-    // send normal tasks to the next channel
-    match code {
-        TaskCode::Normal => {
-            for id in ids {
-                sender.send(id).await.expect("next channel is closed");
-            }
-        }
-        _ => {
-            info!(?ids, "abnormal tasks");
-        }
-    }
     Ok(())
 }
 
@@ -141,7 +149,6 @@ async fn inner_batch(receiver: &Receiver<u32>, ids: &mut Vec<u32>, limit: usize)
             break;
         }
     }
-    info!(batch_size=?ids.len(), "received batch size from channel");
 }
 
 async fn get_batch(
@@ -153,16 +160,8 @@ async fn get_batch(
     let id = receiver.recv().await.expect("receiver is closed");
     ids.push(id);
     if batch_size > 1 {
-        if tokio::time::timeout(wait_time, inner_batch(receiver, ids, batch_size))
-            .await
-            .is_err()
-        {
-            debug!(
-                "timeout before the batch is full: {}/{}",
-                ids.len(),
-                batch_size
-            );
-        }
+        let _ = tokio::time::timeout(wait_time, inner_batch(receiver, ids, batch_size)).await;
+        debug!("batch size: {}/{}", ids.len(), batch_size);
     }
 }
 
