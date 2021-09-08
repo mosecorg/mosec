@@ -160,7 +160,7 @@ class Server:
         # terminate controller first and wait for a graceful period
         if self._controller_process:
             self._controller_process.terminate()
-            graceful_period = monotonic() + self._configs.timeout  # TODO: str -> int
+            graceful_period = monotonic() + self._configs.timeout / 1000
             while monotonic() < graceful_period:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode:
