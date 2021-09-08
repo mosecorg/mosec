@@ -9,9 +9,9 @@ use std::net::SocketAddr;
 use clap::Clap;
 use hyper::{body::to_bytes, Body, Request, Response, Server};
 use routerify::{Router, RouterService};
+use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use tokio::signal::unix::{signal, SignalKind};
 
 use crate::args::Opts;
 use crate::coordinator::Coordinator;

@@ -74,7 +74,8 @@ impl TaskManager {
                     break;
                 }
             }
-        }).await;
+        })
+        .await;
     }
 
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
