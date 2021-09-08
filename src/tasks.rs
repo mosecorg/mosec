@@ -5,7 +5,7 @@ use bytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, RwLock};
 use tokio::sync::oneshot;
-use tokio::time::timeout;
+use tokio::time;
 use tracing::{debug, error, info};
 
 use crate::errors::ServiceError;
@@ -26,14 +26,14 @@ pub(crate) struct Task {
 }
 
 impl Task {
-    pub(crate) fn new(data: Bytes) -> Self {
+    pub fn new(data: Bytes) -> Self {
         Self {
             code: TaskCode::UnknownError,
             data,
         }
     }
 
-    pub(crate) fn update(&mut self, code: TaskCode, data: &Bytes) {
+    pub fn update(&mut self, code: TaskCode, data: &Bytes) {
         self.code = code;
         self.data = data.clone();
     }
@@ -55,7 +55,7 @@ impl TaskManager {
         TASK_MANAGER.get().expect("task manager is not initialized")
     }
 
-    pub fn new(timeout: Duration, channel: async_channel::Sender<u32>) -> Self {
+    pub(crate) fn new(timeout: Duration, channel: async_channel::Sender<u32>) -> Self {
         Self {
             table: RwLock::new(HashMap::new()),
             notifiers: Mutex::new(HashMap::new()),
@@ -65,9 +65,21 @@ impl TaskManager {
         }
     }
 
+    pub(crate) async fn shutdown(&self) {
+        let _ = time::timeout(self.timeout, async {
+            let mut interval = time::interval(Duration::from_millis(100));
+            loop {
+                interval.tick().await;
+                if self.table.read().len() == 0 {
+                    break;
+                }
+            }
+        }).await;
+    }
+
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
         let (id, rx) = self.add_new_task(data).await?;
-        if let Err(err) = timeout(self.timeout, rx).await {
+        if let Err(err) = time::timeout(self.timeout, rx).await {
             error!(%id, %err, "task timeout");
             let mut table = self.table.write();
             let mut notifiers = self.notifiers.lock();
