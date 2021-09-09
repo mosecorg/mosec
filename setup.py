@@ -42,7 +42,10 @@ class RustExtension(Extension):
     """Custom Extension class for rust"""
 
 
-rust_controller_ext = RustExtension(name="mosec.bin", sources=["src/*"])
+ext_modules = []
+
+if os.getenv("PRODUCTION_MODE"):
+    ext_modules.append(RustExtension(name="mosec.bin", sources=["src/*"]))
 
 
 class RustBuildExt(_build_ext):
@@ -75,14 +78,15 @@ class RustBuildExt(_build_ext):
 
         # clean up
         if os.getenv("RUST_TARGET"):
-            target_dir = path.join(build_libpath, os.getenv(
-                "RUST_TARGET"), "release", "mosec")
-            rm_dir = os.getenv("RUST_TARGET")
+            target_dir = path.join(
+                build_libpath, os.getenv("RUST_TARGET"), "release", "mosec"
+            )
         else:
             target_dir = path.join(build_libpath, "release", "mosec")
-            rm_dir = "release"
         shutil.copy(target_dir, build_libpath)
-        shutil.rmtree(path.join(build_libpath, rm_dir))
+        shutil.rmtree(path.join(build_libpath, "release"))
+        if os.getenv("RUST_TARGET"):
+            shutil.rmtree(path.join(build_libpath, os.getenv("RUST_TARGET")))
 
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
@@ -127,6 +131,6 @@ setup(
     entry_points={
         "console_scripts": [],
     },
-    ext_modules=[rust_controller_ext],
+    ext_modules=ext_modules,
     cmdclass=dict(build_ext=RustBuildExt),
 )

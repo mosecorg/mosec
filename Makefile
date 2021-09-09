@@ -19,7 +19,7 @@ clean:
 	find . -name '__pycache__' -exec rm -rf {} +
 
 package: clean
-	python setup.py sdist bdist_wheel
+	PRODUCTION_MODE=yes python setup.py bdist_wheel
 
 publish: package
 	twine upload dist/*
