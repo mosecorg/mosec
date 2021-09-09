@@ -19,6 +19,10 @@ use crate::errors::{error_handler, ServiceError};
 use crate::tasks::{TaskCode, TaskManager};
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
+    let task_manager = TaskManager::global();
+    if task_manager.is_shutdown() {
+        return Err(ServiceError::GracefulShutdown);
+    }
     Ok(Response::new(Body::from("MOSEC service")))
 }
 

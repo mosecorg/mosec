@@ -19,6 +19,9 @@ pub(crate) enum ServiceError {
     #[display(fmt = "too many request: channel is full")]
     TooManyRequests,
 
+    #[display(fmt = "cannot accept new request during the graceful shutdown")]
+    GracefulShutdown,
+
     #[display(fmt = "mosec unknown error")]
     UnknownError,
 }
@@ -31,6 +34,7 @@ pub(crate) async fn error_handler(err: RouteError) -> Response<Body> {
         ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
         ServiceError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
         ServiceError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+        ServiceError::GracefulShutdown => StatusCode::SERVICE_UNAVAILABLE,
         ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
     };
 

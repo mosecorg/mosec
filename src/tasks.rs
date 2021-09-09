@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -46,6 +47,7 @@ pub(crate) struct TaskManager {
     timeout: Duration,
     current_id: Mutex<u32>,
     channel: async_channel::Sender<u32>,
+    shutdown: AtomicBool,
 }
 
 pub(crate) static TASK_MANAGER: OnceCell<TaskManager> = OnceCell::new();
@@ -62,11 +64,13 @@ impl TaskManager {
             timeout,
             current_id: Mutex::new(0),
             channel,
+            shutdown: AtomicBool::new(false),
         }
     }
 
     pub(crate) async fn shutdown(&self) {
-        let _ = time::timeout(self.timeout, async {
+        self.shutdown.store(true, Ordering::Release);
+        if time::timeout(self.timeout, async {
             let mut interval = time::interval(Duration::from_millis(100));
             loop {
                 interval.tick().await;
@@ -75,7 +79,11 @@ impl TaskManager {
                 }
             }
         })
-        .await;
+        .await
+        .is_err()
+        {
+            error!("task manager shutdown timeout");
+        }
     }
 
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
@@ -98,10 +106,17 @@ impl TaskManager {
         }
     }
 
-    pub(crate) async fn add_new_task(
+    pub(crate) fn is_shutdown(&self) -> bool {
+        self.shutdown.load(Ordering::Acquire)
+    }
+
+    async fn add_new_task(
         &self,
         data: Bytes,
     ) -> Result<(u32, oneshot::Receiver<()>), ServiceError> {
+        if self.is_shutdown() {
+            return Err(ServiceError::GracefulShutdown);
+        }
         let mut current_id = self.current_id.lock();
         let id = *current_id;
         let (tx, rx) = oneshot::channel();
