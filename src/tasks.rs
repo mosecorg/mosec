@@ -27,14 +27,14 @@ pub(crate) struct Task {
 }
 
 impl Task {
-    pub fn new(data: Bytes) -> Self {
+    fn new(data: Bytes) -> Self {
         Self {
             code: TaskCode::UnknownError,
             data,
         }
     }
 
-    pub fn update(&mut self, code: TaskCode, data: &Bytes) {
+    fn update(&mut self, code: TaskCode, data: &Bytes) {
         self.code = code;
         self.data = data.clone();
     }
@@ -53,7 +53,7 @@ pub(crate) struct TaskManager {
 pub(crate) static TASK_MANAGER: OnceCell<TaskManager> = OnceCell::new();
 
 impl TaskManager {
-    pub fn global() -> &'static TaskManager {
+    pub(crate) fn global() -> &'static TaskManager {
         TASK_MANAGER.get().expect("task manager is not initialized")
     }
 
