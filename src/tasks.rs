@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, RwLock};
 use tokio::sync::oneshot;
-use tokio::time::timeout;
+use tokio::time;
 use tracing::{debug, error, info};
 
 use crate::errors::ServiceError;
@@ -26,14 +27,14 @@ pub(crate) struct Task {
 }
 
 impl Task {
-    pub(crate) fn new(data: Bytes) -> Self {
+    fn new(data: Bytes) -> Self {
         Self {
             code: TaskCode::UnknownError,
             data,
         }
     }
 
-    pub(crate) fn update(&mut self, code: TaskCode, data: &Bytes) {
+    fn update(&mut self, code: TaskCode, data: &Bytes) {
         self.code = code;
         self.data = data.clone();
     }
@@ -46,28 +47,48 @@ pub(crate) struct TaskManager {
     timeout: Duration,
     current_id: Mutex<u32>,
     channel: async_channel::Sender<u32>,
+    shutdown: AtomicBool,
 }
 
 pub(crate) static TASK_MANAGER: OnceCell<TaskManager> = OnceCell::new();
 
 impl TaskManager {
-    pub fn global() -> &'static TaskManager {
+    pub(crate) fn global() -> &'static TaskManager {
         TASK_MANAGER.get().expect("task manager is not initialized")
     }
 
-    pub fn new(timeout: Duration, channel: async_channel::Sender<u32>) -> Self {
+    pub(crate) fn new(timeout: Duration, channel: async_channel::Sender<u32>) -> Self {
         Self {
             table: RwLock::new(HashMap::new()),
             notifiers: Mutex::new(HashMap::new()),
             timeout,
             current_id: Mutex::new(0),
             channel,
+            shutdown: AtomicBool::new(false),
+        }
+    }
+
+    pub(crate) async fn shutdown(&self) {
+        self.shutdown.store(true, Ordering::Release);
+        if time::timeout(self.timeout, async {
+            let mut interval = time::interval(Duration::from_millis(100));
+            loop {
+                interval.tick().await;
+                if self.table.read().len() == 0 {
+                    break;
+                }
+            }
+        })
+        .await
+        .is_err()
+        {
+            error!("task manager shutdown timeout");
         }
     }
 
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
         let (id, rx) = self.add_new_task(data).await?;
-        if let Err(err) = timeout(self.timeout, rx).await {
+        if let Err(err) = time::timeout(self.timeout, rx).await {
             error!(%id, %err, "task timeout");
             let mut table = self.table.write();
             let mut notifiers = self.notifiers.lock();
@@ -85,10 +106,17 @@ impl TaskManager {
         }
     }
 
-    pub(crate) async fn add_new_task(
+    pub(crate) fn is_shutdown(&self) -> bool {
+        self.shutdown.load(Ordering::Acquire)
+    }
+
+    async fn add_new_task(
         &self,
         data: Bytes,
     ) -> Result<(u32, oneshot::Receiver<()>), ServiceError> {
+        if self.is_shutdown() {
+            return Err(ServiceError::GracefulShutdown);
+        }
         let mut current_id = self.current_id.lock();
         let id = *current_id;
         let (tx, rx) = oneshot::channel();
