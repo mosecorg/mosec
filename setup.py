@@ -61,6 +61,7 @@ class RustBuildExt(_build_ext):
 
         libpath = ext.name.replace(".", sep)
         build_libpath = path.join(self.build_lib, libpath)
+        rust_target = os.getenv("RUST_TARGET")
         build_cmd = [
             "cargo",
             "build",
@@ -68,8 +69,8 @@ class RustBuildExt(_build_ext):
             "--target-dir",
             path.join(build_libpath),
         ]
-        if os.getenv("RUST_TARGET"):
-            build_cmd += ["--target", os.getenv("RUST_TARGET")]
+        if rust_target is not None:
+            build_cmd += ["--target", rust_target]
 
         print(f"running rust cargo package build: {build_cmd}")
         errno = subprocess.call(build_cmd)
@@ -77,16 +78,14 @@ class RustBuildExt(_build_ext):
         assert errno == 0, "Error occurred while building rust binary"
 
         # clean up
-        if os.getenv("RUST_TARGET"):
-            target_dir = path.join(
-                build_libpath, os.getenv("RUST_TARGET"), "release", "mosec"
-            )
+        if rust_target is not None:
+            target_dir = path.join(build_libpath, rust_target, "release", "mosec")
         else:
             target_dir = path.join(build_libpath, "release", "mosec")
         shutil.copy(target_dir, build_libpath)
         shutil.rmtree(path.join(build_libpath, "release"))
-        if os.getenv("RUST_TARGET"):
-            shutil.rmtree(path.join(build_libpath, os.getenv("RUST_TARGET")))
+        if rust_target is not None:
+            shutil.rmtree(path.join(build_libpath, rust_target))
 
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
