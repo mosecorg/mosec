@@ -9,6 +9,7 @@ use std::net::SocketAddr;
 use clap::Clap;
 use hyper::{body::to_bytes, Body, Request, Response, Server};
 use routerify::{Router, RouterService};
+use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -18,6 +19,10 @@ use crate::errors::{error_handler, ServiceError};
 use crate::tasks::{TaskCode, TaskManager};
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
+    let task_manager = TaskManager::global();
+    if task_manager.is_shutdown() {
+        return Err(ServiceError::GracefulShutdown);
+    }
     Ok(Response::new(Body::from("MOSEC service")))
 }
 
@@ -53,6 +58,22 @@ fn init_env() {
         .init();
 }
 
+async fn shutdown_signal() {
+    let mut interrupt = signal(SignalKind::interrupt()).unwrap();
+    let mut terminate = signal(SignalKind::terminate()).unwrap();
+    tokio::select! {
+        _ = interrupt.recv() => {
+            info!("received interrupt signal");
+        },
+        _ = terminate.recv() => {
+            info!("received terminate signal");
+        },
+    };
+    let task_manager = TaskManager::global();
+    task_manager.shutdown().await;
+    info!("shutdown complete");
+}
+
 #[tokio::main]
 async fn main() {
     init_env();
@@ -75,7 +96,8 @@ async fn main() {
     let service = RouterService::new(router).unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let server = Server::bind(&addr).serve(service);
-    if let Err(err) = server.await {
+    let graceful = server.with_graceful_shutdown(shutdown_signal());
+    if let Err(err) = graceful.await {
         tracing::error!(%err, "server error");
     }
 }
