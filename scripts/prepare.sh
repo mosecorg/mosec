@@ -9,4 +9,4 @@ export PATH=$HOME/miniconda3/bin:$PATH
 eval "$(conda shell.bash hook)"
 conda init bash
 # shellcheck disable=SC1090
-.${HOME}/.bashrc
+source ${HOME}/.bashrc
