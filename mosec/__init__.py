@@ -1,5 +1,6 @@
 import logging
 
+from ._version import __version__  # noqa
 from .server import Server
 from .worker import Worker
 
