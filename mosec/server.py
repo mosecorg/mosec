@@ -3,15 +3,17 @@ import multiprocessing as mp
 import signal
 import subprocess
 from multiprocessing.synchronize import Event
+from os.path import exists
 from pathlib import Path
+from shutil import rmtree
 from time import monotonic, sleep
 from typing import List, Optional, Tuple, Type, Union
 
 import pkg_resources
-from pydantic import BaseModel, BaseSettings, conint, validate_arguments
+from pydantic import BaseModel, conint, validate_arguments
 
+from .args import ArgParser
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
-from .utils import Settings
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -39,7 +41,7 @@ class Server:
 
         self._controller_process: Optional[mp.Process] = None
 
-        self._configs: BaseSettings = Settings()
+        self._configs: dict = {}
 
         self._server_shutdown: bool = False
         signal.signal(signal.SIGTERM, self._terminate)
@@ -52,15 +54,30 @@ class Server:
         )
 
     def _parse_args(self):
-        # directly update self._configs
-        # serialize configs into env for controller to read
-        pass  # TODO
+        self._configs = vars(ArgParser.parse())
+        logger.info(f"Mosec Server Configurations: {self._configs}")
+
+    def _controller_args(self):
+        args = []
+        for k, v in self._configs.items():
+            args.append(f"--{k}")
+            args.append(str(v))
+        args.append("--batches")
+        for b in self._worker_mbs:
+            args.append(str(b))
+        return args
 
     def _start_controller(self):
         """Subprocess to start controller program"""
         if not self._server_shutdown:
+            path = self._configs["path"]
+            if exists(path):
+                logger.info(f"path already exists, try to remove it: {path}")
+                rmtree(path)
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
-            self._controller_process = subprocess.Popen([path])
+            self._controller_process = subprocess.Popen(
+                [path] + self._controller_args()
+            )
 
     def _terminate(self, signum, framestack):
         logger.info(f"[{signum}] terminating server [{framestack}] ...")
@@ -134,7 +151,7 @@ class Server:
                             w_mbs,
                             stage,
                             shutdown,
-                            self._configs.socket_prefix,
+                            self._configs["path"],
                             stage_id,
                             worker_id,
                             req_schema,
@@ -160,7 +177,7 @@ class Server:
         # terminate controller first and wait for a graceful period
         if self._controller_process:
             self._controller_process.terminate()
-            graceful_period = monotonic() + self._configs.timeout / 1000
+            graceful_period = monotonic() + self._configs["timeout"] / 1000
             while monotonic() < graceful_period:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode:
