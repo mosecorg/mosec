@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+set -e
+
 MINICONDA_FILENAME=Miniconda3-latest-Linux-x86_64.sh
 curl -L -o ${MINICONDA_FILENAME} \
     "https://repo.anaconda.com/miniconda/${MINICONDA_FILENAME}"

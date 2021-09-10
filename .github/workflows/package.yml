@@ -18,9 +18,9 @@ jobs:
           toolchain: stable
           override: true
       - name: Prepare conda environment
-        run: "scripts/prepare"
+        run: bash ./scripts/prepare.sh
       - name: Build
-        run: "scripts/build"
+        run: bash ./scripts/build.sh
       - name: Publish
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}

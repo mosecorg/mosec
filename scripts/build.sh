@@ -1,4 +1,5 @@
-#!/bin/sh -e
+#!/bin/sh
+set -e
 eval "$(conda shell.bash hook)"
 
 # Support multiple python versions
