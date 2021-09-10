@@ -60,11 +60,8 @@ class Server:
     def _controller_args(self):
         args = []
         for k, v in self._configs.items():
-            args.append(f"--{k}")
-            args.append(str(v))
-        args.append("--batches")
-        for b in self._worker_mbs:
-            args.append(str(b))
+            args.extend([f"--{k}", str(v)])
+        args.extend(["--batches"] + list(map(lambda x: str(x), self._worker_mbs)))
         return args
 
     def _start_controller(self):
