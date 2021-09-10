@@ -1,6 +1,4 @@
 import os
-import pathlib
-import re
 import shutil
 import subprocess
 from io import open
@@ -27,14 +25,8 @@ def get_version():
     version_str = '__version__ = "{}"'.format(version)
 
     # update py version
-    init_path = pathlib.Path(here).joinpath("mosec/__init__.py")
-    cont = init_path.open("r").read()
-    p1 = "# do_not_modify_below\n"
-    p2 = "\n# do_not_modify_above"
-    cont = re.sub(
-        "{}.*?{}".format(p1, p2), p1 + version_str + p2, cont, flags=re.DOTALL
-    )
-    init_path.write_text(cont)
+    with open("mosec/_version.py", "w") as f:
+        f.write(f"{version_str}\n")
     return version
 
 
@@ -124,6 +116,7 @@ setup(
             "isort>=5.6",
             "autoflake>=1.4",
             "msgpack>=1.0.2",
+            "pre-commit>=2.15.0",
         ],
     },
     zip_safe=False,

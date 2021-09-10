@@ -1,3 +1,4 @@
+#!/bin/sh
 set -e
 
 MINICONDA_FILENAME=Miniconda3-latest-Linux-x86_64.sh

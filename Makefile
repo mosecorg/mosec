@@ -1,10 +1,11 @@
 check: lint test
 
-PY_SOURCE_FILES=mosec tests examples setup.py 
+PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
 	pip install -e .[dev]
+	pre-commit install
 
 test:
 	pytest tests -vv -s
@@ -35,6 +36,6 @@ lint:
 	black --check --diff ${PY_SOURCE_FILES}
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
-	cargo +nightly fmt -- --check 
+	cargo +nightly fmt -- --check
 
 .PHONY: test doc
