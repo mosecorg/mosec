@@ -17,10 +17,6 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
       - name: Prepare conda environment
         run: "scripts/prepare"
       - name: Build
