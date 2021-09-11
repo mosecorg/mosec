@@ -2,7 +2,7 @@
 set -e
 
 OS_NAME=$(uname -s)
-if [ "$OS_NAME" == "Darwin" ]; then
+if [[ "$OS_NAME" == "Darwin" ]]; then
   OS_NAME="MacOSX"
 fi
 MINICONDA_FILENAME=Miniconda3-latest-${OS_NAME}-x86_64.sh
