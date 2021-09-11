@@ -20,8 +20,6 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Prepare conda environment
-        run: bash ./scripts/prepare.sh
       - name: Build
         run: bash ./scripts/build.sh
       - name: Publish
