@@ -12,13 +12,16 @@ OS_NAME=$(uname -s)
 for VERSION in 3.6 3.7 3.8 3.9; do
   conda create -y -n py$VERSION python=$VERSION
   conda activate py$VERSION
+  which python
 
-  pip install --no-cache-dir setuptools wheel
+  ${HOME}/miniconda3/envs/py${VERSION}/bin/pip install --no-cache-dir setuptools wheel
 
   if [[ "${OS_NAME}" == "Linux" ]]; then
-    PRODUCTION_MODE=yes RUST_TARGET=x86_64-unknown-linux-gnu python setup.py bdist_wheel --plat-name manylinux1_x86_64
+    PRODUCTION_MODE=yes RUST_TARGET=x86_64-unknown-linux-gnu \
+      ${HOME}/miniconda3/envs/py${VERSION}/binpython setup.py bdist_wheel --plat-name manylinux1_x86_64 # linux
   else
-    PRODUCTION_MODE=yes RUST_TARGET=x86_64-apple-darwin python setup.py bdist_wheel --plat-name macosx_10.9_x86_64 # macos
+    PRODUCTION_MODE=yes RUST_TARGET=x86_64-apple-darwin \
+      ${HOME}/miniconda3/envs/py${VERSION}/binpython setup.py bdist_wheel --plat-name macosx_10.9_x86_64 # macos
   fi
 
   conda deactivate
