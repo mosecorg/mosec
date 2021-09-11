@@ -18,10 +18,10 @@ for VERSION in 3.6 3.7 3.8 3.9; do
 
   if [[ "${OS_NAME}" == "Linux" ]]; then
     PRODUCTION_MODE=yes RUST_TARGET=x86_64-unknown-linux-gnu \
-      ${HOME}/miniconda3/envs/py${VERSION}/binpython setup.py bdist_wheel --plat-name manylinux1_x86_64 # linux
+      ${HOME}/miniconda3/envs/py${VERSION}/bin/python setup.py bdist_wheel --plat-name manylinux1_x86_64 # linux
   else
     PRODUCTION_MODE=yes RUST_TARGET=x86_64-apple-darwin \
-      ${HOME}/miniconda3/envs/py${VERSION}/binpython setup.py bdist_wheel --plat-name macosx_10.9_x86_64 # macos
+      ${HOME}/miniconda3/envs/py${VERSION}/bin/python setup.py bdist_wheel --plat-name macosx_10.9_x86_64 # macos
   fi
 
   conda deactivate
