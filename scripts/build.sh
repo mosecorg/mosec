@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
+
+export PATH=$HOME/miniconda3/bin:$PATH
+which conda
 eval "$(conda shell.bash hook)"
+source ${HOME}/.bashrc
 
 OS_NAME=$(uname -s)
 
