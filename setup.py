@@ -8,6 +8,7 @@ from setuptools import Extension, find_packages, setup  # type: ignore
 from setuptools.command.build_ext import build_ext as _build_ext  # type: ignore
 
 here = path.abspath(path.dirname(__file__))
+PACKAGE_NAME = "mosec"
 
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
@@ -53,6 +54,10 @@ class RustBuildExt(_build_ext):
 
         libpath = ext.name.replace(".", sep)
         build_libpath = path.join(self.build_lib, libpath)
+        print(f"path info: {libpath=}, {build_libpath=}")
+        os.makedirs(
+            os.path.dirname(path.join(build_libpath, PACKAGE_NAME)), exist_ok=True
+        )
         rust_target = os.getenv("RUST_TARGET")
         build_cmd = ["cargo", "build", "--release"]
         if rust_target is not None:
@@ -65,10 +70,11 @@ class RustBuildExt(_build_ext):
 
         # package the binary
         if rust_target is not None:
-            target_dir = path.join("target", rust_target, "release", "mosec")
+            target_dir = path.join("target", rust_target, "release", PACKAGE_NAME)
         else:
-            target_dir = path.join("target", "release", "mosec")
-        shutil.copy(target_dir, build_libpath)
+            target_dir = path.join("target", "release", PACKAGE_NAME)
+        shutil.copy(target_dir, path.join(build_libpath, PACKAGE_NAME))
+        shutil.copytree("src", path.join(self.build_lib, "src"))
 
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
@@ -76,7 +82,7 @@ class RustBuildExt(_build_ext):
 
 
 setup(
-    name="mosec",
+    name=PACKAGE_NAME,
     version=get_version(),
     author="Keming Yang",
     author_email="kemingy94@gmail.com",
@@ -85,7 +91,6 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mosecorg/mosec",
     packages=find_packages(exclude=["examples*", "tests*"]),
-    package_data={},
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.6",
