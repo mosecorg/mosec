@@ -54,7 +54,6 @@ class RustBuildExt(_build_ext):
 
         libpath = ext.name.replace(".", sep)
         build_libpath = path.join(self.build_lib, libpath)
-        print(f"path info: {libpath=}, {build_libpath=}")
         os.makedirs(
             os.path.dirname(path.join(build_libpath, PACKAGE_NAME)), exist_ok=True
         )
