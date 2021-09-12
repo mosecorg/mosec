@@ -54,13 +54,7 @@ class RustBuildExt(_build_ext):
         libpath = ext.name.replace(".", sep)
         build_libpath = path.join(self.build_lib, libpath)
         rust_target = os.getenv("RUST_TARGET")
-        build_cmd = [
-            "cargo",
-            "build",
-            "--release",
-            "--target-dir",
-            path.join(build_libpath),
-        ]
+        build_cmd = ["cargo", "build", "--release"]
         if rust_target is not None:
             build_cmd += ["--target", rust_target]
 
@@ -69,15 +63,12 @@ class RustBuildExt(_build_ext):
 
         assert errno == 0, "Error occurred while building rust binary"
 
-        # clean up
+        # package the binary
         if rust_target is not None:
-            target_dir = path.join(build_libpath, rust_target, "release", "mosec")
+            target_dir = path.join("target", rust_target, "release", "mosec")
         else:
-            target_dir = path.join(build_libpath, "release", "mosec")
+            target_dir = path.join("target", "release", "mosec")
         shutil.copy(target_dir, build_libpath)
-        shutil.rmtree(path.join(build_libpath, "release"))
-        if rust_target is not None:
-            shutil.rmtree(path.join(build_libpath, rust_target))
 
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
