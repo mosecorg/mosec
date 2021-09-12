@@ -5,8 +5,8 @@ on:
     types: [created]
 
 jobs:
-  publish:
-    name: "Publish PyPI Package"
+  build:
+    name: "Build PyPI Package"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -24,6 +24,23 @@ jobs:
         run: |
           bash ./scripts/prepare.sh
           bash ./scripts/build.sh
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels_${{ github.event.release.tag_name }}
+          retention-days: 5
+          path: dist
+
+  publish:
+    name: "Publish PyPI Package"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels_${{ github.event.release.tag_name }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
       - name: Publish
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
