@@ -4,17 +4,21 @@ PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
+	pip install .
+
+dev:
 	pip install -e .[dev]
 	pre-commit install
 
 test:
 	pytest tests -vv -s
-	export RUST_BACKTRACE=1 && cargo test -vv
+	RUST_BACKTRACE=1 cargo test -vv
 
 doc:
 	cd docs && make html
 
 clean:
+	cargo clean
 	rm -rf build/ dist/ *.egg-info .pytest_cache
 	find . -name '*.pyc' -type f -exec rm -rf {} +
 	find . -name '__pycache__' -exec rm -rf {} +
