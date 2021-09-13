@@ -54,9 +54,7 @@ class RustBuildExt(_build_ext):
 
         libpath = ext.name.replace(".", sep)
         build_libpath = path.join(self.build_lib, libpath)
-        os.makedirs(
-            os.path.dirname(path.join(build_libpath, PACKAGE_NAME)), exist_ok=True
-        )
+
         rust_target = os.getenv("RUST_TARGET")
         build_cmd = ["cargo", "build", "--release"]
         if rust_target is not None:
@@ -72,6 +70,7 @@ class RustBuildExt(_build_ext):
             target_dir = path.join("target", rust_target, "release", PACKAGE_NAME)
         else:
             target_dir = path.join("target", "release", PACKAGE_NAME)
+        os.makedirs(build_libpath, exist_ok=True)
         shutil.copy(target_dir, path.join(build_libpath, PACKAGE_NAME))
 
         if self.inplace:
