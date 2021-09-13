@@ -8,6 +8,7 @@ from setuptools import Extension, find_packages, setup  # type: ignore
 from setuptools.command.build_ext import build_ext as _build_ext  # type: ignore
 
 here = path.abspath(path.dirname(__file__))
+PACKAGE_NAME = "mosec"
 
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
@@ -53,14 +54,9 @@ class RustBuildExt(_build_ext):
 
         libpath = ext.name.replace(".", sep)
         build_libpath = path.join(self.build_lib, libpath)
+
         rust_target = os.getenv("RUST_TARGET")
-        build_cmd = [
-            "cargo",
-            "build",
-            "--release",
-            "--target-dir",
-            path.join(build_libpath),
-        ]
+        build_cmd = ["cargo", "build", "--release"]
         if rust_target is not None:
             build_cmd += ["--target", rust_target]
 
@@ -69,15 +65,13 @@ class RustBuildExt(_build_ext):
 
         assert errno == 0, "Error occurred while building rust binary"
 
-        # clean up
+        # package the binary
         if rust_target is not None:
-            target_dir = path.join(build_libpath, rust_target, "release", "mosec")
+            target_dir = path.join("target", rust_target, "release", PACKAGE_NAME)
         else:
-            target_dir = path.join(build_libpath, "release", "mosec")
+            target_dir = path.join("target", "release", PACKAGE_NAME)
+        os.makedirs(build_libpath, exist_ok=True)
         shutil.copy(target_dir, build_libpath)
-        shutil.rmtree(path.join(build_libpath, "release"))
-        if rust_target is not None:
-            shutil.rmtree(path.join(build_libpath, rust_target))
 
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
@@ -85,7 +79,7 @@ class RustBuildExt(_build_ext):
 
 
 setup(
-    name="mosec",
+    name=PACKAGE_NAME,
     version=get_version(),
     author="Keming Yang",
     author_email="kemingy94@gmail.com",
@@ -94,7 +88,6 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mosecorg/mosec",
     packages=find_packages(exclude=["examples*", "tests*"]),
-    package_data={},
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.6",

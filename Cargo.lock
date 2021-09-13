@@ -390,7 +390,7 @@ dependencies = [
 
 [[package]]
 name = "mosec"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.2"
 dependencies = [
  "async-channel",
  "bytes",
