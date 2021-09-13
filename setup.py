@@ -73,7 +73,6 @@ class RustBuildExt(_build_ext):
         else:
             target_dir = path.join("target", "release", PACKAGE_NAME)
         shutil.copy(target_dir, path.join(build_libpath, PACKAGE_NAME))
-        shutil.copytree("src", path.join(self.build_lib, "src"))
 
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
