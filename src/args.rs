@@ -3,10 +3,10 @@ use clap::{crate_version, AppSettings, Clap};
 #[derive(Clap, Debug)]
 #[clap(version = crate_version!())]
 #[clap(setting = AppSettings::ColoredHelp)]
-// #[clap(setting = AppSettings::)]
+
 pub(crate) struct Opts {
     /// Unix domain socket directory path
-    #[clap(short, long, default_value = "/tmp/mosec")]
+    #[clap(long, default_value = "/tmp/mosec")]
     pub(crate) path: String,
 
     /// batch size for each stage
@@ -25,4 +25,12 @@ pub(crate) struct Opts {
     /// wait time for each batch (milliseconds)
     #[clap(short, long, default_value = "10")]
     pub(crate) wait: u64,
+
+    /// service host
+    #[clap(short, long, default_value = "0.0.0.0")]
+    pub(crate) address: String,
+
+    /// service port
+    #[clap(short, long, default_value = "8000")]
+    pub(crate) port: u16,
 }
