@@ -4,9 +4,6 @@ PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
-	pip install .
-
-dev:
 	pip install -e .[dev]
 	pre-commit install
 
