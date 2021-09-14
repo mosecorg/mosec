@@ -8,7 +8,7 @@ jobs:
   build:
     name: "Build PyPI Package"
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: wheels_${{ github.event.release.tag_name }}
-          retention-days: 5
+          retention-days: 1
           path: dist
 
   publish:
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
-      - name: Publish
+      - name: Publish PyPI
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
@@ -51,3 +51,9 @@ jobs:
           pip install setuptools wheel twine
           ls
           twine upload *
+      - name: Publish Crates
+        env:
+          CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+        run: |
+          cargo login $CRATES_TOKEN
+          cargo publish

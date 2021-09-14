@@ -9,12 +9,13 @@ install:
 
 test:
 	pytest tests -vv -s
-	export RUST_BACKTRACE=1 && cargo test -vv
+	RUST_BACKTRACE=1 cargo test -vv
 
 doc:
 	cd docs && make html
 
 clean:
+	cargo clean
 	rm -rf build/ dist/ *.egg-info .pytest_cache
 	find . -name '*.pyc' -type f -exec rm -rf {} +
 	find . -name '__pycache__' -exec rm -rf {} +

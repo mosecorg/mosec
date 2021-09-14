@@ -94,7 +94,7 @@ async fn main() {
         .unwrap();
 
     let service = RouterService::new(router).unwrap();
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
+    let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     let server = Server::bind(&addr).serve(service);
     let graceful = server.with_graceful_shutdown(shutdown_signal());
     if let Err(err) = graceful.await {
