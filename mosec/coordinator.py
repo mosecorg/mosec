@@ -108,7 +108,15 @@ class Coordinator:
     def init_worker(self):
         """Optional warmup to allocate resources (useful for GPU workload)"""
         if not self.shutdown.is_set():
-            pass  # TODO
+            if self.worker.example:
+                try:
+                    self.worker.forward(self.worker.example)
+                    logger.info(f"{self.name} warmup successfully")
+                except Exception as err:
+                    logger.error(
+                        f"{self.name} warmup failed: {err}\nplease ensure"
+                        " worker's example meets its forward input format"
+                    )
 
     def run(self):
         """Maintain the protocol connection and run the coordination"""
