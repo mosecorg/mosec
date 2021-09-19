@@ -38,5 +38,19 @@ class ArgParser:
             default=10,
         )
 
+        parser.add_argument(
+            "--address",
+            help="Address of the HTTP service",
+            type=str,
+            default="0.0.0.0",
+        )
+
+        parser.add_argument(
+            "--port",
+            help="Port of the HTTP service",
+            type=int,
+            default=8000,
+        )
+
         args = parser.parse_args()
         return args
