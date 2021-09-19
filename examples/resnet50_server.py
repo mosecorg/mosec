@@ -1,5 +1,6 @@
 import base64
 import logging
+from typing import List
 from urllib.request import urlretrieve
 
 import cv2  # type: ignore
@@ -19,6 +20,8 @@ sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 
+INFERENCE_BATCH_SIZE = 16
+
 
 class ImageReq(BaseModel):
     image: str  # base64 encoded
@@ -29,7 +32,7 @@ class CategoryResp(BaseModel):
 
 
 class Preprocess(Worker):
-    def forward(self, req: ImageReq):
+    def forward(self, req: ImageReq) -> np.array:
         im = np.frombuffer(base64.b64decode(req.image), np.uint8)
         im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
         im = cv2.resize(im, (256, 256))
@@ -53,7 +56,12 @@ class Inference(Worker):
         self.model.eval()
         self.model.to(self.device)
 
-    def forward(self, data):
+        # overwrite self.example for warmup
+        self.example = [
+            np.zeros((3, 244, 244), dtype=np.float32)
+        ] * INFERENCE_BATCH_SIZE
+
+    def forward(self, data: List[np.array]) -> List[int]:
         logger.info(f"processing batch with size: {len(data)}")
         with torch.no_grad():
             batch = torch.stack([torch.tensor(arr, device=self.device) for arr in data])
@@ -73,13 +81,13 @@ class Postprocess(Worker):
         with open(local_filename) as f:
             self.categories = list(map(lambda x: x.strip(), f.readlines()))
 
-    def forward(self, data) -> CategoryResp:
+    def forward(self, data: int) -> CategoryResp:
         return CategoryResp(category=self.categories[data])
 
 
 if __name__ == "__main__":
     server = Server(ImageReq, CategoryResp)
     server.append_worker(Preprocess, num=4)
-    server.append_worker(Inference, max_batch_size=16)
+    server.append_worker(Inference, max_batch_size=INFERENCE_BATCH_SIZE)
     server.append_worker(Postprocess, num=1)
     server.run()

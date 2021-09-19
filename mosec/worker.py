@@ -15,6 +15,8 @@ class Worker:
         self._stage = None
         self._max_batch_size = 1
 
+        self.example = None
+
     def _serialize_ipc(self, data):
         """Define IPC serialize method"""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
