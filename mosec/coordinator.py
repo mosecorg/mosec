@@ -108,7 +108,7 @@ class Coordinator:
     def init_worker(self):
         """Optional warmup to allocate resources (useful for GPU workload)"""
         if not self.shutdown.is_set():
-            if self.worker.example:
+            if self.worker.example is not None:
                 try:
                     self.worker.forward(self.worker.example)
                     logger.info(f"{self.name} warmup successfully")
