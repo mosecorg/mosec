@@ -89,7 +89,7 @@ pub(crate) async fn communicate(
                             error!(%err, "receive message error");
                             break;
                         }
-                        task_manager.update_multi_tasks(code, &mut ids, &data);
+                        task_manager.update_multi_tasks(code, &ids, &data);
                         match code {
                             TaskCode::Normal => {
                                 for id in &ids {

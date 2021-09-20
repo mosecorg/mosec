@@ -73,7 +73,7 @@ impl TaskManager {
 
     pub(crate) async fn shutdown(&self) {
         self.shutdown.store(true, Ordering::Release);
-        if time::timeout(self.timeout, async {
+        let fut = time::timeout(self.timeout, async {
             let mut interval = time::interval(Duration::from_millis(100));
             loop {
                 interval.tick().await;
@@ -81,10 +81,8 @@ impl TaskManager {
                     break;
                 }
             }
-        })
-        .await
-        .is_err()
-        {
+        });
+        if fut.await.is_err() {
             error!("task manager shutdown timeout");
         }
     }

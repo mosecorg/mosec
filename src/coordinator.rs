@@ -71,7 +71,7 @@ impl Coordinator {
             last_receiver = receiver;
             last_sender = sender;
         }
-        tokio::spawn(finish_task(last_receiver.clone()));
+        tokio::spawn(finish_task(last_receiver));
     }
 }
 
