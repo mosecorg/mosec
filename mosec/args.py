@@ -52,5 +52,12 @@ class ArgParser:
             default=8000,
         )
 
+        parser.add_argument(
+            "--namespace",
+            help="prometheus metrics namespace",
+            type=str,
+            default="mosec_service",
+        )
+
         args = parser.parse_args()
         return args
