@@ -17,7 +17,7 @@ impl Metrics {
         METRICS.get().expect("Metrics is not initialized")
     }
 
-    pub(crate) fn init_with_namespace(namespace: &str) -> Self {
+    pub(crate) fn init_with_namespace(namespace: &str, timeout: u64) -> Self {
         Self {
             throughput: register_int_counter_vec!(
                 format!("{}_throughput", namespace),
@@ -27,9 +27,10 @@ impl Metrics {
             .unwrap(),
             duration: register_histogram_vec!(
                 format!("{}_process_duration_second", namespace),
-                "process duration for different stages",
+                "process duration for each connection in each stage",
                 &["stage", "connection"],
-                exponential_buckets(1e-6f64, 4f64, 12).unwrap() // 1us ~ 4.19s
+                exponential_buckets(1e-3f64, 2f64, (timeout as f64).log2().ceil() as usize + 1)
+                    .unwrap() // 1ms ~ 4.096s (default)
             )
             .unwrap(),
             batch_size: register_histogram_vec!(
@@ -41,7 +42,7 @@ impl Metrics {
             .unwrap(),
             remaining_task: register_int_gauge!(
                 format!("{}_remaining_task", namespace),
-                "remaining tasks for each stage"
+                "remaining tasks for the whole service"
             )
             .unwrap(),
         }

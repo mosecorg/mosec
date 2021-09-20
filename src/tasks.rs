@@ -10,7 +10,6 @@ use tokio::time;
 use tracing::{debug, error, info};
 
 use crate::errors::ServiceError;
-use crate::metrics::Metrics;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum TaskCode {

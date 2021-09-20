@@ -48,13 +48,13 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
 
     metrics.remaining_task.inc();
     let task = task_manager.submit_task(data).await?;
-    metrics
-        .duration
-        .with_label_values(&["total", "total"])
-        .observe(task.create_at.elapsed().as_secs_f64());
     match task.code {
         TaskCode::Normal => {
             metrics.remaining_task.dec();
+            metrics
+                .duration
+                .with_label_values(&["total", "total"])
+                .observe(task.create_at.elapsed().as_secs_f64());
             metrics
                 .throughput
                 .with_label_values(&[StatusCode::OK.as_str()])

@@ -1,6 +1,5 @@
 use std::path::PathBuf;
-use std::time::Duration;
-use std::usize;
+use std::time::{Duration, Instant};
 
 use async_channel::{Receiver, Sender};
 use bytes::{BufMut, Bytes, BytesMut};
@@ -54,14 +53,9 @@ pub(crate) async fn communicate(
                         get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
                         // start record the duration metrics here because receiving the first task
                         // depends on when the request comes in.
-                        let start_timer = metrics
-                            .duration
-                            .with_label_values(&metric_label)
-                            .start_timer();
+                        let start_timer = Instant::now();
                         task_manager.get_multi_tasks_data(&mut ids, &mut data);
                         if data.is_empty() {
-                            // if all the ids in this batch are timeout, the data will be empty
-                            start_timer.stop_and_discard();
                             continue;
                         }
                         if batch_size > 1 {
@@ -98,6 +92,11 @@ pub(crate) async fn communicate(
                                         .await
                                         .expect("next channel is closed");
                                 }
+                                // only the normal tasks will be recorded
+                                metrics
+                                    .duration
+                                    .with_label_values(&metric_label)
+                                    .observe(start_timer.elapsed().as_secs_f64());
                             }
                             _ => {
                                 info!(?ids, ?code, "abnormal tasks");

@@ -29,7 +29,7 @@ impl Coordinator {
         let wait_time = Duration::from_millis(opts.wait);
         let task_manager = TaskManager::new(timeout, sender.clone());
         TASK_MANAGER.set(task_manager).unwrap();
-        let metrics = Metrics::init_with_namespace(&opts.namespace);
+        let metrics = Metrics::init_with_namespace(&opts.namespace, opts.timeout);
         METRICS.set(metrics).unwrap();
 
         Self {
