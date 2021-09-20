@@ -54,7 +54,7 @@ class ArgParser:
 
         parser.add_argument(
             "--namespace",
-            help="prometheus metrics namespace",
+            help="Namespace for prometheus metrics",
             type=str,
             default="mosec_service",
         )

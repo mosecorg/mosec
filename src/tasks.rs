@@ -93,15 +93,7 @@ impl TaskManager {
             error!(%id, %err, "task timeout");
             let mut table = self.table.write();
             let mut notifiers = self.notifiers.lock();
-            if let Some(task) = table.remove(&id) {
-                let metrics = Metrics::global();
-                // task is removed from here, but the actual time elapsed can be longer
-                // than this observation since it's not done yet
-                metrics
-                    .duration
-                    .with_label_values(&["total", "total"])
-                    .observe(task.create_at.elapsed().as_secs_f64());
-            }
+            table.remove(&id);
             notifiers.remove(&id);
             return Err(ServiceError::Timeout);
         }

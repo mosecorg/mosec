@@ -43,10 +43,6 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     let metrics = Metrics::global();
 
     if data.is_empty() {
-        metrics
-            .throughput
-            .with_label_values(&[StatusCode::OK.as_str()])
-            .inc();
         return Ok(Response::new(Body::from("No data provided")));
     }
 
