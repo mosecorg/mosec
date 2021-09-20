@@ -6,6 +6,7 @@ use async_channel::{bounded, Receiver, Sender};
 use tracing::{error, info};
 
 use crate::args::Opts;
+use crate::metrics::{Metrics, METRICS};
 use crate::protocol::communicate;
 use crate::tasks::{TaskManager, TASK_MANAGER};
 
@@ -28,6 +29,8 @@ impl Coordinator {
         let wait_time = Duration::from_millis(opts.wait);
         let task_manager = TaskManager::new(timeout, sender.clone());
         TASK_MANAGER.set(task_manager).unwrap();
+        let metrics = Metrics::init_with_namespace(&opts.namespace);
+        METRICS.set(metrics).unwrap();
 
         Self {
             capacity: opts.capacity,
@@ -60,6 +63,7 @@ impl Coordinator {
                 path,
                 batch_size as usize,
                 wait_time,
+                i.to_string(),
                 last_receiver.clone(),
                 sender.clone(),
                 last_sender.clone(),

@@ -1,13 +1,15 @@
 mod args;
 mod coordinator;
 mod errors;
+mod metrics;
 mod protocol;
 mod tasks;
 
 use std::net::SocketAddr;
 
 use clap::Clap;
-use hyper::{body::to_bytes, Body, Request, Response, Server};
+use hyper::{body::to_bytes, Body, Request, Response, Server, StatusCode};
+use prometheus::{Encoder, TextEncoder};
 use routerify::{Router, RouterService};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
@@ -16,6 +18,7 @@ use tracing_subscriber::EnvFilter;
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
 use crate::errors::{error_handler, ServiceError};
+use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
@@ -27,20 +30,41 @@ async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
 }
 
 async fn metrics(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
-    Ok(Response::new(Body::from("TODO: metrics")))
+    let encoder = TextEncoder::new();
+    let metrics = prometheus::gather();
+    let mut buffer = vec![];
+    encoder.encode(&metrics, &mut buffer).unwrap();
+    Ok(Response::new(Body::from(buffer)))
 }
 
 async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
+    let metrics = Metrics::global();
 
     if data.is_empty() {
+        metrics
+            .throughput
+            .with_label_values(&[StatusCode::OK.as_str()])
+            .inc();
         return Ok(Response::new(Body::from("No data provided")));
     }
 
+    metrics.remaining_task.inc();
     let task = task_manager.submit_task(data).await?;
+    metrics
+        .duration
+        .with_label_values(&["total", "total"])
+        .observe(task.create_at.elapsed().as_secs_f64());
     match task.code {
-        TaskCode::Normal => Ok(Response::new(Body::from(task.data))),
+        TaskCode::Normal => {
+            metrics.remaining_task.dec();
+            metrics
+                .throughput
+                .with_label_values(&[StatusCode::OK.as_str()])
+                .inc();
+            Ok(Response::new(Body::from(task.data)))
+        }
         TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
         TaskCode::ValidationError => Err(ServiceError::ValidationError),
         TaskCode::InternalError => Err(ServiceError::InternalError),

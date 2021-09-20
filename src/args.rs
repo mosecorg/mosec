@@ -33,4 +33,8 @@ pub(crate) struct Opts {
     /// service port
     #[clap(short, long, default_value = "8000")]
     pub(crate) port: u16,
+
+    /// metrics namespace
+    #[clap(short, long, default_value = "mosec_service")]
+    pub(crate) namespace: String,
 }

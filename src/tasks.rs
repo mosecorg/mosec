@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -10,6 +10,7 @@ use tokio::time;
 use tracing::{debug, error, info};
 
 use crate::errors::ServiceError;
+use crate::metrics::Metrics;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum TaskCode {
@@ -24,6 +25,7 @@ pub(crate) enum TaskCode {
 pub(crate) struct Task {
     pub(crate) code: TaskCode,
     pub(crate) data: Bytes,
+    pub(crate) create_at: Instant,
 }
 
 impl Task {
@@ -31,6 +33,7 @@ impl Task {
         Self {
             code: TaskCode::UnknownError,
             data,
+            create_at: Instant::now(),
         }
     }
 
@@ -92,7 +95,15 @@ impl TaskManager {
             error!(%id, %err, "task timeout");
             let mut table = self.table.write();
             let mut notifiers = self.notifiers.lock();
-            table.remove(&id);
+            if let Some(task) = table.remove(&id) {
+                let metrics = Metrics::global();
+                // task is removed from here, but the actual time elapsed can be longer
+                // than this observation since it's not done yet
+                metrics
+                    .duration
+                    .with_label_values(&["total", "total"])
+                    .observe(task.create_at.elapsed().as_secs_f64());
+            }
             notifiers.remove(&id);
             return Err(ServiceError::Timeout);
         }
@@ -117,14 +128,17 @@ impl TaskManager {
         if self.is_shutdown() {
             return Err(ServiceError::GracefulShutdown);
         }
-        let mut current_id = self.current_id.lock();
-        let id = *current_id;
         let (tx, rx) = oneshot::channel();
+        let id: u32;
+        {
+            let mut current_id = self.current_id.lock();
+            id = *current_id;
+            *current_id = id.wrapping_add(1);
+        }
         let mut table = self.table.write();
         let mut notifiers = self.notifiers.lock();
         table.insert(id, Task::new(data));
         notifiers.insert(id, tx);
-        *current_id = id.wrapping_add(1);
         debug!(%id, "add a new task");
 
         if self.channel.try_send(id).is_err() {

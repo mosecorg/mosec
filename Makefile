@@ -7,6 +7,12 @@ install:
 	pip install -e .[dev]
 	pre-commit install
 
+dev:
+	cargo build
+	mkdir -p mosec/bin
+	cp ./target/debug/mosec mosec/bin/
+	pip install -e .
+
 test:
 	pytest tests -vv -s
 	RUST_BACKTRACE=1 cargo test -vv

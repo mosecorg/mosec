@@ -4,7 +4,6 @@ version = "0.1.0-alpha.2"
 authors = ["Keming <kemingy94@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"
-license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/mosecorg/mosec"
 description = "Model Serving made Efficient in the Cloud."
@@ -25,3 +24,4 @@ async-channel = { version = "1.6.1" }
 parking_lot = "0.11"
 once_cell = { version = "1.8", features = ["parking_lot"] }
 clap = "3.0.0-beta.4"
+prometheus = "0.12.0"
