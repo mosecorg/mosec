@@ -2,6 +2,8 @@ use derive_more::Display;
 use hyper::{Body, Response, StatusCode};
 use routerify::RouteError;
 
+use crate::metrics::Metrics;
+
 #[derive(Debug, Display, derive_more::Error)]
 pub(crate) enum ServiceError {
     #[display(fmt = "inference timeout")]
@@ -37,6 +39,13 @@ pub(crate) async fn error_handler(err: RouteError) -> Response<Body> {
         ServiceError::GracefulShutdown => StatusCode::SERVICE_UNAVAILABLE,
         ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
     };
+
+    let metrics = Metrics::global();
+    metrics.remaining_task.dec();
+    metrics
+        .throughput
+        .with_label_values(&[status.as_str()])
+        .inc();
 
     Response::builder()
         .status(status)

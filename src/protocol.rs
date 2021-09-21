@@ -1,6 +1,5 @@
 use std::path::PathBuf;
-use std::time::Duration;
-use std::usize;
+use std::time::{Duration, Instant};
 
 use async_channel::{Receiver, Sender};
 use bytes::{BufMut, Bytes, BytesMut};
@@ -8,6 +7,7 @@ use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tracing::{debug, error, info};
 
+use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
 
 const FLAG_U8_SIZE: usize = 2;
@@ -24,15 +24,19 @@ pub(crate) async fn communicate(
     path: PathBuf,
     batch_size: usize,
     wait_time: Duration,
+    stage_id: String,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
     last_sender: Sender<u32>,
 ) {
     let listener = UnixListener::bind(&path).expect("failed to bind to the socket");
+    let mut connection_id: u32 = 0;
     loop {
         let sender_clone = sender.clone();
         let last_sender_clone = last_sender.clone();
         let receiver_clone = receiver.clone();
+        let stage_id_label = stage_id.clone();
+        let connection_id_label = connection_id.to_string();
         match listener.accept().await {
             Ok((mut stream, addr)) => {
                 info!(?addr, "accepted connection from");
@@ -41,14 +45,25 @@ pub(crate) async fn communicate(
                     let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
                     let mut data: Vec<Bytes> = Vec::with_capacity(batch_size);
                     let task_manager = TaskManager::global();
+                    let metrics = Metrics::global();
+                    let metric_label = [stage_id_label.as_str(), connection_id_label.as_str()];
                     loop {
                         ids.clear();
                         data.clear();
                         get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
+                        // start record the duration metrics here because receiving the first task
+                        // depends on when the request comes in.
+                        let start_timer = Instant::now();
                         task_manager.get_multi_tasks_data(&mut ids, &mut data);
                         if data.is_empty() {
-                            // if all the ids in this batch are timeout, the data will be empty
                             continue;
+                        }
+                        if batch_size > 1 {
+                            // only record the batch size when it's set to a number > 1
+                            metrics
+                                .batch_size
+                                .with_label_values(&metric_label)
+                                .observe(data.len() as f64);
                         }
                         if let Err(err) = send_message(&mut stream, &ids, &data).await {
                             error!(%err, "send message error");
@@ -68,7 +83,7 @@ pub(crate) async fn communicate(
                             error!(%err, "receive message error");
                             break;
                         }
-                        task_manager.update_multi_tasks(code, &mut ids, &data);
+                        task_manager.update_multi_tasks(code, &ids, &data);
                         match code {
                             TaskCode::Normal => {
                                 for id in &ids {
@@ -77,6 +92,11 @@ pub(crate) async fn communicate(
                                         .await
                                         .expect("next channel is closed");
                                 }
+                                // only the normal tasks will be recorded
+                                metrics
+                                    .duration
+                                    .with_label_values(&metric_label)
+                                    .observe(start_timer.elapsed().as_secs_f64());
                             }
                             _ => {
                                 info!(?ids, ?code, "abnormal tasks");
@@ -90,6 +110,7 @@ pub(crate) async fn communicate(
                 break;
             }
         }
+        connection_id += 1;
     }
 }
 

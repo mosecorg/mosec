@@ -5,7 +5,7 @@ from urllib.request import urlretrieve
 
 import cv2  # type: ignore
 import numpy as np  # type: ignore
-import torch
+import torch  # type: ignore
 import torchvision  # type: ignore
 from pydantic import BaseModel
 
@@ -32,7 +32,7 @@ class CategoryResp(BaseModel):
 
 
 class Preprocess(Worker):
-    def forward(self, req: ImageReq) -> np.array:
+    def forward(self, req: ImageReq) -> np.ndarray:
         im = np.frombuffer(base64.b64decode(req.image), np.uint8)
         im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
         im = cv2.resize(im, (256, 256))
@@ -61,7 +61,7 @@ class Inference(Worker):
             np.zeros((3, 244, 244), dtype=np.float32)
         ] * INFERENCE_BATCH_SIZE
 
-    def forward(self, data: List[np.array]) -> List[int]:
+    def forward(self, data: List[np.ndarray]) -> List[int]:
         logger.info(f"processing batch with size: {len(data)}")
         with torch.no_grad():
             batch = torch.stack([torch.tensor(arr, device=self.device) for arr in data])
