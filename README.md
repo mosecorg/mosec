@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./.github/static/logo_name.svg" height="150" alt="MOSEC" />
+  <img src="./.github/static/logo_name.svg" height="230" alt="MOSEC" />
 </p>
 
 
@@ -38,7 +38,7 @@ Install the latest PyPI package with:
     pip install -U mosec
 
 ## Usage
-Wanna spend only 5 minutes in converting your trained model into a service? Let's go.
+Wanna spend only 5 minutes and convert your trained model into a service? Let's go.
 ```python
 WIP
 ```
