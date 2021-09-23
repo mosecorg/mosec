@@ -109,8 +109,8 @@ and test it:
 That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
 
 ## Example
-More ready-to-use examples can be found in the [Example](https://mosec.github.io/example) section.
+More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section.
 
 
 ## Contributing
-We welcome any kind of contributions. Please give us feedback by raising issues or directly [contribute](https://mosec.github.io/contributing) your code and pull request!
+We welcome any kind of contributions. Please give us feedback by raising issues or directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
