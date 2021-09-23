@@ -52,7 +52,7 @@ class RustBuildExt(_build_ext):
         if not isinstance(ext, RustExtension):
             return super().build_extension(ext)
 
-        libpath = ext.name.replace(".", sep)
+        libpath = ext.name.replace(".", sep)  # type: ignore
         build_libpath = path.join(self.build_lib, libpath)
 
         rust_target = os.getenv("RUST_TARGET")
@@ -118,6 +118,6 @@ setup(
     entry_points={
         "console_scripts": [],
     },
-    ext_modules=ext_modules,
+    ext_modules=ext_modules,  # type: ignore
     cmdclass=dict(build_ext=RustBuildExt),
 )
