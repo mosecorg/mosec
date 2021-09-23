@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./.github/static/logo_name.svg" height="230" alt="MOSEC" />
+  <img src="https://user-images.githubusercontent.com/38581401/134487662-49733d45-2ba0-4c19-aa07-1f43fd35c453.png" height="230" alt="MOSEC" />
 </p>
 
 <p align="center">
@@ -32,26 +32,88 @@ Mosec is a high-performance and flexible model serving framework for building ML
 
 
 ## Installation
-Mosec requires Python 3.6 or above.
-
-Install the latest PyPI package with:
+Mosec requires Python 3.6 or above. Install the latest PyPI package with:
 
     pip install -U mosec
 
 
 ## Usage
+### Write the server.py
 <details>
-<summary>Wanna spend only 5 minutes and convert your trained model into a service?</summary>
+<summary>Import the libraries and setup a basic logger to better observe what happens:</summary>
 ```python
-WIP
+import logging
+
+from pydantic import BaseModel  # we need this to define our input/output schemas
+
+from mosec import Server, Worker
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
+)
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+logger.addHandler(sh)
 ```
 </details>
 
 <details>
-<summary>Wanna explore more ready-to-use examples?</summary>
-see [examples](./examples/)
+<summary>Define our service schemas for both input and output. These schemas will help us for data validation:</summary>
+```python
+class Request(BaseModel):
+    x: float
+
+
+class Response(BaseModel):
+    y: float
+```
 </details>
+
+Now, we are going to **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` function:
+```python
+import math
+
+
+class CalculateExp(Worker):
+    def forward(self, req: Request):
+        y = math.exp(req.x)  # f = e ^ x
+        logger.debug(f"e ^ {req.x} = {y}")
+        return Response(y=y)
+```
+
+<details>
+<summary>Finally, we run the server when the file is executed:</summary>
+```python
+if __name__ == "__main__":
+    server = Server(Request, Response)
+    server.append_worker(
+        CalculateExp, num=2
+    )  # we spawn two processes for our calculator
+    server.run()
+
+```
+</details>
+
+### Run the server.py
+We can first have a look at the possible arguments:
+
+    python server.py --help
+
+Let's start the server...
+
+    python server.py
+
+and test it:
+
+    curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
+
+That's it! You have just host your exponential-computing model as a server!
+
+## Example
+More ready-to-use examples can be found in the [Example](https://mosec.github.io/example) section.
 
 
 ## Contributing
-We welcome any kind of contributions. Please give us feedback by raising issues or directly [contribute your code and pull request](.github/CONTRIBUTING.md)!
+We welcome any kind of contributions. Please give us feedback by raising issues or directly [contribute](https://mosec.github.io/contributing) your code and pull request!

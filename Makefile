@@ -18,7 +18,7 @@ test:
 	RUST_BACKTRACE=1 cargo test -vv
 
 doc:
-	cd docs && make html
+	mkdocs serve
 
 clean:
 	cargo clean

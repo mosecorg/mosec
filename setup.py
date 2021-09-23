@@ -110,6 +110,8 @@ setup(
             "autoflake>=1.4",
             "msgpack>=1.0.2",
             "pre-commit>=2.15.0",
+            "mkdocstrings>=0.16.0",
+            "mkdocs-material>=7.3.0",
         ],
     },
     zip_safe=False,

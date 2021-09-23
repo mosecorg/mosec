@@ -1,0 +1,62 @@
+site_name: MOSEC
+site_description: Model Serving made Efficient in the Cloud
+
+
+repo_name: mosecorg/mosec
+repo_url: https://github.com/mosecorg/mosec
+
+docs_dir: .github/docs
+
+nav:
+  - Home:
+      - Overview: "index.md"
+      - Contributing: "contributing.md"
+  - Example:
+      - Overview: "example.md"
+      - Echo: "example_echo.md"
+      - PyTorch: "example_pytorch.md"
+  # - Deploy: "deploy.md"
+  # - FAQ: "faq.md"
+  # - Benchmark: "BENCHMARK.md"
+
+
+theme:
+  name: "material"
+  features:
+    - navigation.tabs
+    - navigation.top
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: grey
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: grey
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist
+  - toc:
+      permalink: "¤"
+
+plugins:
+  - search:
+      lang: en
+  - mkdocstrings:
+      watch:
+        - mosec
