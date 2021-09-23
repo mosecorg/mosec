@@ -12,8 +12,8 @@
   <a href="https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)">
       <img src="https://img.shields.io/pypi/l/mosec" alt="License" height="20">
   </a>
-  <a href="https://github.com/facebookresearch/CompilerGym/actions?query=workflow%3ACI+branch%3Adevelopment">
-      <img src="https://github.com/mosecorg/mosec/actions/workflows/check.yml/badge.svg" alt="Check status" height="20">
+  <a href="https://github.com/mosecorg/mosec/actions/workflows/check.yml?query=workflow%3A%22lint+and+test%22+branch%3Amain">
+      <img src="https://github.com/mosecorg/mosec/actions/workflows/check.yml/badge.svg?branch=main" alt="Check status" height="20">
   </a>
 </p>
 
