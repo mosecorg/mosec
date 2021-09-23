@@ -1,6 +1,6 @@
 check: lint test
 
-PY_SOURCE_FILES=mosec tests examples
+PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
