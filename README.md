@@ -69,7 +69,7 @@ class Response(BaseModel):
 ```
 
 
-Now, we are going to **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` function:
+Now, we are going to **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method:
 ```python
 import math
 
@@ -94,11 +94,11 @@ if __name__ == "__main__":
 ```
 
 ### Run the server
-We can first have a look at the possible arguments:
+After merging the snippets above into a file named `server.py`, we can first have a look at the supported arguments:
 
     python server.py --help
 
-Let's start the server...
+Then let's start the server...
 
     python server.py
 
