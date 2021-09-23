@@ -2,7 +2,6 @@
   <img src="./.github/static/logo_name.svg" height="230" alt="MOSEC" />
 </p>
 
-
 <p align="center">
   <a href="https://pypi.org/project/mosec/">
       <img src="https://badge.fury.io/py/mosec.svg" alt="PyPI version" height="20">
@@ -22,26 +21,37 @@
   <i>Model Serving made Efficient in the Cloud.</i>
 </p>
 
-## Introduction
 
-Mosec is a high-performance and flexible model serving framework for building ML model enabled backends and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
+## Introduction
+Mosec is a high-performance and flexible model serving framework for building ML model-enabled backends and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
 
 * **Highly performant**: web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
-* **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in any ML framework using the same code as they do for offline testing
+* **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
 * **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
 * **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
 
+
 ## Installation
+Mosec requires Python 3.6 or above.
 
 Install the latest PyPI package with:
 
     pip install -U mosec
 
+
 ## Usage
-Wanna spend only 5 minutes and convert your trained model into a service? Let's go.
+<details>
+<summary>Wanna spend only 5 minutes and convert your trained model into a service?</summary>
 ```python
 WIP
 ```
+</details>
+
+<details>
+<summary>Wanna explore more ready-to-use examples?</summary>
+see [examples](./examples/)
+</details>
+
 
 ## Contributing
 We welcome any kind of contributions. Please give us feedback by raising issues or directly [contribute your code and pull request](.github/CONTRIBUTING.md)!
