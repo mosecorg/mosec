@@ -106,7 +106,7 @@ and test it:
 
     curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 
-That's it! You have justed host your ***exponential-computing model*** as a server!
+That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
 
 ## Example
 More ready-to-use examples can be found in the [Example](https://mosec.github.io/example) section.
