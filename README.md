@@ -38,9 +38,8 @@ Mosec requires Python 3.6 or above. Install the latest PyPI package with:
 
 
 ## Usage
-### Write the server.py
-<details>
-<summary>Import the libraries and setup a basic logger to better observe what happens:</summary>
+### Write the server
+Import the libraries and setup a basic logger to better observe what happens:
 ```python
 import logging
 
@@ -57,10 +56,9 @@ sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 ```
-</details>
 
-<details>
-<summary>Define our service schemas for both input and output. These schemas will help us for data validation:</summary>
+
+Define our service schemas for both input and output. These schemas will help us for data validation:
 ```python
 class Request(BaseModel):
     x: float
@@ -69,7 +67,7 @@ class Request(BaseModel):
 class Response(BaseModel):
     y: float
 ```
-</details>
+
 
 Now, we are going to **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` function:
 ```python
@@ -83,8 +81,8 @@ class CalculateExp(Worker):
         return Response(y=y)
 ```
 
-<details>
-<summary>Finally, we run the server when the file is executed:</summary>
+
+Finally, we run the server when the file is executed:
 ```python
 if __name__ == "__main__":
     server = Server(Request, Response)
@@ -94,9 +92,8 @@ if __name__ == "__main__":
     server.run()
 
 ```
-</details>
 
-### Run the server.py
+### Run the server
 We can first have a look at the possible arguments:
 
     python server.py --help
