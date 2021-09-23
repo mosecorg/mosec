@@ -76,7 +76,7 @@ import math
 
 class CalculateExp(Worker):
     def forward(self, req: Request):
-        y = math.exp(req.x)  # f = e ^ x
+        y = math.exp(req.x)  # f(x) = e ^ x
         logger.debug(f"e ^ {req.x} = {y}")
         return Response(y=y)
 ```

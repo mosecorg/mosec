@@ -1,16 +1,15 @@
 site_name: MOSEC
 site_description: Model Serving made Efficient in the Cloud
 
-
 repo_name: mosecorg/mosec
 repo_url: https://github.com/mosecorg/mosec
-
-docs_dir: .github/docs
 
 nav:
   - Home:
       - Overview: "index.md"
       - Contributing: "contributing.md"
+  - Feature:
+      - Overview: "feature.md"
   - Example:
       - Overview: "example.md"
       - Echo: "example_echo.md"

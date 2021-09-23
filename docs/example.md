@@ -1,7 +1,7 @@
 We provide examples across different ML frameworks and for various tasks in this section.
 
 ## Get started
-All the examples in this section are self-contained and tested, feel free to grab one and run your
+All the examples in this section are self-contained and tested, feel free to grab one and run:
 
     python model_server.py
 
