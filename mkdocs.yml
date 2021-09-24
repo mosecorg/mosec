@@ -42,9 +42,6 @@ theme:
         icon: material/weather-night
         name: Switch to light mode
 
-extra_css:
-  - css/mkdocstrings.css
-
 markdown_extensions:
   - admonition
   - pymdownx.details
@@ -73,3 +70,4 @@ plugins:
 
 extra_css:
   - styles/extra.css
+  - css/mkdocstrings.css
