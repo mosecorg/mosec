@@ -30,7 +30,6 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue
       accent: grey
       toggle:
         icon: material/weather-sunny
@@ -71,3 +70,6 @@ plugins:
             show_root_heading: yes
             show_object_full_path: yes
             show_signature_annotations: yes
+
+extra_css:
+  - styles/extra.css
