@@ -2,7 +2,7 @@ name: Pages
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths:
       - 'mosec/**'
       - 'docs/**'
