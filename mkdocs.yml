@@ -70,4 +70,4 @@ plugins:
 
 extra_css:
   - styles/extra.css
-  - css/mkdocstrings.css
+  - styles/mkdocstrings.css
