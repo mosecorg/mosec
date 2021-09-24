@@ -10,8 +10,8 @@ repos:
   - repo: local
     hooks:
       - id: make-lint
-        name: make-lint
+        name: Lint
         entry: make lint
         language: system
-        types: [python]
+        types: [python, rust]
         pass_filenames: false

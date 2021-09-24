@@ -8,18 +8,20 @@ mod tasks;
 use std::net::SocketAddr;
 
 use clap::Clap;
-use hyper::{body::to_bytes, Body, Request, Response, Server, StatusCode};
+use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, Server, StatusCode};
 use prometheus::{Encoder, TextEncoder};
-use routerify::{Router, RouterService};
+use routerify::{Middleware, RouteError, Router, RouterService};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
-use crate::errors::{error_handler, ServiceError};
+use crate::errors::ServiceError;
 use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
+
+const SERVER_INFO: &'static str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     let task_manager = TaskManager::global();
@@ -68,14 +70,35 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
     }
 }
 
-fn init_env() {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info")
-    }
+async fn error_handler(err: RouteError) -> Response<Body> {
+    let mosec_err = err.downcast::<ServiceError>().unwrap();
+    let status = match mosec_err.as_ref() {
+        ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
+        ServiceError::BadRequestError => StatusCode::BAD_REQUEST,
+        ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
+        ServiceError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
+        ServiceError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+        ServiceError::GracefulShutdown => StatusCode::SERVICE_UNAVAILABLE,
+        ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
+    };
+    let metrics = Metrics::global();
 
-    tracing_subscriber::fmt::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+    metrics.remaining_task.dec();
+    metrics
+        .throughput
+        .with_label_values(&[status.as_str()])
+        .inc();
+
+    Response::builder()
+        .status(status)
+        .body(Body::from(mosec_err.to_string()))
+        .unwrap()
+}
+
+async fn post_middleware_handler(mut resp: Response<Body>) -> Result<Response<Body>, ServiceError> {
+    resp.headers_mut()
+        .insert("Server", HeaderValue::from_static(SERVER_INFO));
+    Ok(resp)
 }
 
 async fn shutdown_signal() {
@@ -94,6 +117,16 @@ async fn shutdown_signal() {
     info!("shutdown complete");
 }
 
+fn init_env() {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info")
+    }
+
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+}
+
 #[tokio::main]
 async fn main() {
     init_env();
@@ -110,6 +143,7 @@ async fn main() {
         .get("/metrics", metrics)
         .post("/inference", inference)
         .err_handler(error_handler)
+        .middleware(Middleware::post(post_middleware_handler))
         .build()
         .unwrap();
 
