@@ -21,7 +21,6 @@ nav:
   # - FAQ: "faq.md"
   # - Benchmark: "BENCHMARK.md"
 
-
 theme:
   name: "material"
   favicon: https://user-images.githubusercontent.com/38581401/134649759-1cf310ee-786e-4116-98ae-be197f3ef143.png
@@ -43,6 +42,9 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to light mode
+
+extra_css:
+  - css/mkdocstrings.css
 
 markdown_extensions:
   - admonition

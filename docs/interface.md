@@ -1,3 +1,2 @@
-::: mosec.worker.Worker
-
-::: mosec.server.Server
+::: mosec.worker
+::: mosec.server
