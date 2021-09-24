@@ -12,11 +12,11 @@ nav:
       # - Argument: "argument.md"
       - Contributing: "contributing.md"
   - Feature:
-      - Overview: "feature.md"
+      - Overview: "feature/index.md"
   - Example:
-      - Overview: "example.md"
-      - Echo: "example_echo.md"
-      - PyTorch: "example_pytorch.md"
+      - Overview: "example/index.md"
+      - Echo: "example/echo.md"
+      - PyTorch: "example/pytorch.md"
   # - Deploy: "deploy.md"
   # - FAQ: "faq.md"
   # - Benchmark: "BENCHMARK.md"
