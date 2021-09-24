@@ -25,6 +25,20 @@ NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 
 class Server:
+    """
+    This public class defines the mosec server interface. It allows
+    users to sequentially append workers they implemented, builds
+    the workflow pipeline automatically and starts up the server.
+
+    ###### Batching
+    > The user may enable the batching feature for any stage when the
+    corresponding worker is appended, by setting the `max_batch_size`.
+
+    ###### Multiprocess
+    > The user may spawn multiple processes for any stage when the
+    corresponding worker is appended, by setting the `num`.
+    """
+
     def __init__(
         self, req_schema: Type[BaseModel] = None, resp_schema: Type[BaseModel] = None
     ):
@@ -199,7 +213,16 @@ class Server:
         max_batch_size: AtLeastOne = 1,  # type: ignore
         start_method: str = "spawn",
     ):
-        """Sequentially add workers to be invoked in a pipelined manner"""
+        """
+        This method sequentially appends workers to the workflow pipeline.
+
+        Arguments:
+            worker: the class you inherit from `Worker` which implements
+                the `forward` method
+            num: the number of processes for parallel computing (>=1)
+            max_batch_size: the maximum batch size allowed (>=1)
+            start_method: the process starting method ("spawn" or "fork")
+        """
         assert (
             start_method in NEW_PROCESS_METHOD
         ), f"start method needs to be one of {NEW_PROCESS_METHOD}"
@@ -212,7 +235,9 @@ class Server:
         self._coordinator_shutdown.append([None] * num)
 
     def run(self):
-        """Run the mosec model server!"""
+        """
+        This method starts the mosec model server!
+        """
         self._validate()
         self._parse_args()
         self._start_controller()
