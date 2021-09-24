@@ -1,0 +1,43 @@
+name: Pages
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'mosec/**'
+      - 'docs/**'
+      - '.github/workflows/page.yml'
+      - 'mkdocs.yml'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        make install
+    - name: Generate docs
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        mkdocs build
+        cd site
+        touch .nojekyll
+        git config --global url."https://".insteadOf git://
+        git config --global url."https://github.com/".insteadOf git@github.com:
+        remote_repo="https://${GITHUB_ACTOR}:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        remote_branch=gh-pages
+        git init
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Deploy GitHub Pages"
+        git push --force "${remote_repo}" master:${remote_branch}
