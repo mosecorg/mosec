@@ -5,6 +5,6 @@ All the examples in this section are self-contained and tested, feel free to gra
 
     python model_server.py
 
-To test the server, we use `httpie` and `httpx` by default. You can have other choices but if you want to install them:
+To test the server, we use [`httpie`](https://github.com/httpie/httpie) and [`httpx`](https://github.com/encode/httpx) by default. You can have other choices but if you want to install them:
 
     pip install httpie httpx
