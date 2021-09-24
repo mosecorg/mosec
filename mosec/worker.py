@@ -21,6 +21,7 @@ class Worker:
     [MessagePack](https://msgpack.org/index.html),
     [BSON](https://bsonspec.org/)
     and other protocols alternatively.
+
     ###### Note
     > The "_same type_" mentioned below is applicable only when the stage
     disables batching. For a stage that
