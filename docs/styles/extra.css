@@ -1,0 +1,19 @@
+/* default color */
+
+:root {
+    --md-primary-fg-color: #326ce5;
+}
+
+/* Indentation. */
+
+div.doc-contents:not(.first) {
+    padding-left: 15px;
+    border-left: 3px solid rgba(230, 230, 230);
+    margin-bottom: 70px;
+}
+
+/* Avoid breaking parameters name, etc. in table cells. */
+
+td code {
+    word-break: normal !important;
+}
