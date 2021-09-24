@@ -15,7 +15,7 @@ class Worker:
     In addition, users may also want to override the `deserialize` method
     in the **first** stage (we term it as _ingress_ stage)) **together with**
     the `serialize` method in the **last** stage (we term it as _egress_ stage).
-    By default, we use [Json](https://www.json.org/) protocol and utilize
+    By default, we use [JSON](https://www.json.org/) protocol and utilize
     [pydantic](https://pydantic-docs.helpmanual.io/) for schema validation.
     Users are free to choose
     [MessagePack](https://msgpack.org/index.html),
