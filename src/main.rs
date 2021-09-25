@@ -21,7 +21,7 @@ use crate::errors::ServiceError;
 use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
 
-const SERVER_INFO: &'static str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
 async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
     let task_manager = TaskManager::global();
