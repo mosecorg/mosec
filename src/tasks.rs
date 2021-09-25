@@ -185,3 +185,132 @@ impl TaskManager {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_and_update_task() {
+        let now = Instant::now();
+        let mut task = Task::new(Bytes::from_static(b"hello"));
+        assert!(task.create_at > now);
+        assert!(task.create_at < Instant::now());
+        assert!(matches!(task.code, TaskCode::UnknownError));
+        assert_eq!(task.data, Bytes::from_static(b"hello"));
+
+        task.update(TaskCode::Normal, &Bytes::from_static(b"world"));
+        assert!(matches!(task.code, TaskCode::Normal));
+        assert_eq!(task.data, Bytes::from_static(b"world"));
+    }
+
+    #[tokio::test]
+    async fn task_manager_add_new_task() {
+        let (tx, rx) = async_channel::bounded(1);
+        let task_manager = TaskManager::new(Duration::from_secs(1), tx);
+        let (id, _rx) = task_manager
+            .add_new_task(Bytes::from_static(b"hello"))
+            .await
+            .unwrap();
+        assert_eq!(id, 0);
+        {
+            let table = task_manager.table.read();
+            let task = table.get(&id).unwrap();
+            assert_eq!(task.data, Bytes::from_static(b"hello"));
+        }
+        let recv_id = rx.recv().await.unwrap();
+        assert_eq!(recv_id, id);
+
+        // add a new task
+        let (id, _rx) = task_manager
+            .add_new_task(Bytes::from_static(b"world"))
+            .await
+            .unwrap();
+        assert_eq!(id, 1);
+        {
+            let table = task_manager.table.read();
+            let task = table.get(&id).unwrap();
+            assert_eq!(task.data, Bytes::from_static(b"world"));
+        }
+        let recv_id = rx.recv().await.unwrap();
+        assert_eq!(recv_id, id);
+    }
+
+    #[tokio::test]
+    async fn task_manager_timeout() {
+        let (tx, _rx) = async_channel::bounded(1);
+        let task_manager = TaskManager::new(Duration::from_millis(1), tx);
+
+        // wait until this task timeout
+        let res = task_manager.submit_task(Bytes::from_static(b"hello")).await;
+        assert!(matches!(res.unwrap_err(), ServiceError::Timeout));
+    }
+
+    #[tokio::test]
+    async fn task_manager_too_many_request() {
+        let (tx, _rx) = async_channel::bounded(1);
+        // push one task into the channel to make the channel full
+        let _ = tx.send(0u32).await;
+        let task_manager = TaskManager::new(Duration::from_millis(1), tx);
+
+        // trigger too many request since the capacity is 0
+        let res = task_manager.submit_task(Bytes::from_static(b"hello")).await;
+        assert!(matches!(res.unwrap_err(), ServiceError::TooManyRequests));
+    }
+
+    #[tokio::test]
+    async fn task_manager_graceful_shutdown() {
+        let (tx, _rx) = async_channel::bounded(1);
+        let task_manager = TaskManager::new(Duration::from_millis(1), tx);
+        assert!(!task_manager.is_shutdown());
+        task_manager.shutdown().await;
+        assert!(task_manager.is_shutdown());
+
+        let (tx, _rx) = async_channel::bounded(1);
+        let task_manager = TaskManager::new(Duration::from_millis(10), tx);
+        {
+            // block with one task in the channel
+            let mut table = task_manager.table.write();
+            table.insert(0u32, Task::new(Bytes::from_static(b"hello")));
+        }
+        assert!(!task_manager.is_shutdown());
+        let now = Instant::now();
+        task_manager.shutdown().await;
+        assert!(task_manager.is_shutdown());
+        // force shutdown after a timeout duration
+        assert!(now.elapsed() >= Duration::from_millis(10));
+    }
+
+    #[tokio::test]
+    async fn task_manager_get_and_update_task() {
+        let (tx, _rx) = async_channel::bounded(1);
+        let task_manager = TaskManager::new(Duration::from_millis(1), tx);
+
+        // add some tasks to the table
+        {
+            let mut table = task_manager.table.write();
+            table.insert(0, Task::new(Bytes::from_static(b"hello")));
+            table.insert(1, Task::new(Bytes::from_static(b"world")));
+        }
+
+        let mut task_ids = vec![0, 1, 2];
+        let mut data = Vec::new();
+        task_manager.get_multi_tasks_data(&mut task_ids, &mut data);
+        assert_eq!(task_ids, vec![0, 1]);
+        assert_eq!(
+            data,
+            vec![Bytes::from_static(b"hello"), Bytes::from_static(b"world")]
+        );
+
+        // update tasks
+        data = vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")];
+        task_manager.update_multi_tasks(TaskCode::Normal, &task_ids, &data);
+        let mut new_data = Vec::new();
+        task_manager.get_multi_tasks_data(&mut task_ids, &mut new_data);
+        assert_eq!(task_ids, vec![0, 1]);
+        assert_eq!(
+            new_data,
+            vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")]
+        );
+    }
+}
