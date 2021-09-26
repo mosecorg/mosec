@@ -68,7 +68,7 @@ def base_test_config():
     }
 
 
-def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notif, config):
+def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
     return mp.get_context(c_ctx).Process(
         target=Coordinator,
         args=(
@@ -76,7 +76,7 @@ def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notif, config):
             config["max_batch_size"],
             stage,
             shutdown,
-            shutdown_notif,
+            shutdown_notify,
             socket_prefix,
             config["stage_id"],
             config["worker_id"],
@@ -94,7 +94,7 @@ def test_socket_file_not_found(mocker, base_test_config):
 
     c_ctx = base_test_config.pop("c_ctx")
     shutdown = mp.get_context(c_ctx).Event()
-    shutdown_notif = mp.get_context(c_ctx).Event()
+    shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
         with pytest.raises(RuntimeError, match=r".*cannot find.*"):
@@ -102,7 +102,7 @@ def test_socket_file_not_found(mocker, base_test_config):
                 EchoWorkerJSON,
                 stage=stage,
                 shutdown=shutdown,
-                shutdown_notif=shutdown_notif,
+                shutdown_notify=shutdown_notify,
                 socket_prefix=socket_prefix,
                 **base_test_config,
             )
@@ -116,7 +116,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
     sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
     c_ctx = base_test_config.pop("c_ctx")
     shutdown = mp.get_context(c_ctx).Event()
-    shutdown_notif = mp.get_context(c_ctx).Event()
+    shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
         os.makedirs(socket_prefix, exist_ok=False)
@@ -128,7 +128,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
                 EchoWorkerJSON,
                 stage=stage,
                 shutdown=shutdown,
-                shutdown_notif=shutdown_notif,
+                shutdown_notify=shutdown_notify,
                 socket_prefix=socket_prefix,
                 **base_test_config,
             )
@@ -144,7 +144,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
                 EchoWorkerJSON,
                 stage=stage,
                 shutdown=shutdown,
-                shutdown_notif=shutdown_notif,
+                shutdown_notify=shutdown_notify,
                 socket_prefix=socket_prefix,
                 **base_test_config,
             )
@@ -184,7 +184,7 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
 
     sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
     shutdown = mp.get_context(c_ctx).Event()
-    shutdown_notif = mp.get_context(c_ctx).Event()
+    shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
         os.makedirs(socket_prefix, exist_ok=False)
@@ -194,7 +194,7 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
         sock.listen()
 
         coordinator_process = make_coordinator_process(
-            worker, c_ctx, shutdown, shutdown_notif, base_test_config
+            worker, c_ctx, shutdown, shutdown_notify, base_test_config
         )
         coordinator_process.start()
 

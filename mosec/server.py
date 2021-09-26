@@ -52,8 +52,8 @@ class Server:
 
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
-        self._coordinator_shutdown: List[List[Union[Event, None]]] = []
-        self._coordinator_shutdown_notif: List[List[Union[Event, None]]] = []
+        self._coordinator_shutdown: Union[Event, None] = None
+        self._coordinator_shutdown_notify: Union[Event, None] = None
 
         self._controller_process: Optional[mp.Process] = None
 
@@ -107,6 +107,10 @@ class Server:
 
     def _manage_coordinators(self):
         first = True
+        shutdown = mp.Event()
+        shutdown_notify = mp.Event()
+        self._coordinator_shutdown = shutdown
+        self._coordinator_shutdown_notify = shutdown_notify
         while not self._server_shutdown:
             for stage_id, (w_cls, w_num, w_mbs, c_ctx) in enumerate(
                 zip(
@@ -150,8 +154,7 @@ class Server:
                     # for every worker in each stage
                     if self._coordinator_pools[stage_id][worker_id] is not None:
                         continue
-                    shutdown = mp.get_context(c_ctx).Event()
-                    shutdown_notif = mp.get_context(c_ctx).Event()
+
                     coordinator_process = mp.get_context(c_ctx).Process(
                         target=Coordinator,
                         args=(
@@ -159,7 +162,7 @@ class Server:
                             w_mbs,
                             stage,
                             shutdown,
-                            shutdown_notif,
+                            shutdown_notify,
                             self._configs["path"],
                             stage_id,
                             worker_id,
@@ -170,10 +173,6 @@ class Server:
                     )
                     coordinator_process.start()
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
-                    self._coordinator_shutdown[stage_id][worker_id] = shutdown
-                    self._coordinator_shutdown_notif[stage_id][
-                        worker_id
-                    ] = shutdown_notif
             first = False
             if self._controller_process:
                 ctr_exitcode = self._controller_process.poll()
@@ -184,17 +183,10 @@ class Server:
                     )
             sleep(GUARD_CHECK_INTERVAL)
 
-    @staticmethod
-    def _set_events_list(events_list: List[List[Union[Event, None]]]):
-        for events in events_list:
-            for event in events:
-                if event:
-                    event.set()
-
     def _halt(self):
         """Graceful shutdown"""
         # notify coordinators for the shutdown
-        self._set_events_list(self._coordinator_shutdown_notif)
+        self._coordinator_shutdown_notify.set()
 
         # terminate controller first and wait for a graceful period
         if self._controller_process:
@@ -213,7 +205,7 @@ class Server:
                 sleep(0.1)
 
         # shutdown coordinators
-        self._set_events_list(self._coordinator_shutdown)
+        self._coordinator_shutdown.set()
 
         logger.info("mosec server exited. see you.")
 
@@ -244,8 +236,6 @@ class Server:
         self._worker_mbs.append(max_batch_size)
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)
-        self._coordinator_shutdown.append([None] * num)
-        self._coordinator_shutdown_notif.append([None] * num)
 
     def run(self):
         """

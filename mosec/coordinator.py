@@ -37,7 +37,7 @@ class Coordinator:
         max_batch_size: int,
         stage: str,
         shutdown: Event,
-        shutdown_notif: Event,
+        shutdown_notify: Event,
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
@@ -80,7 +80,7 @@ class Coordinator:
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         self.shutdown = shutdown
-        self.shutdown_notif = shutdown_notif
+        self.shutdown_notify = shutdown_notify
 
         self.init_protocol()
         self.init_worker()
@@ -88,7 +88,6 @@ class Coordinator:
 
     def exit(self):
         logger.info(f"{self.name} exiting...")
-        self.shutdown.set()
 
     def init_protocol(self):
         """Check socket readiness"""
@@ -127,7 +126,7 @@ class Coordinator:
             try:
                 self.protocol.open()
             except OSError as err:
-                if not self.shutdown_notif.is_set():
+                if not self.shutdown_notify.is_set():
                     logger.error(f"{self.name} socket connection error: {err}")
                 break
             except ConnectionRefusedError as err:
@@ -174,7 +173,7 @@ class Coordinator:
             except socket.timeout:
                 continue
             except (struct.error, OSError) as err:
-                if not self.shutdown_notif.is_set():
+                if not self.shutdown_notify.is_set():
                     logger.error(f"{self.name} socket receive error: {err}")
                 break
 
