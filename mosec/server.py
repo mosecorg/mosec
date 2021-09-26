@@ -52,8 +52,8 @@ class Server:
 
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
-        self._coordinator_shutdown: Union[Event, None] = None
-        self._coordinator_shutdown_notify: Union[Event, None] = None
+        self._coordinator_shutdown: Union[Event, None] = mp.Event()
+        self._coordinator_shutdown_notify: Union[Event, None] = mp.Event()
 
         self._controller_process: Optional[mp.Process] = None
 
@@ -107,10 +107,6 @@ class Server:
 
     def _manage_coordinators(self):
         first = True
-        shutdown = mp.Event()
-        shutdown_notify = mp.Event()
-        self._coordinator_shutdown = shutdown
-        self._coordinator_shutdown_notify = shutdown_notify
         while not self._server_shutdown:
             for stage_id, (w_cls, w_num, w_mbs, c_ctx) in enumerate(
                 zip(
@@ -161,8 +157,8 @@ class Server:
                             w_cls,
                             w_mbs,
                             stage,
-                            shutdown,
-                            shutdown_notify,
+                            self._coordinator_shutdown,
+                            self._coordinator_shutdown_notify,
                             self._configs["path"],
                             stage_id,
                             worker_id,
