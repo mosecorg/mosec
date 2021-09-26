@@ -52,8 +52,8 @@ class Server:
 
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
-        self._coordinator_shutdown: Union[Event, None] = mp.get_context("spawn").Event()
-        self._coordinator_shutdown_notify: Union[Event, None] = mp.get_context("spawn").Event()
+        self._coordinator_shutdown: Event = mp.get_context("spawn").Event()
+        self._coordinator_shutdown_notify: Event = mp.get_context("spawn").Event()
 
         self._controller_process: Optional[mp.Process] = None
 
