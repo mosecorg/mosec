@@ -104,17 +104,20 @@ async fn post_middleware_handler(mut resp: Response<Body>) -> Result<Response<Bo
 async fn shutdown_signal() {
     let mut interrupt = signal(SignalKind::interrupt()).unwrap();
     let mut terminate = signal(SignalKind::terminate()).unwrap();
-    tokio::select! {
-        _ = interrupt.recv() => {
-            info!("received interrupt signal");
-        },
-        _ = terminate.recv() => {
-            info!("received terminate signal");
-        },
-    };
-    let task_manager = TaskManager::global();
-    task_manager.shutdown().await;
-    info!("shutdown complete");
+    loop {
+        tokio::select! {
+            _ = interrupt.recv() => {
+                info!("received interrupt signal and ignored at controller side");
+            },
+            _ = terminate.recv() => {
+                info!("received terminate signal");
+                let task_manager = TaskManager::global();
+                task_manager.shutdown().await;
+                info!("shutdown complete");
+                break;
+            },
+        };
+    }
 }
 
 fn init_env() {
