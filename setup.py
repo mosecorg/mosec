@@ -112,6 +112,7 @@ setup(
             "pre-commit>=2.15.0",
             "mkdocstrings>=0.16.0",
             "mkdocs-material>=7.3.0",
+            "mkdocs-gen-files>=0.3.3",
         ],
     },
     zip_safe=False,
