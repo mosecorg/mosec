@@ -44,6 +44,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          make install
+          pip install -e .[dev]
       - name: Test
         run: make test
