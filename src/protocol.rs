@@ -205,3 +205,78 @@ async fn send_message(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{env, vec};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn get_batch_from_channel() {
+        let (sender, receiver) = async_channel::bounded(64);
+        let wait = Duration::from_millis(1);
+        for i in 0..32 {
+            sender.send(i as u32).await.expect("sender is closed");
+        }
+
+        let mut ids = Vec::new();
+        get_batch(&receiver, 8, &mut ids, wait).await;
+        assert_eq!(ids, vec![0, 1, 2, 3, 4, 5, 6, 7]);
+
+        ids.clear();
+        get_batch(&receiver, 1, &mut ids, wait).await;
+        assert_eq!(ids, vec![8]);
+
+        ids.clear();
+        get_batch(&receiver, 20, &mut ids, wait).await;
+        assert_eq!(ids.len(), 20);
+
+        ids.clear();
+        get_batch(&receiver, 8, &mut ids, wait).await;
+        assert_eq!(ids, vec![29, 30, 31]);
+
+        // channel is empty
+        ids.clear();
+        let fut = tokio::time::timeout(wait * 2, get_batch(&receiver, 1, &mut ids, wait)).await;
+        assert!(fut.is_err());
+
+        sender.send(0).await.expect("sender is closed");
+        ids.clear();
+        get_batch(&receiver, 1, &mut ids, wait).await;
+        assert_eq!(ids, vec![0]);
+    }
+
+    #[tokio::test]
+    async fn stream_read_write() {
+        let path = env::temp_dir().join("mosec_test.ipc");
+        if path.exists() {
+            std::fs::remove_file(&path).expect("remove file error");
+        }
+        let listener = UnixListener::bind(&path).expect("bind error");
+        let ids = vec![0u32, 1];
+        let data = vec![Bytes::from_static(b"hello"), Bytes::from_static(b"world")];
+
+        // setup the server in another tokio thread
+        let ids_clone = ids.clone();
+        let data_clone = data.clone();
+        tokio::spawn(async move {
+            let (mut stream, _addr) = listener.accept().await.unwrap();
+            send_message(&mut stream, &ids_clone, &data_clone)
+                .await
+                .expect("send message error");
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        });
+
+        let mut stream = UnixStream::connect(&path).await.unwrap();
+        let mut recv_ids = Vec::new();
+        let mut recv_data = Vec::new();
+        let mut code = TaskCode::UnknownError;
+        read_message(&mut stream, &mut code, &mut recv_ids, &mut recv_data)
+            .await
+            .expect("read message error");
+
+        assert_eq!(recv_ids, ids);
+        assert_eq!(recv_data, data);
+    }
+}
