@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import List
 
 from pydantic import BaseModel
 
@@ -24,20 +25,20 @@ class EchoResp(BaseModel):
 
 
 class Preprocess(Worker):
-    def forward(self, data: EchoReq):
+    def forward(self, data: EchoReq) -> float:
         logger.debug(f"pre received {data}")
         return data.time
 
 
 class Inference(Worker):
-    def forward(self, data):
+    def forward(self, data: List[float]) -> List[float]:
         logger.info(f"received batch size: {len(data)}")
         time.sleep(sum(data) / len(data))
         return data
 
 
 class Postprocess(Worker):
-    def forward(self, data) -> EchoResp:
+    def forward(self, data: float) -> EchoResp:
         logger.debug(f"post received {data}")
         return EchoResp(msg=f"sleep {data} seconds")
 
