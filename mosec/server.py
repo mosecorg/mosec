@@ -2,12 +2,13 @@ import logging
 import multiprocessing as mp
 import signal
 import subprocess
+import traceback
 from multiprocessing.synchronize import Event
 from os.path import exists
 from pathlib import Path
 from shutil import rmtree
 from time import monotonic, sleep
-from typing import List, Optional, Tuple, Type, Union
+from typing import List, Optional, Type, Union
 
 import pkg_resources
 from pydantic import BaseModel, conint, validate_arguments
@@ -52,6 +53,7 @@ class Server:
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
         self._coordinator_shutdown: List[List[Union[Event, None]]] = []
+        self._coordinator_shutdown_notif: List[List[Union[Event, None]]] = []
 
         self._controller_process: Optional[mp.Process] = None
 
@@ -97,13 +99,11 @@ class Server:
     @staticmethod
     def _clean_pools(
         processes: List[Union[mp.Process, None]],
-        events: List[Union[Event, None]],
-    ) -> Tuple[List[Union[mp.Process, None]], List[Union[Event, None]]]:
-        for i, (p, e) in enumerate(zip(processes, events)):
+    ) -> List[Union[mp.Process, None]]:
+        for i, p in enumerate(processes):
             if p is None or p.exitcode is not None:
                 processes[i] = None
-                events[i] = None
-        return processes, events
+        return processes
 
     def _manage_coordinators(self):
         first = True
@@ -117,12 +117,8 @@ class Server:
                 )
             ):
                 # for every sequential stage
-                (
-                    self._coordinator_pools[stage_id],
-                    self._coordinator_shutdown[stage_id],
-                ) = self._clean_pools(
-                    self._coordinator_pools[stage_id],
-                    self._coordinator_shutdown[stage_id],
+                self._coordinator_pools[stage_id] = self._clean_pools(
+                    self._coordinator_pools[stage_id]
                 )
 
                 if all(self._coordinator_pools[stage_id]):
@@ -155,6 +151,7 @@ class Server:
                     if self._coordinator_pools[stage_id][worker_id] is not None:
                         continue
                     shutdown = mp.get_context(c_ctx).Event()
+                    shutdown_notif = mp.get_context(c_ctx).Event()
                     coordinator_process = mp.get_context(c_ctx).Process(
                         target=Coordinator,
                         args=(
@@ -162,6 +159,7 @@ class Server:
                             w_mbs,
                             stage,
                             shutdown,
+                            shutdown_notif,
                             self._configs["path"],
                             stage_id,
                             worker_id,
@@ -173,6 +171,9 @@ class Server:
                     coordinator_process.start()
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
                     self._coordinator_shutdown[stage_id][worker_id] = shutdown
+                    self._coordinator_shutdown_notif[stage_id][
+                        worker_id
+                    ] = shutdown_notif
             first = False
             if self._controller_process:
                 ctr_exitcode = self._controller_process.poll()
@@ -183,26 +184,37 @@ class Server:
                     )
             sleep(GUARD_CHECK_INTERVAL)
 
+    @staticmethod
+    def _set_events_list(events_list: List[List[Union[Event, None]]]):
+        for events in events_list:
+            for event in events:
+                if event:
+                    event.set()
+
     def _halt(self):
         """Graceful shutdown"""
+        # notify coordinators for the shutdown
+        self._set_events_list(self._coordinator_shutdown_notif)
+
         # terminate controller first and wait for a graceful period
         if self._controller_process:
             self._controller_process.terminate()
             graceful_period = monotonic() + self._configs["timeout"] / 1000
             while monotonic() < graceful_period:
                 ctr_exitcode = self._controller_process.poll()
-                if ctr_exitcode:
-                    self._terminate(
-                        ctr_exitcode,
-                        f"mosec controller halted on error: {ctr_exitcode}",
-                    )
+                if ctr_exitcode is not None:  # exited
+                    if ctr_exitcode:  # on error
+                        logger.error(
+                            f"mosec controller halted on error: {ctr_exitcode}"
+                        )
+                    else:
+                        logger.info("mosec controller halted normally")
                     break
                 sleep(0.1)
 
-        for shutdown_events in self._coordinator_shutdown:
-            for event in shutdown_events:
-                if event:
-                    event.set()
+        # shutdown coordinators
+        self._set_events_list(self._coordinator_shutdown)
+
         logger.info("mosec server exited. see you.")
 
     @validate_arguments
@@ -233,6 +245,7 @@ class Server:
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)
         self._coordinator_shutdown.append([None] * num)
+        self._coordinator_shutdown_notif.append([None] * num)
 
     def run(self):
         """
@@ -241,5 +254,8 @@ class Server:
         self._validate()
         self._parse_args()
         self._start_controller()
-        self._manage_coordinators()
+        try:
+            self._manage_coordinators()
+        except Exception:
+            logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
