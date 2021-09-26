@@ -9,7 +9,7 @@ nav:
   - Home:
       - Overview: "index.md"
       - Interface: "interface.md"
-      # - Argument: "argument.md"
+      - Argument: "argument.md"
       - Contributing: "contributing.md"
   - Feature:
       - Overview: "feature/index.md"
@@ -23,7 +23,7 @@ nav:
 
 theme:
   name: "material"
-  favicon: https://user-images.githubusercontent.com/38581401/134649759-1cf310ee-786e-4116-98ae-be197f3ef143.png
+  favicon: https://user-images.githubusercontent.com/38581401/134798617-0104dc12-e0d4-4ed5-a79c-9e2435e99a14.png
   features:
     - navigation.tabs
     - navigation.top
@@ -58,9 +58,13 @@ markdown_extensions:
 plugins:
   - search:
       lang: en
+  - gen-files:
+      scripts:
+        - scripts/gen_docs_args.py
   - mkdocstrings:
       watch:
         - mosec
+        - scripts
       handlers:
         python:
           rendering:

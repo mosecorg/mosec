@@ -1,10 +1,10 @@
 check: lint test
 
-PY_SOURCE_FILES=mosec tests examples setup.py
+PY_SOURCE_FILES=mosec tests examples scripts setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
-	pip install -e .[dev]
+	pip install -e .[dev,doc]
 	pre-commit install
 
 dev:

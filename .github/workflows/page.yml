@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        make install
+        pip install -e .[doc]
     - name: Generate docs
       env:
         TOKEN: ${{ secrets.GITHUB_TOKEN }}
