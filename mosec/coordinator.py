@@ -68,7 +68,7 @@ class Coordinator:
         self.req_schema = req_schema
         self.resp_schema = resp_schema
 
-        self.name = f"<{stage_id+1}|{worker.__name__}|{worker_id+1}>"
+        self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 
         self.protocol = Protocol(
             name=self.name,
@@ -128,12 +128,6 @@ class Coordinator:
             except OSError as err:
                 if not self.shutdown_notify.is_set():
                     logger.error(f"{self.name} socket connection error: {err}")
-                break
-            except ConnectionRefusedError as err:
-                logger.error(f"{self.name} socket connection refused: {err}")
-                break
-            except FileNotFoundError:
-                logger.error(f"{self.name} socket file not found")
                 break
 
             self.coordinate()

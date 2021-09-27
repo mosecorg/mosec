@@ -56,14 +56,14 @@ impl Coordinator {
 
         for (i, batch) in self.batches.iter().enumerate() {
             let (sender, receiver) = bounded::<u32>(self.capacity);
-            let path = folder.join(format!("ipc_{:?}.socket", i));
+            let path = folder.join(format!("ipc_{:?}.socket", i + 1));
 
             let batch_size = *batch;
             tokio::spawn(communicate(
                 path,
                 batch_size as usize,
                 wait_time,
-                i.to_string(),
+                (i + 1).to_string(),
                 last_receiver.clone(),
                 sender.clone(),
                 last_sender.clone(),

@@ -52,8 +52,8 @@ class Server:
 
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
-        self._coordinator_shutdown: Union[Event, None] = mp.Event()
-        self._coordinator_shutdown_notify: Union[Event, None] = mp.Event()
+        self._coordinator_shutdown: Event = mp.get_context("spawn").Event()
+        self._coordinator_shutdown_notify: Event = mp.get_context("spawn").Event()
 
         self._controller_process: Optional[mp.Process] = None
 
@@ -129,7 +129,7 @@ class Server:
                     # this stage might contain bugs
                     self._terminate(
                         1,
-                        f"all workers at stage {stage_id+1} exited;"
+                        f"all workers at stage {stage_id} exited;"
                         " please check for bugs or socket connection issues",
                     )
                     break
@@ -160,8 +160,8 @@ class Server:
                             self._coordinator_shutdown,
                             self._coordinator_shutdown_notify,
                             self._configs["path"],
-                            stage_id,
-                            worker_id,
+                            stage_id + 1,
+                            worker_id + 1,
                             req_schema,
                             resp_schema,
                         ),

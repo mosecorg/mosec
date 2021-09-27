@@ -2,18 +2,17 @@ import os
 import shutil
 import subprocess
 from io import open
-from os import path, sep
 
 from setuptools import Extension, find_packages, setup  # type: ignore
 from setuptools.command.build_ext import build_ext as _build_ext  # type: ignore
 
-here = path.abspath(path.dirname(__file__))
+here = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_NAME = "mosec"
 
-with open(path.join(here, "README.md"), encoding="utf-8") as f:
+with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
 
-with open(path.join(here, "requirements.txt"), encoding="utf-8") as f:
+with open(os.path.join(here, "requirements.txt"), encoding="utf-8") as f:
     requires = [req.strip() for req in f if req]
 
 
@@ -52,8 +51,8 @@ class RustBuildExt(_build_ext):
         if not isinstance(ext, RustExtension):
             return super().build_extension(ext)
 
-        libpath = ext.name.replace(".", sep)  # type: ignore
-        build_libpath = path.join(self.build_lib, libpath)
+        libpath = ext.name.replace(".", os.sep)  # type: ignore
+        build_libpath = os.path.join(self.build_lib, libpath)
 
         rust_target = os.getenv("RUST_TARGET")
         build_cmd = ["cargo", "build", "--release"]
@@ -67,9 +66,9 @@ class RustBuildExt(_build_ext):
 
         # package the binary
         if rust_target is not None:
-            target_dir = path.join("target", rust_target, "release", PACKAGE_NAME)
+            target_dir = os.path.join("target", rust_target, "release", PACKAGE_NAME)
         else:
-            target_dir = path.join("target", "release", PACKAGE_NAME)
+            target_dir = os.path.join("target", "release", PACKAGE_NAME)
         os.makedirs(build_libpath, exist_ok=True)
         shutil.copy(target_dir, build_libpath)
 
@@ -110,6 +109,7 @@ setup(
             "autoflake>=1.4",
             "msgpack>=1.0.2",
             "pre-commit>=2.15.0",
+            "httpx>=0.19.0",
         ],
         "doc": [
             "mkdocstrings>=0.16.0",
