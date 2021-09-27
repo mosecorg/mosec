@@ -55,11 +55,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Install latest stable rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
       - name: Build
         run: |
           bash ./scripts/prepare.sh
