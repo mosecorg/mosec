@@ -129,12 +129,6 @@ class Coordinator:
                 if not self.shutdown_notify.is_set():
                     logger.error(f"{self.name} socket connection error: {err}")
                 break
-            except ConnectionRefusedError as err:
-                logger.error(f"{self.name} socket connection refused: {err}")
-                break
-            except FileNotFoundError:
-                logger.error(f"{self.name} socket file not found")
-                break
 
             self.coordinate()
 
