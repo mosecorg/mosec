@@ -60,8 +60,8 @@ class EchoWorkerMSGPACK(EchoWorkerJSON):
 def base_test_config():
     return {
         "max_batch_size": 1,
-        "stage_id": 0,
-        "worker_id": 0,
+        "stage_id": 1,
+        "worker_id": 1,
         "req_schema": None,
         "resp_schema": None,
         "c_ctx": "spawn",

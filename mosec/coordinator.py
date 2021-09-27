@@ -68,7 +68,7 @@ class Coordinator:
         self.req_schema = req_schema
         self.resp_schema = resp_schema
 
-        self.name = f"<{stage_id+1}|{worker.__name__}|{worker_id+1}>"
+        self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 
         self.protocol = Protocol(
             name=self.name,

@@ -32,6 +32,7 @@ pub(crate) async fn communicate(
     let listener = UnixListener::bind(&path).expect("failed to bind to the socket");
     let mut connection_id: u32 = 0;
     loop {
+        connection_id += 1;
         let sender_clone = sender.clone();
         let last_sender_clone = last_sender.clone();
         let receiver_clone = receiver.clone();
@@ -110,7 +111,6 @@ pub(crate) async fn communicate(
                 break;
             }
         }
-        connection_id += 1;
     }
 }
 
