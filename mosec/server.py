@@ -72,8 +72,7 @@ class Server:
         def check_schema(schema):
             if schema:
                 assert isinstance(schema, BaseModel), (
-                    "invalid schema\n"
-                    f"expect {BaseModel} but got {schema}"
+                    "invalid schema\n" f"expect {BaseModel} but got {schema}"
                 )
 
         for schema in [self._req_schema, self._resp_schema]:

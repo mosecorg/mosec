@@ -59,10 +59,10 @@ class Inference(Worker):
         ] * INFERENCE_BATCH_SIZE
 
     def forward(self, data: List[T]) -> List[str]:
-        data = [torch.tensor(token) for token in data]
+        tensors = [torch.tensor(token) for token in data]
         with torch.no_grad():
             result = self.model(
-                torch.nn.utils.rnn.pad_sequence(data, batch_first=True)
+                torch.nn.utils.rnn.pad_sequence(tensors, batch_first=True)
             )[0]
         scores = result.softmax(dim=1).cpu().tolist()
         return [f"positive={p}" for (_, p) in scores]
