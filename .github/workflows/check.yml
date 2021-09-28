@@ -7,6 +7,13 @@ on:
       - master
       - main
       - dev
+    paths:
+      - '.github/workflows/check.yml'
+      - 'mosec/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'examples/**'
+      - 'setup.py'
 
 jobs:
   lint:
