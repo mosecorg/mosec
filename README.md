@@ -9,6 +9,7 @@
   <a href="https://pepy.tech/project/mosec">
       <img src="https://pepy.tech/badge/mosec/month" alt="PyPi Downloads" height="20">
   </a>
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2Fmosecorg%2Fmosec?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmosecorg%2Fmosec.svg?type=shield"/></a>
   <a href="https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)">
       <img src="https://img.shields.io/pypi/l/mosec" alt="License" height="20">
   </a>
@@ -21,6 +22,9 @@
   <i>Model Serving made Efficient in the Cloud.</i>
 </p>
 
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmosecorg%2Fmosec.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmosecorg%2Fmosec?ref=badge_large)
 
 ## Introduction
 Mosec is a high-performance and flexible model serving framework for building ML model-enabled backends and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
