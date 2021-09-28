@@ -13,8 +13,7 @@ exclude = ["target", "examples", "tests", "scripts"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hyper = "0.14"
-routerify = "2"
+hyper = { version = "0.14", features = ["http1", "server", "runtime"] }
 bytes = "1"
 tracing = "0.1"
 tracing-subscriber = "0.2"
