@@ -20,7 +20,8 @@ class Worker:
     Users are free to choose
     [MessagePack](https://msgpack.org/index.html),
     [BSON](https://bsonspec.org/)
-    and other protocols alternatively.
+    and other protocols alternatively. A naive customization can be found in
+    [this example](https://mosecorg.github.io/mosec/example/pytorch/#sentiment-analysis).
 
     ###### Note
     > The "_same type_" mentioned below is applicable only when the stage

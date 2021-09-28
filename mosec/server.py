@@ -69,6 +69,16 @@ class Server:
             "help: use `.append_worker(...)` to register at least one worker"
         )
 
+        def check_schema(schema):
+            if schema:
+                assert isinstance(schema, BaseModel), (
+                    "invalid schema\n"
+                    f"expect {BaseModel} but got {schema}"
+                )
+
+        for schema in [self._req_schema, self._resp_schema]:
+            check_schema(schema)
+
     def _parse_args(self):
         self._configs = vars(ArgParser.parse())
         logger.info(f"Mosec Server Configurations: {self._configs}")

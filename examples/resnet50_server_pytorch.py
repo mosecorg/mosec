@@ -86,7 +86,7 @@ class Postprocess(Worker):
 
 
 if __name__ == "__main__":
-    server = Server(ImageReq, CategoryResp)
+    server = Server(req_schema=ImageReq, resp_schema=CategoryResp)
     server.append_worker(Preprocess, num=4)
     server.append_worker(Inference, max_batch_size=INFERENCE_BATCH_SIZE)
     server.append_worker(Postprocess, num=1)

@@ -10,7 +10,7 @@
       <img src="https://pepy.tech/badge/mosec/month" alt="PyPi Downloads" height="20">
   </a>
   <a href="https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)">
-      <img src="https://img.shields.io/pypi/l/mosec" alt="License" height="20">
+      <img src="https://img.shields.io/github/license/mosecorg/mosec" alt="License" height="20">
   </a>
   <a href="https://github.com/mosecorg/mosec/actions/workflows/check.yml?query=workflow%3A%22lint+and+test%22+branch%3Amain">
       <img src="https://github.com/mosecorg/mosec/actions/workflows/check.yml/badge.svg?branch=main" alt="Check status" height="20">

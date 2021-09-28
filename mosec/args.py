@@ -7,6 +7,7 @@ class ArgParser:
         """Parsing user configurations"""
         parser = argparse.ArgumentParser(
             description="Mosec Server Configurations",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
 
         parser.add_argument(

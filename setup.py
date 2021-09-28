@@ -86,6 +86,7 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     url="https://github.com/mosecorg/mosec",
+    license="Apache License 2.0",
     packages=find_packages(exclude=["examples*", "tests*"]),
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
