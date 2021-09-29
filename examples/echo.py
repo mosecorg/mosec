@@ -2,9 +2,8 @@ import logging
 import time
 from typing import List
 
-from pydantic import BaseModel
-
 from mosec import Server, Worker
+from mosec.errors import ValidationError
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -16,18 +15,15 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 
 
-class EchoReq(BaseModel):
-    time: float
-
-
-class EchoResp(BaseModel):
-    msg: str
-
-
 class Preprocess(Worker):
-    def forward(self, data: EchoReq) -> float:
+    def forward(self, data: dict) -> float:
         logger.debug(f"pre received {data}")
-        return data.time
+        # Customized, simple input validation
+        try:
+            time = float(data["time"])
+        except KeyError as err:
+            raise ValidationError(err)
+        return time
 
 
 class Inference(Worker):
@@ -38,14 +34,14 @@ class Inference(Worker):
 
 
 class Postprocess(Worker):
-    def forward(self, data: float) -> EchoResp:
+    def forward(self, data: float) -> dict:
         logger.debug(f"post received {data}")
-        return EchoResp(msg=f"sleep {data} seconds")
+        return {"msg": f"sleep {data} seconds"}
 
 
 if __name__ == "__main__":
-    server = Server(EchoReq, EchoResp)
-    server.append_worker(Preprocess, num=2)
-    server.append_worker(Inference, max_batch_size=16)
-    server.append_worker(Postprocess, num=2)
+    server = Server()
+    server.append_worker(Preprocess)
+    server.append_worker(Inference)
+    server.append_worker(Postprocess)
     server.run()

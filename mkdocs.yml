@@ -65,6 +65,7 @@ plugins:
       watch:
         - mosec
         - scripts
+        - examples
       handlers:
         python:
           rendering:

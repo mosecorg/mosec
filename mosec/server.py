@@ -11,7 +11,6 @@ from time import monotonic, sleep
 from typing import List, Optional, Type, Union
 
 import pkg_resources
-from pydantic import BaseModel, conint, validate_arguments
 
 from .args import ArgParser
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
@@ -19,7 +18,6 @@ from .worker import Worker
 
 logger = logging.getLogger(__name__)
 
-AtLeastOne: Type[int] = conint(strict=True, ge=1)
 
 GUARD_CHECK_INTERVAL = 1
 NEW_PROCESS_METHOD = {"spawn", "fork"}
@@ -40,15 +38,11 @@ class Server:
     corresponding worker is appended, by setting the `num`.
     """
 
-    def __init__(
-        self, req_schema: Type[BaseModel] = None, resp_schema: Type[BaseModel] = None
-    ):
-        self._req_schema = req_schema
-        self._resp_schema = resp_schema
+    def __init__(self):
 
         self._worker_cls: List[Type[Worker]] = []
-        self._worker_num: List[AtLeastOne] = []  # type: ignore
-        self._worker_mbs: List[AtLeastOne] = []  # type: ignore
+        self._worker_num: List[int] = []
+        self._worker_mbs: List[int] = []
 
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
@@ -63,20 +57,31 @@ class Server:
         signal.signal(signal.SIGTERM, self._terminate)
         signal.signal(signal.SIGINT, self._terminate)
 
-    def _validate(self):
+    def _validate_server(self):
         assert len(self._worker_cls) > 0, (
             "no worker registered\n"
             "help: use `.append_worker(...)` to register at least one worker"
         )
 
-        def check_schema(schema):
-            if schema:
-                assert isinstance(schema, BaseModel), (
-                    "invalid schema\n" f"expect {BaseModel} but got {schema}"
-                )
+    @staticmethod
+    def _validate_arguments(
+        worker,
+        num,
+        max_batch_size,
+        start_method,
+    ):
+        def at_least_one_int(num, name):
+            assert isinstance(
+                num, int
+            ), f"{name} must be integer but you give {type(num)}"
+            assert num >= 1, f"{name} must be greater than 1"
 
-        for schema in [self._req_schema, self._resp_schema]:
-            check_schema(schema)
+        assert issubclass(worker, Worker), "worker must be inherited from mosec.Worker"
+        at_least_one_int(num, "worker number")
+        at_least_one_int(max_batch_size, "maximum batch size")
+        assert (
+            start_method in NEW_PROCESS_METHOD
+        ), f"start method must be one of {NEW_PROCESS_METHOD}"
 
     def _parse_args(self):
         self._configs = vars(ArgParser.parse())
@@ -146,14 +151,8 @@ class Server:
                 stage = ""
                 if stage_id == 0:
                     stage += STAGE_INGRESS
-                    req_schema = self._req_schema
-                else:
-                    req_schema = None
                 if stage_id == len(self._worker_cls) - 1:
                     stage += STAGE_EGRESS
-                    resp_schema = self._resp_schema
-                else:
-                    resp_schema = None
 
                 for worker_id in range(w_num):
                     # for every worker in each stage
@@ -171,8 +170,6 @@ class Server:
                             self._configs["path"],
                             stage_id + 1,
                             worker_id + 1,
-                            req_schema,
-                            resp_schema,
                         ),
                         daemon=True,
                     )
@@ -214,12 +211,11 @@ class Server:
 
         logger.info("mosec server exited. see you.")
 
-    @validate_arguments
     def append_worker(
         self,
         worker: Type[Worker],
-        num: AtLeastOne = 1,  # type: ignore
-        max_batch_size: AtLeastOne = 1,  # type: ignore
+        num: int = 1,
+        max_batch_size: int = 1,
         start_method: str = "spawn",
     ):
         """
@@ -232,10 +228,8 @@ class Server:
             max_batch_size: the maximum batch size allowed (>=1)
             start_method: the process starting method ("spawn" or "fork")
         """
-        assert (
-            start_method in NEW_PROCESS_METHOD
-        ), f"start method needs to be one of {NEW_PROCESS_METHOD}"
 
+        self._validate_arguments(worker, num, max_batch_size, start_method)
         self._worker_cls.append(worker)
         self._worker_num.append(num)
         self._worker_mbs.append(max_batch_size)
@@ -246,7 +240,7 @@ class Server:
         """
         This method starts the mosec model server!
         """
-        self._validate()
+        self._validate_server()
         self._parse_args()
         self._start_controller()
         try:

@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 from typing import List
 from urllib.request import urlretrieve
@@ -7,9 +8,11 @@ import cv2  # type: ignore
 import numpy as np  # type: ignore
 import torch  # type: ignore
 import torchvision  # type: ignore
-from pydantic import BaseModel
+from pydantic import BaseModel  # type: ignore
+from pydantic.json import pydantic_encoder  # type: ignore
 
 from mosec import Server, Worker
+from mosec.errors import ValidationError
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -23,6 +26,7 @@ logger.addHandler(sh)
 INFERENCE_BATCH_SIZE = 16
 
 
+# define the input and output schemas for validation
 class ImageReq(BaseModel):
     image: str  # base64 encoded
 
@@ -32,9 +36,26 @@ class CategoryResp(BaseModel):
 
 
 class Preprocess(Worker):
+    def deserialize(self, data: bytes) -> ImageReq:
+        data_json = super().deserialize(data)  # default json decoder
+
+        # Customized validation for schema, raise ValidationError
+        # so that the client can get 422 as http status
+        try:
+            image_req = ImageReq.parse_obj(data_json)
+        except Exception as err:
+            raise ValidationError(err)
+        return image_req
+
     def forward(self, req: ImageReq) -> np.ndarray:
-        im = np.frombuffer(base64.b64decode(req.image), np.uint8)
-        im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
+        # Customized validation for content, raise ValidationError
+        # so that the client can get 422 as http status
+        try:
+            im = np.frombuffer(base64.b64decode(req.image), np.uint8)
+            im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
+        except Exception as err:
+            raise ValidationError(f"cannot decode as image data: {err}")
+
         im = cv2.resize(im, (256, 256))
         crop_im = (
             im[16 : 16 + 224, 16 : 16 + 224].astype(np.float32) / 255
@@ -56,7 +77,7 @@ class Inference(Worker):
         self.model.eval()
         self.model.to(self.device)
 
-        # overwrite self.example for warmup
+        # Overwrite self.example for warmup
         self.example = [
             np.zeros((3, 244, 244), dtype=np.float32)
         ] * INFERENCE_BATCH_SIZE
@@ -84,10 +105,14 @@ class Postprocess(Worker):
     def forward(self, data: int) -> CategoryResp:
         return CategoryResp(category=self.categories[data])
 
+    def serialize(self, data: CategoryResp) -> bytes:
+        # Override default encoder with pydantic
+        return json.dumps(data, indent=2, default=pydantic_encoder).encode()
+
 
 if __name__ == "__main__":
-    server = Server(req_schema=ImageReq, resp_schema=CategoryResp)
+    server = Server()
     server.append_worker(Preprocess, num=4)
-    server.append_worker(Inference, max_batch_size=INFERENCE_BATCH_SIZE)
+    server.append_worker(Inference, num=2, max_batch_size=INFERENCE_BATCH_SIZE)
     server.append_worker(Postprocess, num=1)
     server.run()

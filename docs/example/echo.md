@@ -1,6 +1,6 @@
 An echo server is usually the very first server you wanna implement to get familiar with the framework.
 
-This server sleeps for a given period of time and return. It is a simple illustration of how multi-stage workload is implemented.
+This server sleeps for a given period of time and return. It is a simple illustration of how **multi-stage workload** is implemented. It also shows how to write a simple **validation** for input data.
 
 #### **`echo.py`**
 ```python

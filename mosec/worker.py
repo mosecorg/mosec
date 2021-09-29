@@ -1,8 +1,11 @@
 import json
+import logging
 import pickle
 from typing import Any
 
-from pydantic.json import pydantic_encoder
+from .errors import ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class Worker:
@@ -15,11 +18,13 @@ class Worker:
     In addition, users may also want to override the `deserialize` method
     in the **first** stage (we term it as _ingress_ stage)) **together with**
     the `serialize` method in the **last** stage (we term it as _egress_ stage).
-    By default, we use [JSON](https://www.json.org/) protocol and utilize
-    [pydantic](https://pydantic-docs.helpmanual.io/) for schema validation.
-    Users are free to choose
+    By default, we use [JSON](https://www.json.org/) encoding. Users can
+    optionally use [pydantic](https://pydantic-docs.helpmanual.io/) on top of
+    JSON for schema validation
+    ([example](https://mosecorg.github.io/mosec/example/echo/#echopy)).
+    Besides JSON, users are free to choose
     [MessagePack](https://msgpack.org/index.html),
-    [BSON](https://bsonspec.org/)
+    [Protocol Buffer](https://developers.google.com/protocol-buffers)
     and other protocols alternatively. A naive customization can be found in [this
     example](https://mosecorg.github.io/mosec/example/pytorch/#sentiment-analysis).
 
@@ -63,7 +68,11 @@ class Worker:
         Returns:
             the bytes you want to put into the response body
         """
-        return json.dumps(data, indent=2, default=pydantic_encoder).encode()
+        try:
+            data_bytes = json.dumps(data, indent=2).encode()
+        except Exception as err:
+            raise ValueError(err)
+        return data_bytes
 
     def deserialize(self, data: bytes) -> Any:
         """
@@ -77,7 +86,11 @@ class Worker:
             the [_*same type_][mosec.worker.Worker--note] as the argument of
             the `forward` you implement
         """
-        return json.loads(data) if data else {}
+        try:
+            data_json = json.loads(data) if data else {}
+        except Exception as err:
+            raise ValidationError(err)
+        return data_json
 
     def forward(self, data: Any) -> Any:
         """

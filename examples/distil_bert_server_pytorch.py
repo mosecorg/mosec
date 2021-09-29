@@ -20,7 +20,7 @@ sh = logging.StreamHandler()
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 
-INFERENCE_BATCH_SIZE = 16
+INFERENCE_BATCH_SIZE = 32
 
 
 class Preprocess(Worker):
@@ -53,7 +53,7 @@ class Inference(Worker):
         self.model.eval()
         self.model.to(self.device)
 
-        # overwrite self.example for warmup
+        # Overwrite self.example for warmup
         self.example = [
             [101, 2023, 2003, 1037, 8403, 4937, 999, 102] * 5  # make sentence longer
         ] * INFERENCE_BATCH_SIZE
@@ -75,6 +75,6 @@ class Inference(Worker):
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(Preprocess, num=8)
+    server.append_worker(Preprocess)
     server.append_worker(Inference, max_batch_size=INFERENCE_BATCH_SIZE)
     server.run()
