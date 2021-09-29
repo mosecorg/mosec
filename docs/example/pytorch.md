@@ -21,7 +21,7 @@ Note that in a stage that enables batching (e.g. `Inference` in this example), i
 </details>
 
 ##### Client
-    curl -X POST http://127.0.0.1:8000/inference -d 'i  bought this product for many times, highly recommend'
+    curl -X POST http://127.0.0.1:8000/inference -d 'i bought this product for many times, highly recommend'
 
 
 ## Computer Vision
