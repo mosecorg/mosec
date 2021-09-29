@@ -1,6 +1,5 @@
 import logging
 import time
-from typing import List
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError

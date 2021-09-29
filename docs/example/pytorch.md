@@ -32,7 +32,7 @@ This server receives an image and classify it according to the [ImageNet](https:
 
 We enable multiprocessing for `Preprocess` stage, so that it can produce enough tasks for `Inference` stage to do **batch inference**, which better exploits the GPU computing power. More interestingly, we also started multiple model by setting the number of worker for `Inference` stage to 2. This is because a single model is hard to fully occupy the GPU memory or utilization. Multiple models running on the same device in parallel can further increase our service throughput.
 
-We also demonstrate how to build more proper **validation** through this example. In short, we can raise `ValidationError` whenever our validation check fails. This status will be finally returned to our clients as [HTTP 422](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422). We use [pydantic](https://pydantic-docs.helpmanual.io/) as a third-party tool for this purpose.
+We also demonstrate how to customized **validation** on the data content through this example. In the `forward` method of the `Preprocess` worker, we firstly check the key of the input, then try to decode the str and load it into array. If any of these steps fails, we raise the `ValidationError`. The status will be finally returned to our clients as [HTTP 422](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422).
 
 ##### Server
     python resnet50_server.py

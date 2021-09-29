@@ -1,5 +1,4 @@
 import base64
-import json
 import logging
 from typing import List
 from urllib.request import urlretrieve
@@ -8,8 +7,6 @@ import cv2  # type: ignore
 import numpy as np  # type: ignore
 import torch  # type: ignore
 import torchvision  # type: ignore
-from pydantic import BaseModel  # type: ignore
-from pydantic.json import pydantic_encoder  # type: ignore
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
@@ -26,33 +23,16 @@ logger.addHandler(sh)
 INFERENCE_BATCH_SIZE = 16
 
 
-# define the input and output schemas for validation
-class ImageReq(BaseModel):
-    image: str  # base64 encoded
-
-
-class CategoryResp(BaseModel):
-    category: str  # class name
-
-
 class Preprocess(Worker):
-    def deserialize(self, data: bytes) -> ImageReq:
-        data_json = super().deserialize(data)  # default json decoder
-
-        # Customized validation for schema, raise ValidationError
-        # so that the client can get 422 as http status
+    def forward(self, req: dict) -> np.ndarray:
+        # Customized validation for input key and field content; raise
+        # ValidationError so that the client can get 422 as http status
         try:
-            image_req = ImageReq.parse_obj(data_json)
-        except Exception as err:
-            raise ValidationError(err)
-        return image_req
-
-    def forward(self, req: ImageReq) -> np.ndarray:
-        # Customized validation for content, raise ValidationError
-        # so that the client can get 422 as http status
-        try:
-            im = np.frombuffer(base64.b64decode(req.image), np.uint8)
+            image = req["image"]
+            im = np.frombuffer(base64.b64decode(image), np.uint8)
             im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
+        except KeyError as err:
+            raise ValidationError(f"bad request: {err}")
         except Exception as err:
             raise ValidationError(f"cannot decode as image data: {err}")
 
@@ -102,12 +82,8 @@ class Postprocess(Worker):
         with open(local_filename) as f:
             self.categories = list(map(lambda x: x.strip(), f.readlines()))
 
-    def forward(self, data: int) -> CategoryResp:
-        return CategoryResp(category=self.categories[data])
-
-    def serialize(self, data: CategoryResp) -> bytes:
-        # Override default encoder with pydantic
-        return json.dumps(data, indent=2, default=pydantic_encoder).encode()
+    def forward(self, data: int) -> dict:
+        return {"category": self.categories[data]}
 
 
 if __name__ == "__main__":

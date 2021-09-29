@@ -70,15 +70,15 @@ class Server:
         max_batch_size,
         start_method,
     ):
-        def at_least_one_int(num, name):
+        def validate_int_ge_1(number, name):
             assert isinstance(
-                num, int
-            ), f"{name} must be integer but you give {type(num)}"
-            assert num >= 1, f"{name} must be greater than 1"
+                number, int
+            ), f"{name} must be integer but you give {type(number)}"
+            assert number >= 1, f"{name} must be greater than 1"
 
         assert issubclass(worker, Worker), "worker must be inherited from mosec.Worker"
-        at_least_one_int(num, "worker number")
-        at_least_one_int(max_batch_size, "maximum batch size")
+        validate_int_ge_1(num, "worker number")
+        validate_int_ge_1(max_batch_size, "maximum batch size")
         assert (
             start_method in NEW_PROCESS_METHOD
         ), f"start method must be one of {NEW_PROCESS_METHOD}"
