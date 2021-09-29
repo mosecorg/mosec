@@ -27,9 +27,9 @@ class Preprocess(Worker):
 
 
 class Inference(Worker):
-    def forward(self, data: List[float]) -> List[float]:
-        logger.info(f"received batch size: {len(data)}")
-        time.sleep(sum(data) / len(data))
+    def forward(self, data: float) -> float:
+        logger.info(f"sleeping for {data} seconds")
+        time.sleep(data)
         return data
 
 

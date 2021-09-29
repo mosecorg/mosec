@@ -164,7 +164,7 @@ class Coordinator:
                 err_msg = str(err).replace("\n", " - ")
                 logger.info(f"{self.name} validation error: {err_msg}")
                 status = self.protocol.FLAG_VALIDATION_ERROR
-                payloads = (self.worker.serialize({"Validation Error": err_msg}),)
+                payloads = (f"Validation Error: {err_msg}".encode(),)
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
                 status = self.protocol.FLAG_INTERNAL_ERROR
