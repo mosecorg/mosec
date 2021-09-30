@@ -8,6 +8,8 @@ on:
       - 'docs/**'
       - '.github/workflows/page.yml'
       - 'mkdocs.yml'
+      - 'examples/**'
+      - '**.md'
 
 jobs:
   build:
