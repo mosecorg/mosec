@@ -1,1 +1,1 @@
-We explain our designs with more details in this section.
+We will explain the detail of our designs in this section.

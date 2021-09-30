@@ -23,7 +23,8 @@
 
 
 ## Introduction
-Mosec is a high-performance and flexible model serving framework for building ML model-enabled backends and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
+
+Mosec is a high-performance and flexible model serving framework for building ML model-enabled backend and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
 
 * **Highly performant**: web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
 * **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
@@ -32,14 +33,17 @@ Mosec is a high-performance and flexible model serving framework for building ML
 
 
 ## Installation
+
 Mosec requires Python 3.6 or above. Install the latest PyPI package with:
 
     pip install -U mosec
 
 
 ## Usage
+
 ### Write the server
-Import the libraries and setup a basic logger to better observe what happens.
+
+Import the libraries and set up a basic logger to better observe what happens.
 ```python
 import logging
 
@@ -56,7 +60,7 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 ```
 
-Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g. a dictionary here (because we design it to receive data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g. no key named `"x"` or filed `"x"` cannot be converted to `float`).
+Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g., a dictionary here (because we design it to receive data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g., no key named `"x"` or field `"x"` cannot be converted to `float`).
 ```python
 import math
 
@@ -87,6 +91,7 @@ if __name__ == "__main__":
 ```
 
 ### Run the server
+
 After merging the snippets above into a file named `server.py`, we can first have a look at the supported arguments:
 
     python server.py --help
@@ -102,6 +107,7 @@ and test it:
 That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
 
 ## Example
+
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section. It includes:
 - Multi-stage workflow
 - Batch processing worker
@@ -111,4 +117,5 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 
 ## Contributing
-We welcome any kind of contributions. Please give us feedback by raising issues or directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
+
+We welcome any kind of contribution. Please give us feedback by raising issues or directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
