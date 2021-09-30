@@ -39,13 +39,12 @@ Mosec requires Python 3.6 or above. Install the latest PyPI package with:
 
 ## Usage
 ### Write the server
-Import the libraries and setup a basic logger to better observe what happens:
+Import the libraries and setup a basic logger to better observe what happens.
 ```python
 import logging
 
-from pydantic import BaseModel  # we need this to define our input/output schemas
-
 from mosec import Server, Worker
+from mosec.errors import ValidationError
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -57,38 +56,32 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 ```
 
-
-Define our service schemas for both input and output. These schemas will help us for data validation:
-```python
-class Request(BaseModel):
-    x: float
-
-
-class Response(BaseModel):
-    y: float
-```
-
-
-Now, we are going to **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method:
+Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g. a dictionary here (because we design it to receive data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g. no key named `"x"` or filed `"x"` cannot be converted to `float`).
 ```python
 import math
 
 
 class CalculateExp(Worker):
-    def forward(self, req: Request):
-        y = math.exp(req.x)  # f(x) = e ^ x
-        logger.debug(f"e ^ {req.x} = {y}")
-        return Response(y=y)
+    def forward(self, req: dict) -> dict:
+        try:
+            x = float(req["x"])
+        except KeyError:
+            raise ValidationError("cannot find key 'x'")
+        except ValueError:
+            raise ValidationError("cannot convert 'x' value to float")
+        y = math.exp(x)  # f(x) = e ^ x
+        logger.debug(f"e ^ {x} = {y}")
+        return {"y": y}
 ```
 
 
-Finally, we run the server when the file is executed:
+Finally, we append the worker to the server to construct a `single-stage workflow`, with specifying how many processes we hope it run in parallel. Then we run the server.
 ```python
 if __name__ == "__main__":
-    server = Server(Request, Response)
+    server = Server()
     server.append_worker(
         CalculateExp, num=2
-    )  # we spawn two processes for our calculator
+    )  # we spawn two processes for parallel computing
     server.run()
 
 ```
@@ -109,7 +102,12 @@ and test it:
 That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
 
 ## Example
-More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section.
+More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section. It includes:
+- Multi-stage workflow
+- Batch processing worker
+- PyTorch deep learning models
+  - sentiment analysis
+  - image recognition
 
 
 ## Contributing
