@@ -75,7 +75,7 @@ class CalculateExp(Worker):
 ```
 
 
-Finally, we append the worker to the server to construct a `single-stage workflow`, with specifying how many processes we hope it run in parallel. Then we run the server.
+Finally, we append the worker to the server to construct a `single-stage workflow`, with specifying how many processes we want it to run in parallel. Then we run the server.
 ```python
 if __name__ == "__main__":
     server = Server()
