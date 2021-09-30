@@ -11,8 +11,8 @@ nav:
       - Interface: "interface.md"
       - Argument: "argument.md"
       - Contributing: "contributing.md"
-  - Feature:
-      - Overview: "feature/index.md"
+  - Design:
+      - Overview: "design/index.md"
   - Example:
       - Overview: "example/index.md"
       - Echo: "example/echo.md"
@@ -65,6 +65,7 @@ plugins:
       watch:
         - mosec
         - scripts
+        - examples
       handlers:
         python:
           rendering:

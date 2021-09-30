@@ -11,4 +11,7 @@ prediction = httpx.post(
     "http://localhost:8000/inference",
     json={"image": base64.b64encode(dog_bytes).decode()},
 )
-print(prediction.json())
+if prediction.status_code == 200:
+    print(prediction.json())
+else:
+    print(prediction.status_code, prediction.content)

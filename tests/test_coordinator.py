@@ -62,8 +62,6 @@ def base_test_config():
         "max_batch_size": 1,
         "stage_id": 1,
         "worker_id": 1,
-        "req_schema": None,
-        "resp_schema": None,
         "c_ctx": "spawn",
     }
 
@@ -80,8 +78,6 @@ def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
             socket_prefix,
             config["stage_id"],
             config["worker_id"],
-            config["req_schema"],
-            config["resp_schema"],
         ),
         daemon=True,
     )

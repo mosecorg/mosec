@@ -7,9 +7,9 @@ import cv2  # type: ignore
 import numpy as np  # type: ignore
 import torch  # type: ignore
 import torchvision  # type: ignore
-from pydantic import BaseModel
 
 from mosec import Server, Worker
+from mosec.errors import ValidationError
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -23,18 +23,19 @@ logger.addHandler(sh)
 INFERENCE_BATCH_SIZE = 16
 
 
-class ImageReq(BaseModel):
-    image: str  # base64 encoded
-
-
-class CategoryResp(BaseModel):
-    category: str  # class name
-
-
 class Preprocess(Worker):
-    def forward(self, req: ImageReq) -> np.ndarray:
-        im = np.frombuffer(base64.b64decode(req.image), np.uint8)
-        im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
+    def forward(self, req: dict) -> np.ndarray:
+        # Customized validation for input key and field content; raise
+        # ValidationError so that the client can get 422 as http status
+        try:
+            image = req["image"]
+            im = np.frombuffer(base64.b64decode(image), np.uint8)
+            im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
+        except KeyError as err:
+            raise ValidationError(f"bad request: {err}")
+        except Exception as err:
+            raise ValidationError(f"cannot decode as image data: {err}")
+
         im = cv2.resize(im, (256, 256))
         crop_im = (
             im[16 : 16 + 224, 16 : 16 + 224].astype(np.float32) / 255
@@ -56,7 +57,7 @@ class Inference(Worker):
         self.model.eval()
         self.model.to(self.device)
 
-        # overwrite self.example for warmup
+        # Overwrite self.example for warmup
         self.example = [
             np.zeros((3, 244, 244), dtype=np.float32)
         ] * INFERENCE_BATCH_SIZE
@@ -81,13 +82,13 @@ class Postprocess(Worker):
         with open(local_filename) as f:
             self.categories = list(map(lambda x: x.strip(), f.readlines()))
 
-    def forward(self, data: int) -> CategoryResp:
-        return CategoryResp(category=self.categories[data])
+    def forward(self, data: int) -> dict:
+        return {"category": self.categories[data]}
 
 
 if __name__ == "__main__":
-    server = Server(ImageReq, CategoryResp)
+    server = Server()
     server.append_worker(Preprocess, num=4)
-    server.append_worker(Inference, max_batch_size=INFERENCE_BATCH_SIZE)
+    server.append_worker(Inference, num=2, max_batch_size=INFERENCE_BATCH_SIZE)
     server.append_worker(Postprocess, num=1)
     server.run()

@@ -8,8 +8,7 @@ import traceback
 from multiprocessing.synchronize import Event
 from typing import Callable, Type
 
-from pydantic import BaseModel, ValidationError
-
+from .errors import ValidationError
 from .protocol import Protocol
 from .worker import Worker
 
@@ -41,8 +40,6 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
-        req_schema: Type[BaseModel],
-        resp_schema: Type[BaseModel],
     ):
         """Initialize the mosec coordinator
 
@@ -56,17 +53,10 @@ class Coordinator:
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
                 stage.
-            req_schema (BaseModel): subclass of `pydantic.BaseModel` to define
-                input schema for validation, `None` if not required.
-            resp_schema (BaseModel): subclass of `pydantic.BaseModel` to define
-                output schema for validation, `None` if not required.
         """
         self.worker = worker()
         self.worker._set_mbs(max_batch_size)
         self.worker._set_stage(stage)
-
-        self.req_schema = req_schema
-        self.resp_schema = resp_schema
 
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 
@@ -134,27 +124,12 @@ class Coordinator:
 
     def get_decoder(self) -> Callable:
         if STAGE_INGRESS in self.worker._stage:
-            decoder = self.worker.deserialize
-
-            def validate_decoder(data):
-                return self.req_schema.parse_obj(decoder(data))
-
-            return decoder if self.req_schema is None else validate_decoder
-
+            return self.worker.deserialize
         return self.worker._deserialize_ipc
 
     def get_encoder(self) -> Callable:
         if STAGE_EGRESS in self.worker._stage:
-            encoder = self.worker.serialize
-
-            def validate_encoder(data):
-                assert isinstance(
-                    data, self.resp_schema
-                ), f"response {data} is not the instance of {self.resp_schema}"
-                return encoder(data)
-
-            return encoder if self.resp_schema is None else validate_encoder
-
+            return self.worker.serialize
         return self.worker._serialize_ipc
 
     def coordinate(self):
@@ -189,7 +164,7 @@ class Coordinator:
                 err_msg = str(err).replace("\n", " - ")
                 logger.info(f"{self.name} validation error: {err_msg}")
                 status = self.protocol.FLAG_VALIDATION_ERROR
-                payloads = (self.worker.serialize(err.errors()),)
+                payloads = (f"Validation Error: {err_msg}".encode(),)
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
                 status = self.protocol.FLAG_INTERNAL_ERROR

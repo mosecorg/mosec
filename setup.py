@@ -12,9 +12,6 @@ PACKAGE_NAME = "mosec"
 with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
 
-with open(os.path.join(here, "requirements.txt"), encoding="utf-8") as f:
-    requires = [req.strip() for req in f if req]
-
 
 def get_version():
     """Use rust package version as the single source for versioning"""
@@ -86,6 +83,7 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     url="https://github.com/mosecorg/mosec",
+    license="Apache License 2.0",
     packages=find_packages(exclude=["examples*", "tests*"]),
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
@@ -97,7 +95,6 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.6",
-    install_requires=requires,
     extras_require={
         "dev": [
             "pytest>=6",
