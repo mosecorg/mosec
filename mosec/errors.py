@@ -5,4 +5,3 @@ class ValidationError(Exception):
     after the data deserialization, which converts the raw bytes into
     structured data.
     """
-    pass
