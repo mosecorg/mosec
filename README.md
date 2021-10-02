@@ -30,8 +30,8 @@ Mosec is a high-performance and flexible model serving framework for building ML
 * **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
 * **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
 * **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
+* **Cloud friendly**: deigned to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by any container orchestration systems like Kubernetes
 * **Do one thing well**: focus on the online serving part, users can pay attention to the model performance and business logic
-* **Cloud native**: compatible with Kubernetes and any other on-prem deployment strategies
 
 
 ## Installation
@@ -39,6 +39,7 @@ Mosec is a high-performance and flexible model serving framework for building ML
 Mosec requires Python 3.6 or above. Install the latest PyPI package with:
 
     pip install -U mosec
+
 
 ## Usage
 
@@ -108,11 +109,12 @@ and test it:
 
     curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 
-That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
-
-Check the metrics:
+keep monitoring its Prometheus metrics:
 
     curl http://127.0.0.1:8000/metrics
+
+That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
+
 
 ## Example
 
@@ -123,6 +125,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 - PyTorch deep learning models
   - sentiment analysis
   - image recognition
+
 
 ## Contributing
 
