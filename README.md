@@ -109,7 +109,7 @@ and test it:
 
     curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 
-keep monitoring its Prometheus metrics:
+or check the metrics:
 
     curl http://127.0.0.1:8000/metrics
 
