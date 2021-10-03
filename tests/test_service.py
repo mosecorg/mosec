@@ -51,12 +51,12 @@ def test_square_service(mosec_service, http_client):
 def test_square_service_mp(mosec_service, http_client):
     threads = []
     for _ in range(20):
-        x = Thread(
+        t = Thread(
             target=validate_square_service,
             args=(http_client, random.randint(-500, 500)),
         )
-        x.start()
-        threads.append(x)
+        t.start()
+        threads.append(t)
     for t in threads:
         t.join()
     assert_batch_larger_than_one(http_client)
