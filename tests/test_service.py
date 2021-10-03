@@ -13,9 +13,11 @@ TEST_PORT = "8090"
 URI = f"http://localhost:{TEST_PORT}"
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def http_client():
-    return httpx.Client()
+    client = httpx.Client()
+    yield client
+    client.close()
 
 
 @pytest.fixture(scope="session")
