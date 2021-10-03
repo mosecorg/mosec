@@ -1,4 +1,3 @@
-import asyncio
 import random
 import re
 import subprocess
@@ -13,8 +12,7 @@ import mosec
 TEST_PORT = "8090"
 URI = f"http://localhost:{TEST_PORT}"
 
-sync_client = httpx.Client()
-async_client = httpx.AsyncClient()
+http_client = httpx.Client()
 
 
 @pytest.fixture(scope="session")
@@ -31,17 +29,17 @@ def mosec_service():
 
 
 def test_square_service(mosec_service):
-    resp = sync_client.get(URI)
+    resp = http_client.get(URI)
     assert resp.status_code == 200
     assert f"mosec/{mosec.__version__}" == resp.headers["server"]
 
-    resp = sync_client.get(f"{URI}/metrics")
+    resp = http_client.get(f"{URI}/metrics")
     assert resp.status_code == 200
 
-    resp = sync_client.post(f"{URI}/inference", json={"msg": 2})
+    resp = http_client.post(f"{URI}/inference", json={"msg": 2})
     assert resp.status_code == 422
 
-    resp = sync_client.post(f"{URI}/inference", content=b"bad-binary-request")
+    resp = http_client.post(f"{URI}/inference", content=b"bad-binary-request")
     assert resp.status_code == 422
 
     validate_square_service(2)
@@ -59,30 +57,12 @@ def test_square_service_mp(mosec_service):
 
 
 def validate_square_service(x):
-    resp = sync_client.post(f"{URI}/inference", json={"x": x})
-    assert resp.json()["x"] == x ** 2
-
-
-def test_square_service_mp_async(mosec_service):
-    asyncio.run(run_square_service_mp_async())
-
-
-async def run_square_service_mp_async():
-    tasks = map(
-        asyncio.create_task,
-        [validate_square_service_async(random.randint(-500, 500)) for _ in range(20)],
-    )
-    await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
-    assert_batch_larger_than_one()
-
-
-async def validate_square_service_async(x):
-    resp = await async_client.post(f"{URI}/inference", json={"x": x})
+    resp = http_client.post(f"{URI}/inference", json={"x": x})
     assert resp.json()["x"] == x ** 2
 
 
 def assert_batch_larger_than_one():
-    x = sync_client.get(f"{URI}/metrics").content.decode()
+    x = http_client.get(f"{URI}/metrics").content.decode()
     bs = re.findall(r"batch_size_bucket.+", x)
     get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
     assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
