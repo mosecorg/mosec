@@ -68,7 +68,7 @@ def validate_square_service(http_client, x):
 
 
 def assert_batch_larger_than_one(http_client):
-    x = http_client.get(f"{URI}/metrics").content.decode()
-    bs = re.findall(r"batch_size_bucket.+", x)
+    metrics = http_client.get(f"{URI}/metrics").content.decode()
+    bs = re.findall(r"batch_size_bucket.+", metrics)
     get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
     assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
