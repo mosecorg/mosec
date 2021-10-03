@@ -30,6 +30,8 @@ Mosec is a high-performance and flexible model serving framework for building ML
 * **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
 * **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
 * **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
+* **Cloud friendly**: deigned to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by Kubernetes or any container orchestration systems
+* **Do one thing well**: focus on the online serving part, users can pay attention to the model performance and business logic
 
 
 ## Installation
@@ -44,6 +46,7 @@ Mosec requires Python 3.6 or above. Install the latest PyPI package with:
 ### Write the server
 
 Import the libraries and set up a basic logger to better observe what happens.
+
 ```python
 import logging
 
@@ -61,6 +64,7 @@ logger.addHandler(sh)
 ```
 
 Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g., a dictionary here (because we design it to receive data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g., no key named `"x"` or field `"x"` cannot be converted to `float`).
+
 ```python
 import math
 
@@ -80,6 +84,7 @@ class CalculateExp(Worker):
 
 
 Finally, we append the worker to the server to construct a `single-stage workflow`, with specifying how many processes we want it to run in parallel. Then we run the server.
+
 ```python
 if __name__ == "__main__":
     server = Server()
@@ -104,11 +109,17 @@ and test it:
 
     curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 
+or check the metrics:
+
+    curl http://127.0.0.1:8000/metrics
+
 That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
+
 
 ## Example
 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section. It includes:
+
 - Multi-stage workflow
 - Batch processing worker
 - PyTorch deep learning models
