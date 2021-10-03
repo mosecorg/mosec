@@ -1,5 +1,6 @@
 import asyncio
 import random
+import re
 import subprocess
 import time
 from threading import Thread
@@ -54,6 +55,7 @@ def test_square_service_mp(mosec_service):
         threads.append(x)
     for t in threads:
         t.join()
+    assert_batch_larger_than_one()
 
 
 def validate_square_service(x):
@@ -71,8 +73,16 @@ async def run_square_service_mp_async():
         [validate_square_service_async(random.randint(-500, 500)) for _ in range(20)],
     )
     await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
+    assert_batch_larger_than_one()
 
 
 async def validate_square_service_async(x):
     resp = await async_client.post(f"{URI}/inference", json={"x": x})
     assert resp.json()["x"] == x ** 2
+
+
+def assert_batch_larger_than_one():
+    x = sync_client.get(f"{URI}/metrics").content
+    bs = re.findall(r"batch_size_bucket.+", x.decode())
+    get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
+    assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
