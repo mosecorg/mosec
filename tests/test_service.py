@@ -82,7 +82,7 @@ async def validate_square_service_async(x):
 
 
 def assert_batch_larger_than_one():
-    x = sync_client.get(f"{URI}/metrics").content
-    bs = re.findall(r"batch_size_bucket.+", x.decode())
+    x = sync_client.get(f"{URI}/metrics").content.decode()
+    bs = re.findall(r"batch_size_bucket.+", x)
     get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
     assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
