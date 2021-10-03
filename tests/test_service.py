@@ -1,3 +1,4 @@
+import asyncio
 import random
 import subprocess
 import time
@@ -10,6 +11,9 @@ import mosec
 
 TEST_PORT = "8090"
 URI = f"http://localhost:{TEST_PORT}"
+
+sync_client = httpx.Client()
+async_client = httpx.AsyncClient()
 
 
 @pytest.fixture(scope="session")
@@ -26,17 +30,17 @@ def mosec_service():
 
 
 def test_square_service(mosec_service):
-    resp = httpx.get(URI)
+    resp = sync_client.get(URI)
     assert resp.status_code == 200
     assert f"mosec/{mosec.__version__}" == resp.headers["server"]
 
-    resp = httpx.get(f"{URI}/metrics")
+    resp = sync_client.get(f"{URI}/metrics")
     assert resp.status_code == 200
 
-    resp = httpx.post(f"{URI}/inference", json={"msg": 2})
+    resp = sync_client.post(f"{URI}/inference", json={"msg": 2})
     assert resp.status_code == 422
 
-    resp = httpx.post(f"{URI}/inference", data=b"bad-binary-request")
+    resp = sync_client.post(f"{URI}/inference", content=b"bad-binary-request")
     assert resp.status_code == 422
 
     validate_square_service(2)
@@ -53,5 +57,22 @@ def test_square_service_mp(mosec_service):
 
 
 def validate_square_service(x):
-    resp = httpx.post(f"{URI}/inference", json={"x": x})
+    resp = sync_client.post(f"{URI}/inference", json={"x": x})
+    assert resp.json()["x"] == x ** 2
+
+
+def test_square_service_mp_async(mosec_service):
+    asyncio.run(run_square_service_mp_async())
+
+
+async def run_square_service_mp_async():
+    tasks = map(
+        asyncio.create_task,
+        [validate_square_service_async(random.randint(-500, 500)) for _ in range(20)],
+    )
+    await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
+
+
+async def validate_square_service_async(x):
+    resp = await async_client.post(f"{URI}/inference", json={"x": x})
     assert resp.json()["x"] == x ** 2
