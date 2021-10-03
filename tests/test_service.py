@@ -12,7 +12,10 @@ import mosec
 TEST_PORT = "8090"
 URI = f"http://localhost:{TEST_PORT}"
 
-http_client = httpx.Client()
+
+@pytest.fixture
+def http_client():
+    return httpx.Client()
 
 
 @pytest.fixture(scope="session")
@@ -28,7 +31,7 @@ def mosec_service():
     service.terminate()
 
 
-def test_square_service(mosec_service):
+def test_square_service(mosec_service, http_client):
     resp = http_client.get(URI)
     assert resp.status_code == 200
     assert f"mosec/{mosec.__version__}" == resp.headers["server"]
@@ -42,26 +45,29 @@ def test_square_service(mosec_service):
     resp = http_client.post(f"{URI}/inference", content=b"bad-binary-request")
     assert resp.status_code == 422
 
-    validate_square_service(2)
+    validate_square_service(http_client, 2)
 
 
-def test_square_service_mp(mosec_service):
+def test_square_service_mp(mosec_service, http_client):
     threads = []
     for _ in range(20):
-        x = Thread(target=validate_square_service, args=(random.randint(-500, 500),))
+        x = Thread(
+            target=validate_square_service,
+            args=(http_client, random.randint(-500, 500)),
+        )
         x.start()
         threads.append(x)
     for t in threads:
         t.join()
-    assert_batch_larger_than_one()
+    assert_batch_larger_than_one(http_client)
 
 
-def validate_square_service(x):
+def validate_square_service(http_client, x):
     resp = http_client.post(f"{URI}/inference", json={"x": x})
     assert resp.json()["x"] == x ** 2
 
 
-def assert_batch_larger_than_one():
+def assert_batch_larger_than_one(http_client):
     x = http_client.get(f"{URI}/metrics").content.decode()
     bs = re.findall(r"batch_size_bucket.+", x)
     get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
