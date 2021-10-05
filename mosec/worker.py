@@ -15,17 +15,17 @@ class Worker:
     including its stage and maximum batch size, and leaves the `forward`
     method to be implemented by the users.
 
-    In addition, users may also want to override the `deserialize` method
-    in the **first** stage (we term it as _ingress_ stage)) **together with**
+    By default, we use [JSON](https://www.json.org/) encoding. But users
+    are free to customize via simply overridding the `deserialize` method
+    in the **first** stage (we term it as _ingress_ stage) and/or
     the `serialize` method in the **last** stage (we term it as _egress_ stage).
-    By default, we use [JSON](https://www.json.org/) encoding. Users can
-    optionally use [pydantic](https://pydantic-docs.helpmanual.io/) on top of
-    JSON for schema validation
-    ([example](https://mosecorg.github.io/mosec/example/echo/#echopy)).
-    Besides JSON, users are free to choose
+
+    For the encoding customization, there are many choices including
     [MessagePack](https://msgpack.org/index.html),
     [Protocol Buffer](https://developers.google.com/protocol-buffers)
-    and other protocols alternatively. A naive customization can be found in [this
+    and many other out-of-the-box protocols. Users can even define their own
+    protocol and use it to manipulate the raw bytes!
+    A naive customization can be found in [this
     example](https://mosecorg.github.io/mosec/example/pytorch/#sentiment-analysis).
 
     ###### Note

@@ -66,6 +66,8 @@ plugins:
         - mosec
         - scripts
         - examples
+        - README.md
+        - CONTRIBUTING.md
       handlers:
         python:
           rendering:
