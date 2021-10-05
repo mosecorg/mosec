@@ -63,7 +63,7 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 ```
 
-Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g., a dictionary here (because we design it to receive data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g., no key named `"x"` or field `"x"` cannot be converted to `float`).
+Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g., a dictionary here (wishfully it receives data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g., no key named `"x"` or field `"x"` cannot be converted to `float`).
 
 ```python
 import math
@@ -83,7 +83,7 @@ class CalculateExp(Worker):
 ```
 
 
-Finally, we append the worker to the server to construct a `single-stage workflow`, with specifying how many processes we want it to run in parallel. Then we run the server.
+Finally, we append the worker to the server to construct a `single-stage workflow`, and we specify the number of processes we want it to run in parallel. Then we run the server.
 
 ```python
 if __name__ == "__main__":
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
 ### Run the server
 
-After merging the snippets above into a file named `server.py`, we can first have a look at the supported arguments:
+After merging the snippets above into a file named `server.py`, we can first have a look at the command line arguments:
 
     python server.py --help
 
@@ -105,7 +105,7 @@ Then let's start the server...
 
     python server.py
 
-and test it:
+and in another terminal, test it:
 
     curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 
@@ -122,11 +122,11 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 - Multi-stage workflow
 - Batch processing worker
-- PyTorch deep learning models
+- PyTorch deep learning models:
   - sentiment analysis
   - image recognition
 
 
 ## Contributing
 
-We welcome any kind of contribution. Please give us feedback by raising issues or directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
+We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
