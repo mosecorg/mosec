@@ -5,6 +5,7 @@ import random
 import shutil
 import socket
 import struct
+import tempfile
 import time
 from contextlib import ContextDecorator
 from os.path import join
@@ -19,7 +20,7 @@ from mosec.worker import Worker
 from .mock_logger import MockLogger
 from .utils import imitate_controller_send
 
-socket_prefix = "/tmp/test-mosec/"
+socket_prefix = join(tempfile.gettempdir(), "test-mosec")
 stage = STAGE_INGRESS + STAGE_EGRESS
 
 

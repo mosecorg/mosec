@@ -1,4 +1,6 @@
 import argparse
+import os
+import tempfile
 
 
 class ArgParser:
@@ -14,7 +16,7 @@ class ArgParser:
             "--path",
             help="Unix Domain Socket address for internal Inter-Process Communication",
             type=str,
-            default="/tmp/mosec",
+            default=os.path.join(tempfile.gettempdir(), "mosec"),
         )
 
         parser.add_argument(

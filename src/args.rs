@@ -3,10 +3,9 @@ use clap::{crate_version, AppSettings, Clap};
 #[derive(Clap, Debug)]
 #[clap(version = crate_version!())]
 #[clap(setting = AppSettings::ColoredHelp)]
-
 pub(crate) struct Opts {
     /// Unix domain socket directory path
-    #[clap(long, default_value = "/tmp/mosec")]
+    #[clap(long, default_value = "")]
     pub(crate) path: String,
 
     /// batch size for each stage

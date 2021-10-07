@@ -27,6 +27,16 @@ impl Coordinator {
         let (sender, receiver) = bounded(opts.capacity);
         let timeout = Duration::from_millis(opts.timeout);
         let wait_time = Duration::from_millis(opts.wait);
+        let path = if opts.path.len() > 0 {
+            opts.path.to_string()
+        } else {
+            // default IPC path
+            std::env::temp_dir()
+                .join(env!("CARGO_PKG_NAME"))
+                .into_os_string()
+                .into_string()
+                .unwrap()
+        };
         let task_manager = TaskManager::new(timeout, sender.clone());
         TASK_MANAGER.set(task_manager).unwrap();
         let metrics = Metrics::init_with_namespace(&opts.namespace, opts.timeout);
@@ -34,7 +44,7 @@ impl Coordinator {
 
         Self {
             capacity: opts.capacity,
-            path: opts.path.to_string(),
+            path: path,
             batches: opts.batches.clone(),
             wait_time,
             timeout,
