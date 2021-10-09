@@ -17,6 +17,7 @@ nav:
       - Overview: "example/index.md"
       - Echo: "example/echo.md"
       - PyTorch: "example/pytorch.md"
+      - Metrics: "example/metric.md"
   # - Deploy: "deploy.md"
   # - FAQ: "faq.md"
   # - Benchmark: "BENCHMARK.md"
