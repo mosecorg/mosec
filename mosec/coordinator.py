@@ -8,7 +8,7 @@ import traceback
 from multiprocessing.synchronize import Event
 from typing import Callable, Type
 
-from .errors import ValidationError
+from .errors import DecodingError, ValidationError
 from .protocol import Protocol
 from .worker import Worker
 
@@ -160,8 +160,13 @@ class Coordinator:
                         "returned data doesn't match the input data:"
                         f"input({len(data)})!=output({len(payloads)})"
                     )
-            except ValidationError as err:
+            except DecodingError as err:
                 err_msg = str(err).replace("\n", " - ")
+                logger.info(f"{self.name} decoding error: {err_msg}")
+                status = self.protocol.FLAG_BAD_REQUEST
+                payloads = ("Decoding Error".encode(),)
+            except ValidationError as err:
+                err_msg = str(err)
                 logger.info(f"{self.name} validation error: {err_msg}")
                 status = self.protocol.FLAG_VALIDATION_ERROR
                 payloads = (f"Validation Error: {err_msg}".encode(),)

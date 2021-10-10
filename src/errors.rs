@@ -5,11 +5,8 @@ pub(crate) enum ServiceError {
     #[display(fmt = "inference timeout")]
     Timeout,
 
-    #[display(fmt = "bad request")]
+    #[display(fmt = "bad request: cannot decode request bytes")]
     BadRequestError,
-
-    #[display(fmt = "bad request: validation error")]
-    ValidationError,
 
     #[display(fmt = "inference internal error")]
     InternalError,

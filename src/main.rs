@@ -51,21 +51,34 @@ async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
 
     metrics.remaining_task.inc();
     let task = task_manager.submit_task(data).await?;
+    metrics.remaining_task.dec();
+    let mut status_code = StatusCode::OK;
     match task.code {
         TaskCode::Normal => {
-            metrics.remaining_task.dec();
             metrics
                 .duration
                 .with_label_values(&["total", "total"])
                 .observe(task.create_at.elapsed().as_secs_f64());
             metrics
                 .throughput
-                .with_label_values(&[StatusCode::OK.as_str()])
+                .with_label_values(&[status_code.as_str()])
                 .inc();
             Ok(Response::new(Body::from(task.data)))
         }
+        TaskCode::ValidationError => {
+            // Allow user's customized error message
+            status_code = StatusCode::UNPROCESSABLE_ENTITY;
+            metrics
+                .throughput
+                .with_label_values(&[status_code.as_str()])
+                .inc();
+            Ok(Response::builder()
+                .status(status_code)
+                .header("server", HeaderValue::from_static(SERVER_INFO))
+                .body(Body::from(task.data))
+                .unwrap())
+        }
         TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
-        TaskCode::ValidationError => Err(ServiceError::ValidationError),
         TaskCode::InternalError => Err(ServiceError::InternalError),
         TaskCode::UnknownError => Err(ServiceError::UnknownError),
     }
@@ -76,14 +89,12 @@ fn error_handler(err: ServiceError) -> Response<Body> {
         ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
         ServiceError::BadRequestError => StatusCode::BAD_REQUEST,
         ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
-        ServiceError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
         ServiceError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         ServiceError::GracefulShutdown => StatusCode::SERVICE_UNAVAILABLE,
         ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
     };
     let metrics = Metrics::global();
 
-    metrics.remaining_task.dec();
     metrics
         .throughput
         .with_label_values(&[status.as_str()])

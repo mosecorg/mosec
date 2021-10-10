@@ -45,7 +45,7 @@ def test_square_service(mosec_service, http_client):
     assert resp.status_code == 422
 
     resp = http_client.post(f"{URI}/inference", content=b"bad-binary-request")
-    assert resp.status_code == 422
+    assert resp.status_code == 400
 
     validate_square_service(http_client, 2)
 
