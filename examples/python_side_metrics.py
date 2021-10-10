@@ -1,10 +1,10 @@
+import logging
 import os
 import pathlib
 import tempfile
 import threading
-import logging
+from typing import List
 from wsgiref.simple_server import make_server
-from typing import List, Any
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
@@ -25,12 +25,12 @@ if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
     pathlib.Path(metric_dir_path).mkdir(parents=True, exist_ok=True)
     os.environ["PROMETHEUS_MULTIPROC_DIR"] = metric_dir_path
 
-from prometheus_client import (
-    multiprocess,
-    generate_latest,
-    CollectorRegistry,
+from prometheus_client import (  # type: ignore  # noqa: E402
     CONTENT_TYPE_LATEST,
+    CollectorRegistry,
     Counter,
+    generate_latest,
+    multiprocess,
 )
 
 metric_registry = CollectorRegistry()
@@ -53,13 +53,13 @@ def metric_service(host="", port=8080):
 
 
 class Inference(Worker):
-    def deserialize(self, data: bytes) -> Any:
-        data = super().deserialize(data)
+    def deserialize(self, data: bytes) -> int:
+        json_data = super().deserialize(data)
         try:
-            data = int(data.get("num"))
-        except AttributeError:
-            raise ValidationError("data must be int type")
-        return data
+            res = int(json_data.get("num"))
+        except Exception as err:
+            raise ValidationError(err)
+        return res
 
     def forward(self, data: List[int]) -> List[bool]:
         avg = sum(data) / len(data)
