@@ -75,9 +75,6 @@ class Inference(Worker):
 
 if __name__ == "__main__":
     # Run the metrics server in another thread.
-    # This won't affect the inference performance because most of the computations
-    # are done in the other processes. The main process is only on behalf of the
-    # controller and metrics.
     metric_thread = threading.Thread(target=metric_service, daemon=True)
     metric_thread.start()
 
