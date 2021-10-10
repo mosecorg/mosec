@@ -53,6 +53,10 @@ def metric_service(host="", port=8080):
 
 
 class Inference(Worker):
+    def __init__(self):
+        super().__init__()
+        self.pid = str(os.getpid())
+
     def deserialize(self, data: bytes) -> int:
         json_data = super().deserialize(data)
         try:
@@ -64,9 +68,8 @@ class Inference(Worker):
     def forward(self, data: List[int]) -> List[bool]:
         avg = sum(data) / len(data)
         ans = [x >= avg for x in data]
-        pid = str(os.getpid())
-        counter.labels(status="true", pid=pid).inc(sum(ans))
-        counter.labels(status="false", pid=pid).inc(len(ans) - sum(ans))
+        counter.labels(status="true", pid=self.pid).inc(sum(ans))
+        counter.labels(status="false", pid=self.pid).inc(len(ans) - sum(ans))
         return ans
 
 
