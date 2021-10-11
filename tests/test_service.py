@@ -45,7 +45,7 @@ def test_square_service(mosec_service, http_client):
     assert resp.status_code == 422
 
     resp = http_client.post(f"{URI}/inference", content=b"bad-binary-request")
-    assert resp.status_code == 422
+    assert resp.status_code == 400
 
     validate_square_service(http_client, 2)
 
@@ -62,6 +62,7 @@ def test_square_service_mp(mosec_service, http_client):
     for t in threads:
         t.join()
     assert_batch_larger_than_one(http_client)
+    assert_empty_queue(http_client)
 
 
 def validate_square_service(http_client, x):
@@ -74,3 +75,9 @@ def assert_batch_larger_than_one(http_client):
     bs = re.findall(r"batch_size_bucket.+", metrics)
     get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
     assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
+
+
+def assert_empty_queue(http_client):
+    metrics = http_client.get(f"{URI}/metrics").content.decode()
+    remain = re.findall(r"mosec_service_remaining_task \d+", metrics)[0]
+    assert int(remain.split(" ")[-1]) == 0

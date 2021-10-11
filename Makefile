@@ -13,7 +13,7 @@ dev:
 	cp ./target/debug/mosec mosec/bin/
 	pip install -e .
 
-test:
+test: dev
 	pytest tests -vv -s
 	RUST_BACKTRACE=1 cargo test -vv
 

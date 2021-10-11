@@ -7,6 +7,7 @@ mod tasks;
 
 use std::net::SocketAddr;
 
+use bytes::Bytes;
 use clap::Clap;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response, StatusCode};
@@ -22,97 +23,102 @@ use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-const NOT_FOUND: &[u8] = b"Not Found";
+const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
+const RESPONSE_NOT_FOUND: &[u8] = b"not found";
+const RESPONSE_EMPTY: &[u8] = b"no data provided";
+const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 
-async fn index(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
+async fn index(_: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     if task_manager.is_shutdown() {
-        return Err(ServiceError::GracefulShutdown);
+        build_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            Bytes::from_static(RESPONSE_SHUTDOWN),
+        )
+    } else {
+        build_response(StatusCode::OK, Bytes::from_static(RESPONSE_DEFAULT))
     }
-    Ok(Response::new(Body::from("MOSEC service")))
 }
 
-async fn metrics(_: Request<Body>) -> Result<Response<Body>, ServiceError> {
+async fn metrics(_: Request<Body>) -> Response<Body> {
     let encoder = TextEncoder::new();
     let metrics = prometheus::gather();
     let mut buffer = vec![];
     encoder.encode(&metrics, &mut buffer).unwrap();
-    Ok(Response::new(Body::from(buffer)))
+    build_response(StatusCode::OK, Bytes::from(buffer))
 }
 
-async fn inference(req: Request<Body>) -> Result<Response<Body>, ServiceError> {
+async fn inference(req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
     let metrics = Metrics::global();
 
+    if task_manager.is_shutdown() {
+        return build_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            Bytes::from_static(RESPONSE_SHUTDOWN),
+        );
+    }
+
     if data.is_empty() {
-        return Ok(Response::new(Body::from("No data provided")));
+        return build_response(StatusCode::OK, Bytes::from_static(RESPONSE_EMPTY));
     }
 
+    let (status, content);
     metrics.remaining_task.inc();
-    let task = task_manager.submit_task(data).await?;
-    match task.code {
-        TaskCode::Normal => {
-            metrics.remaining_task.dec();
-            metrics
-                .duration
-                .with_label_values(&["total", "total"])
-                .observe(task.create_at.elapsed().as_secs_f64());
-            metrics
-                .throughput
-                .with_label_values(&[StatusCode::OK.as_str()])
-                .inc();
-            Ok(Response::new(Body::from(task.data)))
+    match task_manager.submit_task(data).await {
+        Ok(task) => {
+            content = task.data;
+            status = match task.code {
+                TaskCode::Normal => {
+                    // Record latency only for successful tasks
+                    metrics
+                        .duration
+                        .with_label_values(&["total", "total"])
+                        .observe(task.create_at.elapsed().as_secs_f64());
+                    StatusCode::OK
+                }
+                TaskCode::BadRequestError => StatusCode::BAD_REQUEST,
+                TaskCode::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
+                TaskCode::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            }
         }
-        TaskCode::BadRequestError => Err(ServiceError::BadRequestError),
-        TaskCode::ValidationError => Err(ServiceError::ValidationError),
-        TaskCode::InternalError => Err(ServiceError::InternalError),
-        TaskCode::UnknownError => Err(ServiceError::UnknownError),
+        Err(err) => {
+            // Handle errors for which tasks cannot be retrieved
+            content = Bytes::from(err.to_string());
+            status = match err {
+                ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
+                ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
+                ServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+        }
     }
-}
-
-fn error_handler(err: ServiceError) -> Response<Body> {
-    let status = match err {
-        ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
-        ServiceError::BadRequestError => StatusCode::BAD_REQUEST,
-        ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
-        ServiceError::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
-        ServiceError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-        ServiceError::GracefulShutdown => StatusCode::SERVICE_UNAVAILABLE,
-        ServiceError::UnknownError => StatusCode::NOT_IMPLEMENTED,
-    };
-    let metrics = Metrics::global();
-
     metrics.remaining_task.dec();
     metrics
         .throughput
         .with_label_values(&[status.as_str()])
         .inc();
 
+    build_response(status, content)
+}
+
+fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
     Response::builder()
         .status(status)
         .header("server", HeaderValue::from_static(SERVER_INFO))
-        .body(Body::from(err.to_string()))
+        .body(Body::from(content))
         .unwrap()
 }
 
 async fn service_func(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
-    let res = match (req.method(), req.uri().path()) {
-        (&Method::GET, "/") => index(req).await,
-        (&Method::GET, "/metrics") => metrics(req).await,
-        (&Method::POST, "/inference") => inference(req).await,
-        _ => Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(NOT_FOUND.into())
-            .unwrap()),
-    };
-    match res {
-        Ok(mut resp) => {
-            resp.headers_mut()
-                .insert("server", HeaderValue::from_static(SERVER_INFO));
-            Ok(resp)
-        }
-        Err(err) => Ok(error_handler(err)),
+    match (req.method(), req.uri().path()) {
+        (&Method::GET, "/") => Ok(index(req).await),
+        (&Method::GET, "/metrics") => Ok(metrics(req).await),
+        (&Method::POST, "/inference") => Ok(inference(req).await),
+        _ => Ok(build_response(
+            StatusCode::NOT_FOUND,
+            Bytes::from(RESPONSE_NOT_FOUND),
+        )),
     }
 }
 

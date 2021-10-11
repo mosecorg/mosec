@@ -32,7 +32,7 @@ class Preprocess(Worker):
             im = np.frombuffer(base64.b64decode(image), np.uint8)
             im = cv2.imdecode(im, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
         except KeyError as err:
-            raise ValidationError(f"bad request: {err}")
+            raise ValidationError(f"cannot find key {err}")
         except Exception as err:
             raise ValidationError(f"cannot decode as image data: {err}")
 

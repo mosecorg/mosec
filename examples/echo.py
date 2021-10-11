@@ -21,7 +21,7 @@ class Preprocess(Worker):
         try:
             time = float(data["time"])
         except KeyError as err:
-            raise ValidationError(err)
+            raise ValidationError(f"cannot find key {err}")
         return time
 
 

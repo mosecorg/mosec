@@ -3,7 +3,7 @@ import logging
 import pickle
 from typing import Any
 
-from .errors import ValidationError
+from .errors import DecodingError
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class Worker:
         try:
             data_json = json.loads(data) if data else {}
         except Exception as err:
-            raise ValidationError(err)
+            raise DecodingError(err)
         return data_json
 
     def forward(self, data: Any) -> Any:
