@@ -13,7 +13,6 @@ use crate::errors::ServiceError;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum TaskCode {
-    UnknownError,
     Normal,
     BadRequestError,
     ValidationError,
@@ -30,7 +29,7 @@ pub(crate) struct Task {
 impl Task {
     fn new(data: Bytes) -> Self {
         Self {
-            code: TaskCode::UnknownError,
+            code: TaskCode::InternalError,
             data,
             create_at: Instant::now(),
         }
@@ -87,7 +86,7 @@ impl TaskManager {
     }
 
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
-        let (id, rx) = self.add_new_task(data).await?;
+        let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
             error!(%id, %err, "task timeout");
             let mut table = self.table.write();
@@ -110,13 +109,7 @@ impl TaskManager {
         self.shutdown.load(Ordering::Acquire)
     }
 
-    async fn add_new_task(
-        &self,
-        data: Bytes,
-    ) -> Result<(u32, oneshot::Receiver<()>), ServiceError> {
-        if self.is_shutdown() {
-            return Err(ServiceError::GracefulShutdown);
-        }
+    fn add_new_task(&self, data: Bytes) -> Result<(u32, oneshot::Receiver<()>), ServiceError> {
         let (tx, rx) = oneshot::channel();
         let id: u32;
         {
@@ -196,7 +189,7 @@ mod tests {
         let mut task = Task::new(Bytes::from_static(b"hello"));
         assert!(task.create_at > now);
         assert!(task.create_at < Instant::now());
-        assert!(matches!(task.code, TaskCode::UnknownError));
+        assert!(matches!(task.code, TaskCode::InternalError));
         assert_eq!(task.data, Bytes::from_static(b"hello"));
 
         task.update(TaskCode::Normal, &Bytes::from_static(b"world"));
@@ -210,7 +203,6 @@ mod tests {
         let task_manager = TaskManager::new(Duration::from_secs(1), tx);
         let (id, _rx) = task_manager
             .add_new_task(Bytes::from_static(b"hello"))
-            .await
             .unwrap();
         assert_eq!(id, 0);
         {
@@ -224,7 +216,6 @@ mod tests {
         // add a new task
         let (id, _rx) = task_manager
             .add_new_task(Bytes::from_static(b"world"))
-            .await
             .unwrap();
         assert_eq!(id, 1);
         {

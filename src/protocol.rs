@@ -18,7 +18,7 @@ const LENGTH_U8_SIZE: usize = 4;
 const BIT_STATUS_OK: u16 = 0b1;
 const BIT_STATUS_BAD_REQ: u16 = 0b10;
 const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
-const BIT_STATUS_INTERNAL_ERR: u16 = 0b1000;
+// Others are treated as Internal Error
 
 pub(crate) async fn communicate(
     path: PathBuf,
@@ -42,7 +42,7 @@ pub(crate) async fn communicate(
             Ok((mut stream, addr)) => {
                 info!(?addr, "accepted connection from");
                 tokio::spawn(async move {
-                    let mut code: TaskCode = TaskCode::UnknownError;
+                    let mut code: TaskCode = TaskCode::InternalError;
                     let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
                     let mut data: Vec<Bytes> = Vec::with_capacity(batch_size);
                     let task_manager = TaskManager::global();
@@ -134,10 +134,8 @@ async fn read_message(
         TaskCode::BadRequestError
     } else if flag & BIT_STATUS_VALIDATION_ERR > 0 {
         TaskCode::ValidationError
-    } else if flag & BIT_STATUS_INTERNAL_ERR > 0 {
-        TaskCode::InternalError
     } else {
-        TaskCode::UnknownError
+        TaskCode::InternalError
     };
 
     let mut id_buf = [0u8; TASK_ID_U8_SIZE];
@@ -271,7 +269,7 @@ mod tests {
         let mut stream = UnixStream::connect(&path).await.unwrap();
         let mut recv_ids = Vec::new();
         let mut recv_data = Vec::new();
-        let mut code = TaskCode::UnknownError;
+        let mut code = TaskCode::InternalError;
         read_message(&mut stream, &mut code, &mut recv_ids, &mut recv_data)
             .await
             .expect("read message error");

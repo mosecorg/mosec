@@ -27,7 +27,7 @@ impl Coordinator {
         let (sender, receiver) = bounded(opts.capacity);
         let timeout = Duration::from_millis(opts.timeout);
         let wait_time = Duration::from_millis(opts.wait);
-        let path = if opts.path.len() > 0 {
+        let path = if !opts.path.is_empty() {
             opts.path.to_string()
         } else {
             // default IPC path
@@ -44,7 +44,7 @@ impl Coordinator {
 
         Self {
             capacity: opts.capacity,
-            path: path,
+            path,
             batches: opts.batches.clone(),
             wait_time,
             timeout,

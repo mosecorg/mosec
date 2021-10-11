@@ -13,7 +13,7 @@ dev:
 	cp ./target/debug/mosec mosec/bin/
 	pip install -e .
 
-test:
+test: dev
 	pytest tests -vv -s
 	RUST_BACKTRACE=1 cargo test -vv
 
@@ -44,5 +44,6 @@ lint:
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
+	cargo clippy
 
 .PHONY: test doc
