@@ -2,11 +2,16 @@ name: lint and test
 
 on:
   pull_request:
+    path:
+      - '.github/workflows/check.yml'
+      - 'mosec/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'examples/**'
+      - 'setup.py'
   push:
     branches:
-      - master
       - main
-      - dev
     paths:
       - '.github/workflows/check.yml'
       - 'mosec/**'
