@@ -57,6 +57,7 @@ class Coordinator:
         self.worker = worker()
         self.worker._set_mbs(max_batch_size)
         self.worker._set_stage(stage)
+        self.worker._set_id(worker_id)
 
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 

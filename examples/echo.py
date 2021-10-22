@@ -5,7 +5,7 @@ from mosec import Server, Worker
 from mosec.errors import ValidationError
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter(
     "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
 )
