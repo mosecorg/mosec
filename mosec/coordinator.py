@@ -73,8 +73,8 @@ class Coordinator:
         self.shutdown = shutdown
         self.shutdown_notify = shutdown_notify
 
-        self.init_protocol()
         self.init_worker()
+        self.init_protocol()
         self.run()
 
     def exit(self):

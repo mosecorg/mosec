@@ -6,6 +6,7 @@ mod protocol;
 mod tasks;
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use clap::Clap;
@@ -13,6 +14,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response, StatusCode};
 use prometheus::{Encoder, TextEncoder};
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::sync::Notify;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -158,13 +160,20 @@ async fn main() {
     info!(?opts, "parse arguments");
 
     let coordinator = Coordinator::init_from_opts(&opts);
+    let all_ready_notify = Arc::new(Notify::new());
+    let notify_receiver = all_ready_notify.clone();
     tokio::spawn(async move {
-        coordinator.run().await;
+        coordinator.run(all_ready_notify.clone()).await;
     });
+    notify_receiver.notified().await;
 
     let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     let server = hyper::Server::bind(&addr).serve(service);
+    info!(
+        "http server is running at {}:{}...",
+        opts.address, opts.port
+    );
     let graceful = server.with_graceful_shutdown(shutdown_signal());
     if let Err(err) = graceful.await {
         tracing::error!(%err, "server error");

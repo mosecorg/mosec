@@ -36,12 +36,12 @@ class Worker:
     will follow the "_same type_" constraint.
     """
 
+    example: Any = None
+
     def __init__(self):
         self._stage = None
         self._max_batch_size = 1
         self._id = 0
-
-        self.example = None
 
     def _serialize_ipc(self, data):
         """Define IPC serialize method"""

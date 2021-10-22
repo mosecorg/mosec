@@ -1,8 +1,10 @@
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_channel::{bounded, Receiver, Sender};
+use tokio::sync::{Barrier, Notify};
 use tracing::{error, info};
 
 use crate::args::Opts;
@@ -53,7 +55,8 @@ impl Coordinator {
         }
     }
 
-    pub(crate) async fn run(&self) {
+    pub(crate) async fn run(&self, all_ready_notify: Arc<Notify>) {
+        let barrier = Arc::new(Barrier::new(self.batches.len()));
         let mut last_receiver = self.receiver.clone();
         let mut last_sender = self.sender.clone();
         let wait_time = self.wait_time;
@@ -77,6 +80,8 @@ impl Coordinator {
                 last_receiver.clone(),
                 sender.clone(),
                 last_sender.clone(),
+                barrier.clone(),
+                all_ready_notify.clone(),
             ));
             last_receiver = receiver;
             last_sender = sender;
