@@ -163,7 +163,7 @@ async fn main() {
     let all_ready_notify = Arc::new(Notify::new());
     let notify_receiver = all_ready_notify.clone();
     tokio::spawn(async move {
-        coordinator.run(all_ready_notify.clone()).await;
+        coordinator.run(all_ready_notify).await;
     });
     notify_receiver.notified().await;
 
