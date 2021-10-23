@@ -36,11 +36,12 @@ class Worker:
     will follow the "_same type_" constraint.
     """
 
+    example: Any = None
+
     def __init__(self):
         self._stage = None
         self._max_batch_size = 1
-
-        self.example = None
+        self._id = 0
 
     def _serialize_ipc(self, data):
         """Define IPC serialize method"""
@@ -55,6 +56,18 @@ class Worker:
 
     def _set_mbs(self, mbs):
         self._max_batch_size = mbs
+
+    def _set_id(self, id):
+        self._id = id
+
+    @property
+    def id(self) -> int:
+        """
+        This property returns the worker id in the range of [1, ... ,`num`]
+        (`num` as defined [here][mosec.server.Server--multiprocess])
+        to differentiate workers in the same stage.
+        """
+        return self._id
 
     def serialize(self, data: Any) -> bytes:
         """
