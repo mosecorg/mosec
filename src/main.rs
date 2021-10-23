@@ -158,8 +158,8 @@ async fn main() {
     info!(?opts, "parse arguments");
 
     let coordinator = Coordinator::init_from_opts(&opts);
-    let barrier = tokio::spawn(async move { coordinator.run().await });
-    barrier.await.unwrap().wait().await;
+    let barrier = coordinator.run().await;
+    barrier.wait().await;
 
     let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
