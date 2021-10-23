@@ -22,7 +22,7 @@ def export_meta_data():
         subprocess.check_output(["cargo", "metadata", "--no-deps"]).decode().strip()
     )
     pkg_meta = json.loads(meta_str)["packages"][0]
-    info_to_get = ["name", "authors", "version", "license", "repository", "description"]
+    info_to_get = ["name", "authors", "version", "repository", "description"]
     for k in info_to_get:
         META_DATA[k] = pkg_meta[k]
 
@@ -99,8 +99,8 @@ setup(
     maintainer=META_DATA["author"][1],
     maintainer_email=META_DATA["author_email"][1],
     url=META_DATA["repository"],
-    license=META_DATA["license"],
     description=META_DATA["description"],
+    license="Apache License 2.0",
     long_description=readme,
     long_description_content_type="text/markdown",
     packages=find_packages(exclude=["examples*", "tests*"]),

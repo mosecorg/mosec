@@ -170,10 +170,7 @@ async fn main() {
     let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     let server = hyper::Server::bind(&addr).serve(service);
-    info!(
-        "http server is running at {}:{}...",
-        opts.address, opts.port
-    );
+    info!(?addr, "http server is running at");
     let graceful = server.with_graceful_shutdown(shutdown_signal());
     if let Err(err) = graceful.await {
         tracing::error!(%err, "server error");

@@ -110,6 +110,7 @@ pub(crate) async fn communicate(
                         }
                     }
                 });
+                // ensure every stage is properly initialized (including warmup)
                 if connection_id == 1 {
                     let wait_result = barrier.wait().await;
                     if wait_result.is_leader() {
