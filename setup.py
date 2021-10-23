@@ -1,44 +1,30 @@
-import json
 import os
-import re
 import shutil
 import subprocess
 from io import open
-from typing import Dict
 
 from setuptools import Extension, find_packages, setup  # type: ignore
 from setuptools.command.build_ext import build_ext as _build_ext  # type: ignore
 
 here = os.path.abspath(os.path.dirname(__file__))
-META_DATA: Dict[str, str] = {}
+PACKAGE_NAME = "mosec"
 
 with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
 
 
-def export_meta_data():
-    """Use rust cargo package as the single source for meta data"""
-    meta_str = (
-        subprocess.check_output(["cargo", "metadata", "--no-deps"]).decode().strip()
-    )
-    pkg_meta = json.loads(meta_str)["packages"][0]
-    info_to_get = ["name", "authors", "version", "repository", "description"]
-    for k in info_to_get:
-        META_DATA[k] = pkg_meta[k]
-
-    def clean(raw_str):
-        return re.sub("[<>]", "", raw_str)
-
-    META_DATA["author"], META_DATA["author_email"] = list(
-        zip(*[clean(x).split(" ") for x in META_DATA["authors"]])
+def get_version():
+    """Use rust package version as the single source for versioning"""
+    version = (
+        subprocess.check_output(["cargo", "pkgid"]).decode().strip().split("#")[-1]
     )
 
-    # update py version file
-    version_str = '__version__ = "{}"'.format(META_DATA["version"])
+    version_str = '__version__ = "{}"'.format(version)
+
+    # update py version
     with open("mosec/_version.py", "w") as f:
         f.write(f"{version_str}\n")
-
-    print(f"python setup meta data: {META_DATA}")
+    return version
 
 
 class RustExtension(Extension):
@@ -77,11 +63,9 @@ class RustBuildExt(_build_ext):
 
         # package the binary
         if rust_target is not None:
-            target_dir = os.path.join(
-                "target", rust_target, "release", META_DATA["name"]
-            )
+            target_dir = os.path.join("target", rust_target, "release", PACKAGE_NAME)
         else:
-            target_dir = os.path.join("target", "release", META_DATA["name"])
+            target_dir = os.path.join("target", "release", PACKAGE_NAME)
         os.makedirs(build_libpath, exist_ok=True)
         shutil.copy(target_dir, build_libpath)
 
@@ -90,19 +74,16 @@ class RustBuildExt(_build_ext):
             shutil.copy(build_libpath, libpath)
 
 
-export_meta_data()
 setup(
-    name=META_DATA["name"],
-    version=META_DATA["version"],
-    author=META_DATA["author"][0],
-    author_email=META_DATA["author_email"][0],
-    maintainer=META_DATA["author"][1],
-    maintainer_email=META_DATA["author_email"][1],
-    url=META_DATA["repository"],
-    description=META_DATA["description"],
-    license="Apache License 2.0",
+    name=PACKAGE_NAME,
+    version=get_version(),
+    author="Keming Yang",
+    author_email="kemingy94@gmail.com",
+    description="Model Serving made Efficient in the Cloud.",
     long_description=readme,
     long_description_content_type="text/markdown",
+    url="https://github.com/mosecorg/mosec",
+    license="Apache License 2.0",
     packages=find_packages(exclude=["examples*", "tests*"]),
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",

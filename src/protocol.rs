@@ -6,7 +6,7 @@ use async_channel::{Receiver, Sender};
 use bytes::{BufMut, Bytes, BytesMut};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
-use tokio::sync::{Barrier, Notify};
+use tokio::sync::Barrier;
 use tracing::{debug, error, info};
 
 use crate::metrics::Metrics;
@@ -32,7 +32,6 @@ pub(crate) async fn communicate(
     sender: Sender<u32>,
     last_sender: Sender<u32>,
     barrier: Arc<Barrier>,
-    all_ready_notify: Arc<Notify>,
 ) {
     let listener = UnixListener::bind(&path).expect("failed to bind to the socket");
     let mut connection_id: u32 = 0;
@@ -112,10 +111,7 @@ pub(crate) async fn communicate(
                 });
                 // ensure every stage is properly initialized (including warmup)
                 if connection_id == 1 {
-                    let wait_result = barrier.wait().await;
-                    if wait_result.is_leader() {
-                        all_ready_notify.notify_one();
-                    }
+                    barrier.wait().await;
                 }
             }
             Err(err) => {
