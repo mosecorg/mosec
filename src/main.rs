@@ -158,7 +158,7 @@ async fn main() {
     info!(?opts, "parse arguments");
 
     let coordinator = Coordinator::init_from_opts(&opts);
-    let barrier = coordinator.run().await;
+    let barrier = coordinator.run();
     barrier.wait().await;
 
     let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });

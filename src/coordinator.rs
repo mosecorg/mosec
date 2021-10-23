@@ -55,7 +55,7 @@ impl Coordinator {
         }
     }
 
-    pub(crate) async fn run(&self) -> Arc<Barrier> {
+    pub(crate) fn run(&self) -> Arc<Barrier> {
         let barrier = Arc::new(Barrier::new(self.batches.len() + 1));
         let mut last_receiver = self.receiver.clone();
         let mut last_sender = self.sender.clone();
