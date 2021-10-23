@@ -1,11 +1,11 @@
 import logging
-from time import sleep
+import time
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
     "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
 )
@@ -26,19 +26,9 @@ class Preprocess(Worker):
 
 
 class Inference(Worker):
-    example = 2.0  # override `example` (the same data format as the input of `forward`)
-
-    def __init__(self):
-        super().__init__()
-        sleep(1)  # mock some time-comsuming data loading, etc.
-        self.first = True
-
     def forward(self, data: float) -> float:
-        if self.first:
-            sleep(5)  # mock first time model forward
-            self.first = False
         logger.info(f"sleeping for {data} seconds")
-        sleep(data)
+        time.sleep(data)
         return data
 
 
