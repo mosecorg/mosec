@@ -1,4 +1,5 @@
 import logging
+import multiprocessing as mp
 import os
 import signal
 import socket
@@ -6,6 +7,8 @@ import struct
 import time
 import traceback
 from multiprocessing.synchronize import Event
+from queue import Empty, Queue
+from threading import Thread
 from typing import Callable, Type
 
 from .errors import DecodingError, ValidationError
@@ -49,6 +52,8 @@ class Coordinator:
             stage (str): identifier to distinguish the first and last stages.
             shutdown (Event): `multiprocessing.synchronize.Event` object for shutdown
                 IPC.
+            shutdown_notify (Event): `multiprocessing.synchronize.Event` object for
+                the notification of graceful shutdown.
             socket_prefix (str): prefix for the socket addresses.
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
@@ -66,6 +71,11 @@ class Coordinator:
             addr=os.path.join(socket_prefix, f"ipc_{stage_id}.socket"),
             timeout=PROTOCOL_TIMEOUT,
         )
+
+        # used by multithreaded protocol i/o: fetch & dispatch
+        self.input_queue: Queue = Queue()
+        self.output_queue: Queue = Queue()
+        self.error_event: Event = mp.get_context("spawn").Event()
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -120,7 +130,10 @@ class Coordinator:
                 if not self.shutdown_notify.is_set():
                     logger.error(f"{self.name} socket connection error: {err}")
                 break
-
+            fetcher = Thread(target=self.fetch)
+            dispatcher = Thread(target=self.dispatch)
+            fetcher.start()
+            dispatcher.start()
             self.coordinate()
 
     def get_decoder(self) -> Callable:
@@ -133,20 +146,43 @@ class Coordinator:
             return self.worker.serialize
         return self.worker._serialize_ipc
 
+    def fetch(self):
+        while not self.shutdown.is_set():
+            item = None
+            try:
+                _, ids, payloads = self.protocol.receive()
+                item = (ids, payloads)
+            except socket.timeout:
+                continue
+            except (struct.error, OSError) as err:
+                if not self.shutdown_notify.is_set():
+                    logger.error(f"{self.name} socket receive error: {err}")
+            self.input_queue.put(item)
+            if item is None:
+                break
+
+    def dispatch(self):
+        while not self.shutdown.is_set():
+            status, ids, payloads = self.output_queue.get()
+            try:
+                self.protocol.send(status, ids, payloads)
+            except OSError as err:
+                logger.error(f"{self.name} socket send error: {err}")
+                self.error_event.set()
+                break
+
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
         decoder = self.get_decoder()
         encoder = self.get_encoder()
         while not self.shutdown.is_set():
             try:
-                _, ids, payloads = self.protocol.receive()
-            except socket.timeout:
+                item = self.input_queue.get(timeout=2.0)
+            except Empty:
                 continue
-            except (struct.error, OSError) as err:
-                if not self.shutdown_notify.is_set():
-                    logger.error(f"{self.name} socket receive error: {err}")
+            if item is None:
                 break
-
+            ids, payloads = item
             try:
                 data = [decoder(item) for item in payloads]
                 data = (
@@ -179,11 +215,8 @@ class Coordinator:
                 logger.warning(traceback.format_exc().replace("\n", " "))
                 status = self.protocol.FLAG_INTERNAL_ERROR
                 payloads = ("inference internal error".encode(),)
-
-            try:
-                self.protocol.send(status, ids, payloads)
-            except OSError as err:
-                logger.error(f"{self.name} socket send error: {err}")
+            self.output_queue.put((status, ids, payloads))
+            if self.error_event.is_set():
                 break
 
         self.protocol.close()
