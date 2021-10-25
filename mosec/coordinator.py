@@ -7,7 +7,7 @@ import struct
 import time
 import traceback
 from multiprocessing.synchronize import Event
-from queue import Empty, Queue
+from queue import Empty, SimpleQueue
 from threading import Thread
 from typing import Callable, Type
 
@@ -73,8 +73,8 @@ class Coordinator:
         )
 
         # used by multithreaded protocol i/o: fetch & dispatch
-        self.input_queue: Queue = Queue()
-        self.output_queue: Queue = Queue()
+        self.input_queue: SimpleQueue = SimpleQueue()
+        self.output_queue: SimpleQueue = SimpleQueue()
         self.error_event: Event = mp.get_context("spawn").Event()
 
         # ignore termination & interruption signal
@@ -130,8 +130,8 @@ class Coordinator:
                 if not self.shutdown_notify.is_set():
                     logger.error(f"{self.name} socket connection error: {err}")
                 break
-            fetcher = Thread(target=self.fetch)
-            dispatcher = Thread(target=self.dispatch)
+            fetcher = Thread(target=self.fetch, daemon=True)
+            dispatcher = Thread(target=self.dispatch, daemon=True)
             fetcher.start()
             dispatcher.start()
             self.coordinate()
@@ -163,7 +163,10 @@ class Coordinator:
 
     def dispatch(self):
         while not self.shutdown.is_set():
-            status, ids, payloads = self.output_queue.get()
+            try:
+                status, ids, payloads = self.output_queue.get(timeout=2.0)
+            except Empty:
+                continue
             try:
                 self.protocol.send(status, ids, payloads)
             except OSError as err:
