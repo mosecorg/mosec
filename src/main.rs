@@ -75,7 +75,7 @@ async fn inference(req: Request<Body>) -> Response<Body> {
                     metrics
                         .duration
                         .with_label_values(&["total", "total"])
-                        .observe(task.create_at.elapsed().as_secs_f64());
+                        .observe(task.duration_sec());
                     StatusCode::OK
                 }
                 TaskCode::BadRequestError => StatusCode::BAD_REQUEST,
