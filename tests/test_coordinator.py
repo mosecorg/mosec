@@ -224,4 +224,4 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
             time.sleep(PROTOCOL_TIMEOUT)
         except Exception as e:
             shutdown.set()
-            assert False, e
+            raise e

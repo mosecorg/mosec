@@ -86,7 +86,7 @@ impl Coordinator {
             last_sender = sender;
         }
         tokio::spawn(finish_task(last_receiver));
-        barrier.clone()
+        barrier
     }
 }
 
