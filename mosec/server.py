@@ -1,5 +1,6 @@
 import logging
 import multiprocessing as mp
+import os
 import signal
 import subprocess
 import traceback
@@ -8,7 +9,7 @@ from os.path import exists
 from pathlib import Path
 from shutil import rmtree
 from time import monotonic, sleep
-from typing import List, Optional, Type, Union
+from typing import Dict, List, Optional, Type, Union
 
 import pkg_resources
 
@@ -44,6 +45,7 @@ class Server:
         self._worker_num: List[int] = []
         self._worker_mbs: List[int] = []
 
+        self._coordinator_env: List[List[Dict[str, str]]] = []
         self._coordinator_ctx: List[str] = []
         self._coordinator_pools: List[List[Union[mp.Process, None]]] = []
         self._coordinator_shutdown: Event = mp.get_context("spawn").Event()
@@ -69,6 +71,7 @@ class Server:
         num,
         max_batch_size,
         start_method,
+        env,
     ):
         def validate_int_ge_1(number, name):
             assert isinstance(
@@ -76,6 +79,24 @@ class Server:
             ), f"{name} must be integer but you give {type(number)}"
             assert number >= 1, f"{name} must be greater than 1"
 
+        def validate_env():
+            def validate_str_dict(dictionary: Dict):
+                for k, v in dictionary.items():
+                    if not (isinstance(k, str) and isinstance(v, str)):
+                        return False
+                return True
+
+            assert len(env) == num, "len(env) must equal to num"
+            valid = True
+            if not isinstance(env, List):
+                valid = False
+            elif not all(
+                [lambda x: isinstance(x, Dict) and validate_str_dict(x) for x in env]
+            ):
+                valid = False
+            assert valid, "env must be a list of string dictionary"
+
+        validate_env()
         assert issubclass(worker, Worker), "worker must be inherited from mosec.Worker"
         validate_int_ge_1(num, "worker number")
         validate_int_ge_1(max_batch_size, "maximum batch size")
@@ -122,12 +143,13 @@ class Server:
     def _manage_coordinators(self):
         first = True
         while not self._server_shutdown:
-            for stage_id, (w_cls, w_num, w_mbs, c_ctx) in enumerate(
+            for stage_id, (w_cls, w_num, w_mbs, c_ctx, c_env) in enumerate(
                 zip(
                     self._worker_cls,
                     self._worker_num,
                     self._worker_mbs,
                     self._coordinator_ctx,
+                    self._coordinator_env,
                 )
             ):
                 # for every sequential stage
@@ -158,6 +180,10 @@ class Server:
                     # for every worker in each stage
                     if self._coordinator_pools[stage_id][worker_id] is not None:
                         continue
+
+                    env = c_env[worker_id]
+                    for k, v in env.items():
+                        os.environ[k] = v
 
                     coordinator_process = mp.get_context(c_ctx).Process(
                         target=Coordinator,
@@ -217,6 +243,7 @@ class Server:
         num: int = 1,
         max_batch_size: int = 1,
         start_method: str = "spawn",
+        env: List[Dict[str, str]] = [{"": ""}],
     ):
         """
         This method sequentially appends workers to the workflow pipeline.
@@ -229,10 +256,11 @@ class Server:
             start_method: the process starting method ("spawn" or "fork")
         """
 
-        self._validate_arguments(worker, num, max_batch_size, start_method)
+        self._validate_arguments(worker, num, max_batch_size, start_method, env)
         self._worker_cls.append(worker)
         self._worker_num.append(num)
         self._worker_mbs.append(max_batch_size)
+        self._coordinator_env.append(env * num)
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)
 
