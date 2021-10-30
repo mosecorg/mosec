@@ -4,6 +4,7 @@ import os
 import signal
 import subprocess
 import traceback
+from contextlib import ContextDecorator
 from multiprocessing.synchronize import Event
 from os.path import exists
 from pathlib import Path
@@ -184,10 +185,6 @@ class Server:
                     if self._coordinator_pools[stage_id][worker_id] is not None:
                         continue
 
-                    if c_env is not None:
-                        for k, v in c_env[worker_id].items():
-                            os.environ[k] = v
-
                     coordinator_process = mp.get_context(c_ctx).Process(
                         target=Coordinator,
                         args=(
@@ -202,7 +199,10 @@ class Server:
                         ),
                         daemon=True,
                     )
-                    coordinator_process.start()
+
+                    with _EnvContext(c_env, worker_id):
+                        coordinator_process.start()
+
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
             first = False
             if self._controller_process:
@@ -280,3 +280,25 @@ class Server:
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
+
+
+class _EnvContext(ContextDecorator):
+    def __init__(self, env: Union[None, Dict[str, str]], id: int) -> None:
+        super().__init__()
+        self.default: Dict = {}
+        self.env = env
+        self.id = id
+
+    def __enter__(
+        self,
+    ):
+        if self.env is not None:
+            for k, v in self.env[self.id].items():
+                self.default[k] = os.getenv(k, "")
+                os.environ[k] = v
+        return self
+
+    def __exit__(self, *exc):
+        for k, v in self.default.items():
+            os.environ[k] = v
+        return False
