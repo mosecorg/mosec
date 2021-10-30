@@ -200,7 +200,7 @@ class Server:
                         daemon=True,
                     )
 
-                    with _EnvContext(c_env, worker_id):
+                    with EnvContext(c_env, worker_id):
                         coordinator_process.start()
 
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
@@ -282,16 +282,14 @@ class Server:
         self._halt()
 
 
-class _EnvContext(ContextDecorator):
+class EnvContext(ContextDecorator):
     def __init__(self, env: Union[None, Dict[str, str]], id: int) -> None:
         super().__init__()
         self.default: Dict = {}
         self.env = env
         self.id = id
 
-    def __enter__(
-        self,
-    ):
+    def __enter__(self):
         if self.env is not None:
             for k, v in self.env[self.id].items():
                 self.default[k] = os.getenv(k, "")

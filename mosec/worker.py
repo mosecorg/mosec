@@ -38,14 +38,11 @@ class Worker(abc.ABC):
     """
 
     example: Any = None
+    _id: int = 0
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self._stage = None
         self._max_batch_size = 1
-        try:
-            self._id = kwargs["id"]
-        except KeyError:
-            raise TypeError("Missing super().__init__ arguments")
 
     def _serialize_ipc(self, data):
         """Define IPC serialize method"""
