@@ -40,8 +40,8 @@ class CleanDirContext(ContextDecorator):
 
 
 class EchoWorkerJSON(Worker):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def forward(self, data):
         return data

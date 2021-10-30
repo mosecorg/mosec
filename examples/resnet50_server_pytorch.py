@@ -47,8 +47,8 @@ class Preprocess(Worker):
 
 
 class Inference(Worker):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
@@ -72,8 +72,8 @@ class Inference(Worker):
 
 
 class Postprocess(Worker):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         logger.info("loading categories file...")
         local_filename, _ = urlretrieve(
             "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"

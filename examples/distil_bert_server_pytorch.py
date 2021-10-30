@@ -24,8 +24,8 @@ INFERENCE_BATCH_SIZE = 32
 
 
 class Preprocess(Worker):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.tokenizer = AutoTokenizer.from_pretrained(
             "distilbert-base-uncased-finetuned-sst-2-english"
         )
@@ -41,8 +41,8 @@ class Preprocess(Worker):
 
 
 class Inference(Worker):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )

@@ -54,10 +54,15 @@ class Coordinator:
             worker_id (int): identification number for worker processes at the same
                 stage.
         """
-        self.worker = worker()
+        try:
+            self.worker = worker(id=worker_id)
+        except TypeError as err:
+            raise RuntimeError(
+                f"{err}\n"
+                f"Please inherit Worker class like this:{_inheritance_format}"
+            )
         self.worker._set_mbs(max_batch_size)
         self.worker._set_stage(stage)
-        self.worker._set_id(worker_id)
 
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 
@@ -188,3 +193,15 @@ class Coordinator:
 
         self.protocol.close()
         time.sleep(CONN_CHECK_INTERVAL)
+
+
+_inheritance_format = """
+class MyWorker(Worker):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # initialize other resources
+        # ...
+
+    def forward(self, data: Any) -> Any:
+        # ...
+"""
