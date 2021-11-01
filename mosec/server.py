@@ -95,7 +95,7 @@ class Server:
             if not isinstance(env, List):
                 valid = False
             elif not all(
-                [lambda x: isinstance(x, Dict) and validate_str_dict(x) for x in env]
+                [isinstance(x, Dict) and validate_str_dict(x) for x in env]
             ):
                 valid = False
             assert valid, "env must be a list of string dictionary"
