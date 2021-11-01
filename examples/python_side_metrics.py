@@ -35,7 +35,7 @@ from prometheus_client import (  # type: ignore  # noqa: E402
 
 metric_registry = CollectorRegistry()
 multiprocess.MultiProcessCollector(metric_registry)
-counter = Counter("inference_result", "statistic of result", ("status", "pid"))
+counter = Counter("inference_result", "statistic of result", ("status", "worker_id"))
 
 
 def metric_app(environ, start_response):
@@ -55,7 +55,7 @@ def metric_service(host="", port=8080):
 class Inference(Worker):
     def __init__(self):
         super().__init__()
-        self.pid = str(os.getpid())
+        self.worker_id = str(self.id)
 
     def deserialize(self, data: bytes) -> int:
         json_data = super().deserialize(data)
@@ -68,8 +68,10 @@ class Inference(Worker):
     def forward(self, data: List[int]) -> List[bool]:
         avg = sum(data) / len(data)
         ans = [x >= avg for x in data]
-        counter.labels(status="true", pid=self.pid).inc(sum(ans))
-        counter.labels(status="false", pid=self.pid).inc(len(ans) - sum(ans))
+        counter.labels(status="true", worker_id=self.worker_id).inc(sum(ans))
+        counter.labels(status="false", worker_id=self.worker_id).inc(
+            len(ans) - sum(ans)
+        )
         return ans
 
 
@@ -80,5 +82,5 @@ if __name__ == "__main__":
 
     # Run the inference server
     server = Server()
-    server.append_worker(Inference, max_batch_size=8)
+    server.append_worker(Inference, num=2, max_batch_size=8)
     server.run()
