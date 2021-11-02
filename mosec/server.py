@@ -94,9 +94,7 @@ class Server:
             valid = True
             if not isinstance(env, List):
                 valid = False
-            elif not all(
-                [isinstance(x, Dict) and validate_str_dict(x) for x in env]
-            ):
+            elif not all([isinstance(x, Dict) and validate_str_dict(x) for x in env]):
                 valid = False
             assert valid, "env must be a list of string dictionary"
 
@@ -283,7 +281,7 @@ class Server:
 
 
 class EnvContext(ContextDecorator):
-    def __init__(self, env: Union[None, Dict[str, str]], id: int) -> None:
+    def __init__(self, env: Union[None, List[Dict[str, str]]], id: int) -> None:
         super().__init__()
         self.default: Dict = {}
         self.env = env
