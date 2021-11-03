@@ -1,7 +1,7 @@
 [package]
 name = "mosec"
-version = "0.2.0"
-authors = ["Keming <kemingy94@gmail.com>"]
+version = "0.2.1"
+authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
@@ -11,7 +11,6 @@ documentation = "https://docs.rs/mosec"
 exclude = ["target", "examples", "tests", "scripts"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 hyper = { version = "0.14", features = ["http1", "server", "runtime"] }
 bytes = "1"
