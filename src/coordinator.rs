@@ -7,7 +7,7 @@ use async_channel::{bounded, Receiver, Sender};
 use tokio::sync::Barrier;
 use tracing::{error, info};
 
-use crate::args::Opts;
+use crate::args::{Opts, BatchSize};
 use crate::metrics::{Metrics, METRICS};
 use crate::protocol::communicate;
 use crate::tasks::{TaskManager, TASK_MANAGER};
@@ -16,7 +16,7 @@ use crate::tasks::{TaskManager, TASK_MANAGER};
 pub(crate) struct Coordinator {
     capacity: usize,
     path: String,
-    batches: Vec<u32>,
+    batches: Vec<BatchSize>,
     wait_time: Duration,
     timeout: Duration,
     receiver: Receiver<u32>,
@@ -74,7 +74,7 @@ impl Coordinator {
             let batch_size = *batch;
             tokio::spawn(communicate(
                 path,
-                batch_size as usize,
+                batch_size,
                 wait_time,
                 (i + 1).to_string(),
                 last_receiver.clone(),

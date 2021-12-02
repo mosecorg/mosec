@@ -1,16 +1,34 @@
-use clap::{crate_version, AppSettings, Clap};
+use std::str::FromStr;
+use clap::{crate_version, Parser};
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Clone)]
+pub(crate) struct BatchSize {
+    size: Vec<usize>,
+}
+
+impl FromStr for BatchSize {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let size: Vec<usize> = s
+            .split('|')
+            .map(|s| s.trim().parse::<usize>().map_err(|op| op.to_string()))
+            .collect::<Result<Vec<usize>, String>>()?;
+        Ok(BatchSize { size })
+    }
+}
+
+#[derive(Parser, Debug)]
 #[clap(version = crate_version!())]
-#[clap(setting = AppSettings::ColoredHelp)]
 pub(crate) struct Opts {
     /// Unix domain socket directory path
     #[clap(long, default_value = "")]
     pub(crate) path: String,
 
     /// batch size for each stage
-    #[clap(short, long, default_values = &["1", "8", "1"])]
-    pub(crate) batches: Vec<u32>,
+    /// for parallel tasks, use '|' to separate batch size for each workers
+    #[clap(short, long, default_values = &["1", "8|8", "1"])]
+    pub(crate) batches: Vec<BatchSize>,
 
     /// capacity for the channel
     /// (when the channel is full, the new requests will be dropped with 429 Too Many Requests)
