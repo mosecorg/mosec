@@ -8,7 +8,6 @@ mod tasks;
 use std::net::SocketAddr;
 
 use bytes::Bytes;
-use clap::Clap;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response, StatusCode};
 use prometheus::{Encoder, TextEncoder};
@@ -158,13 +157,13 @@ async fn main() {
     info!(?opts, "parse arguments");
 
     let coordinator = Coordinator::init_from_opts(&opts);
-    tokio::spawn(async move {
-        coordinator.run().await;
-    });
+    let barrier = coordinator.run();
+    barrier.wait().await;
 
     let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     let server = hyper::Server::bind(&addr).serve(service);
+    info!(?addr, "http server is running at");
     let graceful = server.with_graceful_shutdown(shutdown_signal());
     if let Err(err) = graceful.await {
         tracing::error!(%err, "server error");

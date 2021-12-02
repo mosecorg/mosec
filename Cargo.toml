@@ -1,8 +1,8 @@
 [package]
 name = "mosec"
-version = "0.2.0"
-authors = ["Keming <kemingy94@gmail.com>"]
-edition = "2018"
+version = "0.2.1"
+authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
+edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/mosecorg/mosec"
@@ -11,7 +11,6 @@ documentation = "https://docs.rs/mosec"
 exclude = ["target", "examples", "tests", "scripts"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 hyper = { version = "0.14", features = ["http1", "server", "runtime"] }
 bytes = "1"
@@ -22,5 +21,5 @@ derive_more = { version = "0.99.0", features = ["display", "error"] }
 async-channel = { version = "1.6.1" }
 parking_lot = "0.11"
 once_cell = { version = "1.8", features = ["parking_lot"] }
-clap = "3.0.0-beta.4"
+clap = "3.0.0-beta.5"
 prometheus = "0.12.0"

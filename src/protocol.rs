@@ -1,13 +1,16 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use async_channel::{Receiver, Sender};
 use bytes::{BufMut, Bytes, BytesMut};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
+use tokio::sync::Barrier;
 use tracing::{debug, error, info};
 
 use crate::metrics::Metrics;
+use crate::args::BatchSize;
 use crate::tasks::{TaskCode, TaskManager};
 
 const FLAG_U8_SIZE: usize = 2;
@@ -20,14 +23,16 @@ const BIT_STATUS_BAD_REQ: u16 = 0b10;
 const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
 // Others are treated as Internal Error
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn communicate(
     path: PathBuf,
-    batch_size: usize,
+    batch_size: BatchSize,
     wait_time: Duration,
     stage_id: String,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
     last_sender: Sender<u32>,
+    barrier: Arc<Barrier>,
 ) {
     let listener = UnixListener::bind(&path).expect("failed to bind to the socket");
     let mut connection_id: u32 = 0;
@@ -105,6 +110,10 @@ pub(crate) async fn communicate(
                         }
                     }
                 });
+                // ensure every stage is properly initialized (including warmup)
+                if connection_id == 1 {
+                    barrier.wait().await;
+                }
             }
             Err(err) => {
                 error!(error=%err, "accept connection error");

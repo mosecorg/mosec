@@ -54,6 +54,7 @@ class Coordinator:
             worker_id (int): identification number for worker processes at the same
                 stage.
         """
+        worker._id = worker_id
         self.worker = worker()
         self.worker._set_mbs(max_batch_size)
         self.worker._set_stage(stage)
@@ -72,8 +73,8 @@ class Coordinator:
         self.shutdown = shutdown
         self.shutdown_notify = shutdown_notify
 
-        self.init_protocol()
         self.init_worker()
+        self.init_protocol()
         self.run()
 
     def exit(self):

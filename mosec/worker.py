@@ -1,3 +1,4 @@
+import abc
 import json
 import logging
 import pickle
@@ -8,7 +9,7 @@ from .errors import DecodingError
 logger = logging.getLogger(__name__)
 
 
-class Worker:
+class Worker(abc.ABC):
     """
     This public class defines the mosec worker interface. It provides
     default IPC (de)serialization methods, stores the worker meta data
@@ -36,11 +37,12 @@ class Worker:
     will follow the "_same type_" constraint.
     """
 
+    example: Any = None
+    _id: int = 0
+
     def __init__(self):
         self._stage = None
         self._max_batch_size = 1
-
-        self.example = None
 
     def _serialize_ipc(self, data):
         """Define IPC serialize method"""
@@ -55,6 +57,15 @@ class Worker:
 
     def _set_mbs(self, mbs):
         self._max_batch_size = mbs
+
+    @property
+    def id(self) -> int:
+        """
+        This property returns the worker id in the range of [1, ... ,`num`]
+        (`num` as defined [here][mosec.server.Server--multiprocess])
+        to differentiate workers in the same stage.
+        """
+        return self._id
 
     def serialize(self, data: Any) -> bytes:
         """
@@ -92,6 +103,7 @@ class Worker:
             raise DecodingError(err)
         return data_json
 
+    @abc.abstractmethod
     def forward(self, data: Any) -> Any:
         """
         This method defines the worker's main logic, be it data processing,

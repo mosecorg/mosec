@@ -1,11 +1,13 @@
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_channel::{bounded, Receiver, Sender};
+use tokio::sync::Barrier;
 use tracing::{error, info};
 
-use crate::args::Opts;
+use crate::args::{Opts, BatchSize};
 use crate::metrics::{Metrics, METRICS};
 use crate::protocol::communicate;
 use crate::tasks::{TaskManager, TASK_MANAGER};
@@ -14,7 +16,7 @@ use crate::tasks::{TaskManager, TASK_MANAGER};
 pub(crate) struct Coordinator {
     capacity: usize,
     path: String,
-    batches: Vec<u32>,
+    batches: Vec<BatchSize>,
     wait_time: Duration,
     timeout: Duration,
     receiver: Receiver<u32>,
@@ -53,7 +55,8 @@ impl Coordinator {
         }
     }
 
-    pub(crate) async fn run(&self) {
+    pub(crate) fn run(&self) -> Arc<Barrier> {
+        let barrier = Arc::new(Barrier::new(self.batches.len() + 1));
         let mut last_receiver = self.receiver.clone();
         let mut last_sender = self.sender.clone();
         let wait_time = self.wait_time;
@@ -71,17 +74,19 @@ impl Coordinator {
             let batch_size = *batch;
             tokio::spawn(communicate(
                 path,
-                batch_size as usize,
+                batch_size,
                 wait_time,
                 (i + 1).to_string(),
                 last_receiver.clone(),
                 sender.clone(),
                 last_sender.clone(),
+                barrier.clone(),
             ));
             last_receiver = receiver;
             last_sender = sender;
         }
         tokio::spawn(finish_task(last_receiver));
+        barrier
     }
 }
 
