@@ -1,10 +1,11 @@
+import contextlib
 import logging
 import multiprocessing as mp
 import os
 import signal
 import subprocess
 import traceback
-from contextlib import ContextDecorator
+from functools import partial
 from multiprocessing.synchronize import Event
 from os.path import exists
 from pathlib import Path
@@ -40,7 +41,14 @@ class Server:
     corresponding worker is appended, by setting the `num`.
     """
 
-    def __init__(self):
+    def __init__(self, plasma_shm: int = 0):
+        """Initialize a MOSEC Server
+
+        Args:
+            plasma_shm (int, optional): Size of plasma shared memory for IPC
+                in bytes, 0 for disable. Defaults to 0.
+        """
+        self._plasma_shm = plasma_shm
 
         self._worker_cls: List[Type[Worker]] = []
         self._worker_num: List[int] = []
@@ -144,6 +152,10 @@ class Server:
 
     def _manage_coordinators(self):
         first = True
+        daemon_processes = {
+            "controller": self._controller_process,
+            "shared_memory": self._shm_process,
+        }
         while not self._server_shutdown:
             for stage_id, (w_cls, w_num, w_mbs, c_ctx, c_env) in enumerate(
                 zip(
@@ -194,22 +206,26 @@ class Server:
                             self._configs["path"],
                             stage_id + 1,
                             worker_id + 1,
+                            self._shm_path,
                         ),
                         daemon=True,
                     )
 
-                    with EnvContext(c_env, worker_id):
+                    with _env_var_context(c_env, worker_id):
                         coordinator_process.start()
 
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
             first = False
-            if self._controller_process:
-                ctr_exitcode = self._controller_process.poll()
-                if ctr_exitcode:
-                    self._terminate(
-                        ctr_exitcode,
-                        f"mosec controller exited on error: {ctr_exitcode}",
-                    )
+
+            for name, proc in daemon_processes.items():
+                if proc is not None:
+                    exitcode = proc.poll()
+                    if exitcode:
+                        self._terminate(
+                            exitcode,
+                            f"mosec {name} exited on error: {exitcode}",
+                        )
+
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
@@ -274,27 +290,34 @@ class Server:
         self._parse_args()
         self._start_controller()
         try:
-            self._manage_coordinators()
+            runtime_ctx = partial(_env_var_context, env=None, id=0)
+            if self._plasma_shm:
+                from pyarrow import plasma  # type: ignore
+
+                runtime_ctx = partial(
+                    plasma.start_plasma_store, plasma_store_memory=self._plasma_shm
+                )
+            with runtime_ctx() as (self._shm_path, self._shm_process):
+                self._manage_coordinators()
+        except ImportError:
+            logger.error(
+                "Please install pyarrow (https://pypi.org/project/pyarrow/) "
+                "before using plasma_shm."
+            )
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
 
 
-class EnvContext(ContextDecorator):
-    def __init__(self, env: Union[None, List[Dict[str, str]]], id: int) -> None:
-        super().__init__()
-        self.default: Dict = {}
-        self.env = env
-        self.id = id
-
-    def __enter__(self):
-        if self.env is not None:
-            for k, v in self.env[self.id].items():
-                self.default[k] = os.getenv(k, "")
+@contextlib.contextmanager
+def _env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
+    default: Dict = {}
+    try:
+        if env is not None:
+            for k, v in env[id].items():
+                default[k] = os.getenv(k, "")
                 os.environ[k] = v
-        return self
-
-    def __exit__(self, *exc):
-        for k, v in self.default.items():
+        yield "", None  # compatible with start_plasma_store
+    finally:
+        for k, v in default.items():
             os.environ[k] = v
-        return False
