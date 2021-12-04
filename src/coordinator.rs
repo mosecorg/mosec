@@ -18,7 +18,6 @@ pub(crate) struct Coordinator {
     path: String,
     batches: Vec<u32>,
     wait_time: Duration,
-    timeout: Duration,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
 }
@@ -49,7 +48,6 @@ impl Coordinator {
             path,
             batches: opts.batches.clone(),
             wait_time,
-            timeout,
             receiver,
             sender,
         }

@@ -12,6 +12,16 @@ from .errors import DecodingError, ValidationError
 from .protocol import Protocol
 from .worker import Worker
 
+try:
+    from pyarrow import plasma  # type: ignore
+except ImportError:
+    """
+    We don't include pyarrow as our dependency.
+    Users should install it as third party to enable
+    the shared memory IPC feature.
+    """
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +50,7 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
+        shm_path: str = "",
     ):
         """Initialize the mosec coordinator
 
@@ -53,6 +64,7 @@ class Coordinator:
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
                 stage.
+            shm_path (str): path of plasma shared memory if enabled.
         """
         worker._id = worker_id
         self.worker = worker()
