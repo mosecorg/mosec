@@ -39,7 +39,7 @@ class Postprocess(Worker):
 
 
 if __name__ == "__main__":
-    server = Server(plasma_shm=1024 * 1024 * 50)
+    server = Server()
     server.append_worker(Preprocess)
     server.append_worker(Inference)
     server.append_worker(Postprocess)

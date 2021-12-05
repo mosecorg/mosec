@@ -21,25 +21,22 @@
   <i>Model Serving made Efficient in the Cloud.</i>
 </p>
 
-
 ## Introduction
 
 Mosec is a high-performance and flexible model serving framework for building ML model-enabled backend and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
 
-* **Highly performant**: web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
-* **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
-* **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
-* **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
-* **Cloud friendly**: designed to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by Kubernetes or any container orchestration systems
-* **Do one thing well**: focus on the online serving part, users can pay attention to the model performance and business logic
-
+- **Highly performant**: web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
+- **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
+- **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
+- **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
+- **Cloud friendly**: designed to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by Kubernetes or any container orchestration systems
+- **Do one thing well**: focus on the online serving part, users can pay attention to the model performance and business logic
 
 ## Installation
 
 Mosec requires Python 3.6 or above. Install the latest [PyPI package](https://pypi.org/project/mosec/) with:
 
     pip install -U mosec
-
 
 ## Usage
 
@@ -82,7 +79,6 @@ class CalculateExp(Worker):
         return {"y": y}
 ```
 
-
 Finally, we append the worker to the server to construct a `single-stage workflow`, and we specify the number of processes we want it to run in parallel. Then we run the server.
 
 ```python
@@ -99,22 +95,35 @@ if __name__ == "__main__":
 
 After merging the snippets above into a file named `server.py`, we can first have a look at the command line arguments:
 
-    python server.py --help
+```bash
+$ python server.py --help
+```
 
 Then let's start the server...
 
-    python server.py
+```bash
+$ python server.py
+```
 
 and in another terminal, test it:
 
-    curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
+```bash
+$ curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
+{
+  "y": 7.38905609893065
+}
+
+$ curl -X POST http://127.0.0.1:8000/inference -d '{"input": 2}' # wrong schema
+validation error: cannot find key 'x'
+```
 
 or check the metrics:
 
-    curl http://127.0.0.1:8000/metrics
+```bash
+$ curl http://127.0.0.1:8000/metrics
+```
 
-That's it! You have just hosted your ***exponential-computing model*** as a server! 😉
-
+That's it! You have just hosted your **_exponential-computing model_** as a server! 😉
 
 ## Example
 
@@ -126,24 +135,23 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
   - sentiment analysis
   - image recognition
 
-## Qualitative Comparison<sup>*</sup>
+## Qualitative Comparison<sup>\*</sup>
 
 |                                                             | Batcher | Pipeline | Parallel | I/O Format<sup>(1)</sup>                                                                                                                    | Framework<sup>(2)</sup> | Backend | Activity                                                                      |
 | ----------------------------------------------------------- | :-----: | :------: | :------: | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------- |
-| [TF Serving](https://github.com/tensorflow/serving)         |    ✅    |    ✅     |    ✅     | Limited<a href="https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/api_rest.md#request-format-1"><sup>(a)</sup></a> | Heavily TF              | C++     | ![](https://img.shields.io/github/last-commit/tensorflow/serving)             |
-| [Triton](https://github.com/triton-inference-server/server) |    ✅    |    ✅     |    ✅     | Limited                                                                                                                                     | Multiple                | C++     | ![](https://img.shields.io/github/last-commit/triton-inference-server/server) |
-| [MMS](https://github.com/awslabs/multi-model-server)        |    ✅    |    ❌     |    ✅     | Limited                                                                                                                                     | Heavily MX              | Java    | ![](https://img.shields.io/github/last-commit/awslabs/multi-model-server)     |
-| [BentoML](https://github.com/bentoml/BentoML)               |    ✅    |    ❌     |    ❌     | Limited<a href="https://docs.bentoml.org/en/latest/concepts.html#api-function-return-value"><sup>(b)</sup></a>                              | Multiple                | Python  | ![](https://img.shields.io/github/last-commit/bentoml/BentoML)                |
-| [Streamer](https://github.com/ShannonAI/service-streamer)   |    ✅    |    ❌     |    ✅     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/ShannonAI/service-streamer)     |
-| [Flask](https://github.com/pallets/flask)<sup>(3)</sup>     |    ❌    |    ❌     |    ❌     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/pallets/flask)                  |
-| **[Mosec](https://github.com/mosecorg/mosec)**              |    ✅    |    ✅     |    ✅     | Customizable                                                                                                                                | Agnostic                | Rust    | ![](https://img.shields.io/github/last-commit/mosecorg/mosec)                 |
+| [TF Serving](https://github.com/tensorflow/serving)         |   ✅    |    ✅    |    ✅    | Limited<a href="https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/api_rest.md#request-format-1"><sup>(a)</sup></a> | Heavily TF              | C++     | ![](https://img.shields.io/github/last-commit/tensorflow/serving)             |
+| [Triton](https://github.com/triton-inference-server/server) |   ✅    |    ✅    |    ✅    | Limited                                                                                                                                     | Multiple                | C++     | ![](https://img.shields.io/github/last-commit/triton-inference-server/server) |
+| [MMS](https://github.com/awslabs/multi-model-server)        |   ✅    |    ❌    |    ✅    | Limited                                                                                                                                     | Heavily MX              | Java    | ![](https://img.shields.io/github/last-commit/awslabs/multi-model-server)     |
+| [BentoML](https://github.com/bentoml/BentoML)               |   ✅    |    ❌    |    ❌    | Limited<a href="https://docs.bentoml.org/en/latest/concepts.html#api-function-return-value"><sup>(b)</sup></a>                              | Multiple                | Python  | ![](https://img.shields.io/github/last-commit/bentoml/BentoML)                |
+| [Streamer](https://github.com/ShannonAI/service-streamer)   |   ✅    |    ❌    |    ✅    | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/ShannonAI/service-streamer)     |
+| [Flask](https://github.com/pallets/flask)<sup>(3)</sup>     |   ❌    |    ❌    |    ❌    | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/pallets/flask)                  |
+| **[Mosec](https://github.com/mosecorg/mosec)**              |   ✅    |    ✅    |    ✅    | Customizable                                                                                                                                | Agnostic                | Rust    | ![](https://img.shields.io/github/last-commit/mosecorg/mosec)                 |
 
-<sup>*As accessed on 08 Oct 2021. By no means is this comparison showing that other frameworks are inferior, but rather it is used to illustrate the trade-off. The information is not guaranteed to be absolutely accurate. Please let us know if you find anything that may be incorrect.</sup>
+<sup>\*As accessed on 08 Oct 2021. By no means is this comparison showing that other frameworks are inferior, but rather it is used to illustrate the trade-off. The information is not guaranteed to be absolutely accurate. Please let us know if you find anything that may be incorrect.</sup>
 
 <sup>**(1)**: Data format of the service's request and response. "Limited" in the sense that the framework has pre-defined requirements on the format.</sup>
 <sup>**(2)**: Supported machine learning frameworks. "Heavily" means the serving framework is designed towards a specific ML framework. Thus it is hard, if not impossible, to adapt to others. "Multiple" means the serving framework provides adaptation to several existing ML frameworks. "Agnostic" means the serving framework does not necessarily care about the ML framework. Hence it supports all ML frameworks (in Python).</sup>
 <sup>**(3)**: Flask is a representative of general purpose web frameworks to host ML models.</sup>
-
 
 ## Contributing
 
