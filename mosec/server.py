@@ -39,6 +39,10 @@ class Server:
     ###### Multiprocess
     > The user may spawn multiple processes for any stage when the
     corresponding worker is appended, by setting the `num`.
+
+    ###### Shared Memory
+    > The user may enable plasma-based shared memory for IPC, after
+    installing `pyarrow` as the required third party.
     """
 
     def __init__(self, plasma_shm: int = 0):
@@ -298,6 +302,10 @@ class Server:
                     plasma.start_plasma_store, plasma_store_memory=self._plasma_shm
                 )
             with runtime_ctx() as (self._shm_path, self._shm_process):
+                if self._shm_path:
+                    logger.info(
+                        f"Plasma object store server started at {self._shm_path}"
+                    )
                 self._manage_coordinators()
         except ImportError:
             logger.error(

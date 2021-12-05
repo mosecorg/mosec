@@ -10,17 +10,8 @@ from typing import Callable, Type
 
 from .errors import DecodingError, ValidationError
 from .protocol import Protocol
+from .shm import ShmClient
 from .worker import Worker
-
-try:
-    from pyarrow import plasma  # type: ignore
-except ImportError:
-    """
-    We don't include pyarrow as our dependency.
-    Users should install it as third party to enable
-    the shared memory IPC feature.
-    """
-
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +70,8 @@ class Coordinator:
             timeout=PROTOCOL_TIMEOUT,
         )
 
+        self.shm_client = ShmClient(shm_path, self.name)
+
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -136,14 +129,25 @@ class Coordinator:
             self.coordinate()
 
     def get_decoder(self) -> Callable:
-        if STAGE_INGRESS in self.worker._stage:
-            return self.worker.deserialize
-        return self.worker._deserialize_ipc
+        d_ipc = self.worker._deserialize_ipc
+
+        def batch_decoder(batch):
+            if STAGE_INGRESS in self.worker._stage:
+                return [self.worker.deserialize(x) for x in batch]
+            objects = self.shm_client.get([d_ipc(x) for x in batch])
+            return [d_ipc(x) for x in objects]
+
+        return batch_decoder
 
     def get_encoder(self) -> Callable:
-        if STAGE_EGRESS in self.worker._stage:
-            return self.worker.serialize
-        return self.worker._serialize_ipc
+        s_ipc = self.worker._serialize_ipc
+
+        def single_encoder(data):
+            if STAGE_EGRESS in self.worker._stage:
+                return self.worker.serialize(data)
+            return s_ipc(self.shm_client.put(s_ipc(data)))
+
+        return single_encoder
 
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
@@ -160,7 +164,7 @@ class Coordinator:
                 break
 
             try:
-                data = [decoder(item) for item in payloads]
+                data = decoder(payloads)  # batch decoder compatible with plasma
                 data = (
                     self.worker.forward(data)
                     if self.worker._max_batch_size > 1
