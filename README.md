@@ -131,6 +131,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 - Multi-stage workflow
 - Batch processing worker
+- Shared memory IPC
 - PyTorch deep learning models:
   - sentiment analysis
   - image recognition
