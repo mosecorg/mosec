@@ -89,6 +89,6 @@ class Postprocess(Worker):
 if __name__ == "__main__":
     server = Server(plasma_shm=1000 * 1000 * 1000)  # 1 GiB pre-allocated object store
     server.append_worker(Preprocess, num=4)
-    server.append_worker(Inference, num=1, max_batch_size=INFERENCE_BATCH_SIZE)
+    server.append_worker(Inference, num=2, max_batch_size=INFERENCE_BATCH_SIZE)
     server.append_worker(Postprocess, num=1)
     server.run()
