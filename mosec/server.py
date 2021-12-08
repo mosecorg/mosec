@@ -215,7 +215,7 @@ class Server:
                         daemon=True,
                     )
 
-                    with _env_var_context(c_env, worker_id):
+                    with env_var_context(c_env, worker_id):
                         coordinator_process.start()
 
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
@@ -294,7 +294,7 @@ class Server:
         self._parse_args()
         self._start_controller()
         try:
-            runtime_ctx = partial(_env_var_context, env=None, id=0)
+            runtime_ctx = partial(env_var_context, env=None, id=0)
             if self._plasma_shm:
                 from pyarrow import plasma  # type: ignore
 
@@ -318,7 +318,7 @@ class Server:
 
 
 @contextlib.contextmanager
-def _env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
+def env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
     default: Dict = {}
     try:
         if env is not None:
