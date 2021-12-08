@@ -38,6 +38,14 @@ Mosec requires Python 3.6 or above. Install the latest [PyPI package](https://py
 
     pip install -U mosec
 
+#### Customized Installation
+
+- To enable shared memory feature
+
+```bash
+pip install -U "mosec[shm]"
+```
+
 ## Usage
 
 ### Write the server
