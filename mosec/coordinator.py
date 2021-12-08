@@ -6,7 +6,7 @@ import struct
 import time
 import traceback
 from multiprocessing.synchronize import Event
-from typing import Callable, Type
+from typing import Any, Callable, List, Type
 
 from .errors import DecodingError, ValidationError
 from .protocol import Protocol
@@ -70,7 +70,7 @@ class Coordinator:
             timeout=PROTOCOL_TIMEOUT,
         )
 
-        self.shm_client = ShmClient(shm_path, self.name)
+        self.ipc_wrapper = IPCWrapper(shm_path, self.name)
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -134,7 +134,7 @@ class Coordinator:
         def batch_decoder(batch):
             if STAGE_INGRESS in self.worker._stage:
                 return [self.worker.deserialize(x) for x in batch]
-            objects = self.shm_client.get([d_ipc(x) for x in batch])
+            objects = self.ipc_wrapper.get([d_ipc(x) for x in batch])
             return [d_ipc(x) for x in objects]
 
         return batch_decoder
@@ -145,7 +145,7 @@ class Coordinator:
         def single_encoder(data):
             if STAGE_EGRESS in self.worker._stage:
                 return self.worker.serialize(data)
-            return s_ipc(self.shm_client.put(s_ipc(data)))
+            return s_ipc(self.ipc_wrapper.put(s_ipc(data)))
 
         return single_encoder
 
@@ -204,3 +204,26 @@ class Coordinator:
 
         self.protocol.close()
         time.sleep(CONN_CHECK_INTERVAL)
+
+
+class IPCWrapper:
+    """
+    This private class wraps the IPC methods, optionally enabling
+    the shared object store feature powered by pyarrow.plasma.
+    """
+
+    def __init__(self, shm_path: str = "", name: str = "") -> None:
+        self.shm_client = None
+        if shm_path:
+            self.shm_client = ShmClient(shm_path)
+            logger.info(f"{name} shm connected to {shm_path}")
+
+    def put(self, data: Any) -> Any:
+        if self.shm_client is None:
+            return data
+        return self.shm_client.put(data)
+
+    def get(self, maybe_ids: List[Any]) -> List[Any]:
+        if self.shm_client is None:
+            return maybe_ids
+        return self.shm_client.get(maybe_ids)
