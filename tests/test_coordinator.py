@@ -174,9 +174,14 @@ def test_incorrect_socket_file(mocker, base_test_config):
         ),
     ],
 )
-def test_echo(mocker, base_test_config, test_data, worker, deserializer):
+def test_echo_batch(mocker, base_test_config, test_data, worker, deserializer):
+    """To test the batched data echo functionality. The batch size is automatically
+    determined by the data's size.
+    """
     mocker.patch("mosec.coordinator.logger", MockLogger())
     c_ctx = base_test_config.pop("c_ctx")
+    # whatever value greater than 1, so that coordinator
+    # knows this stage enables batching
     base_test_config["max_batch_size"] = 8
 
     sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
@@ -206,6 +211,7 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
             got_batch_size = struct.unpack("!H", conn.recv(2))[0]
             got_ids = []
             got_payloads = []
+            print("batch size", got_batch_size)
             while got_batch_size > 0:
                 got_batch_size -= 1
                 got_ids.append(conn.recv(4))
@@ -213,6 +219,8 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
                 got_payloads.append(_recv_all(conn, got_length))
             assert got_flag == Protocol.FLAG_OK
             assert got_ids == sent_ids
+            print("got", got_payloads)
+            print("sent", sent_payloads)
             assert all(
                 [
                     deserializer(x) == deserializer(y)
