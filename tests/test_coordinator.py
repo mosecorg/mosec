@@ -211,7 +211,6 @@ def test_echo_batch(mocker, base_test_config, test_data, worker, deserializer):
             got_batch_size = struct.unpack("!H", conn.recv(2))[0]
             got_ids = []
             got_payloads = []
-            print("batch size", got_batch_size)
             while got_batch_size > 0:
                 got_batch_size -= 1
                 got_ids.append(conn.recv(4))
@@ -219,8 +218,6 @@ def test_echo_batch(mocker, base_test_config, test_data, worker, deserializer):
                 got_payloads.append(_recv_all(conn, got_length))
             assert got_flag == Protocol.FLAG_OK
             assert got_ids == sent_ids
-            print("got", got_payloads)
-            print("sent", sent_payloads)
             assert all(
                 [
                     deserializer(x) == deserializer(y)
