@@ -68,7 +68,13 @@ class Protocol:
             ids.append(id_bytes)
             payloads.append(payload)
 
-        logger.debug(f"{self.name} received {len(ids)} tasks with ids: {ids}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "%s received %d tasks with ids: %s",
+                self.name,
+                len(ids),
+                struct.unpack("!" + "I" * len(ids), b"".join(ids)),
+            )
         return flag, ids, payloads
 
     def send(self, flag, ids, payloads):
@@ -83,9 +89,14 @@ class Protocol:
                 data.extend(task_id)
                 data.extend(length)
                 data.extend(payload)
-
         self.socket.sendall(data)
-        logger.debug(f"{self.name} sent {len(ids)} tasks with ids: {ids}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "%s sent %d tasks with ids: %s",
+                self.name,
+                len(ids),
+                struct.unpack("!" + "I" * len(ids), b"".join(ids)),
+            )
 
     def open(self):
         """Open the socket connection"""
