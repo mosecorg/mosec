@@ -6,7 +6,7 @@ import struct
 import time
 import traceback
 from multiprocessing.synchronize import Event
-from typing import Any, Callable, List, Type
+from typing import Callable, Type
 
 from .errors import DecodingError, ValidationError
 from .protocol import Protocol
@@ -70,7 +70,53 @@ class Coordinator:
             timeout=PROTOCOL_TIMEOUT,
         )
 
-        self.ipc_wrapper = IPCWrapper(shm_path, self.name)
+        # optional plugin features - plasma object store as shared memory
+        if shm_path != "":
+            shm_cli = ShmClient(shm_path)
+
+            def get_decoder() -> Callable:
+                d_ipc = self.worker._deserialize_ipc
+
+                def batch_decoder(batch):
+                    if STAGE_INGRESS in self.worker._stage:
+                        return [self.worker.deserialize(x) for x in batch]
+                    objects = shm_cli.get([d_ipc(x) for x in batch])
+                    return [d_ipc(x) for x in objects]
+
+                return batch_decoder
+
+            def get_encoder() -> Callable:
+                s_ipc = self.worker._serialize_ipc
+
+                def single_encoder(data):
+                    if STAGE_EGRESS in self.worker._stage:
+                        return self.worker.serialize(data)
+                    return s_ipc(shm_cli.put(s_ipc(data)))
+
+                return single_encoder
+
+            self.get_decoder = get_decoder
+            self.get_encoder = get_encoder
+
+        else:
+
+            def get_decoder() -> Callable:
+                def batch_decoder(batch):
+                    if STAGE_INGRESS in self.worker._stage:
+                        deserialize = self.worker.deserialize
+                    else:
+                        deserialize = self.worker._deserialize_ipc
+                    return [deserialize(x) for x in batch]
+
+                return batch_decoder
+
+            def get_encoder() -> Callable:
+                if STAGE_EGRESS in self.worker._stage:
+                    return self.worker.serialize
+                return self.worker._serialize_ipc
+
+        self.decoder = get_decoder()
+        self.encoder = get_encoder()
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -128,31 +174,8 @@ class Coordinator:
 
             self.coordinate()
 
-    def get_decoder(self) -> Callable:
-        d_ipc = self.worker._deserialize_ipc
-
-        def batch_decoder(batch):
-            if STAGE_INGRESS in self.worker._stage:
-                return [self.worker.deserialize(x) for x in batch]
-            objects = self.ipc_wrapper.get([d_ipc(x) for x in batch])
-            return [d_ipc(x) for x in objects]
-
-        return batch_decoder
-
-    def get_encoder(self) -> Callable:
-        s_ipc = self.worker._serialize_ipc
-
-        def single_encoder(data):
-            if STAGE_EGRESS in self.worker._stage:
-                return self.worker.serialize(data)
-            return s_ipc(self.ipc_wrapper.put(s_ipc(data)))
-
-        return single_encoder
-
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
-        decoder = self.get_decoder()
-        encoder = self.get_encoder()
         while not self.shutdown.is_set():
             try:
                 _, ids, payloads = self.protocol.receive()
@@ -164,14 +187,14 @@ class Coordinator:
                 break
 
             try:
-                data = decoder(payloads)  # batch decoder compatible with plasma
+                data = self.decoder(payloads)  # batch decoder compatible with plasma
                 data = (
                     self.worker.forward(data)
                     if self.worker._max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
                 status = self.protocol.FLAG_OK
-                payloads = [encoder(item) for item in data]
+                payloads = [self.encoder(item) for item in data]
                 if len(data) != len(payloads):
                     raise ValueError(
                         "returned data doesn't match the input data:"
@@ -204,26 +227,3 @@ class Coordinator:
 
         self.protocol.close()
         time.sleep(CONN_CHECK_INTERVAL)
-
-
-class IPCWrapper:
-    """
-    This private class wraps the IPC methods, optionally enabling
-    the shared object store feature powered by pyarrow.plasma.
-    """
-
-    def __init__(self, shm_path: str = "", name: str = "") -> None:
-        self.shm_client = None
-        if shm_path:
-            self.shm_client = ShmClient(shm_path)
-            logger.info(f"{name} shm connected to {shm_path}")
-
-    def put(self, data: Any) -> Any:
-        if self.shm_client is None:
-            return data
-        return self.shm_client.put(data)
-
-    def get(self, maybe_ids: List[Any]) -> List[Any]:
-        if self.shm_client is None:
-            return maybe_ids
-        return self.shm_client.get(maybe_ids)
