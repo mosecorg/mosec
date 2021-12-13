@@ -10,7 +10,7 @@ from typing import Callable, Type
 
 from .errors import DecodingError, ValidationError
 from .protocol import Protocol
-from .shm import ShmClient
+from .shm import ShmClient, ShmWrapper
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -71,52 +71,12 @@ class Coordinator:
         )
 
         # optional plugin features - plasma object store as shared memory
+        self.shm_wrapper = None
         if shm_path != "":
             shm_cli = ShmClient(shm_path)
-
-            def get_decoder() -> Callable:
-                d_ipc = self.worker._deserialize_ipc
-
-                def batch_decoder(batch):
-                    if STAGE_INGRESS in self.worker._stage:
-                        return [self.worker.deserialize(x) for x in batch]
-                    objects = shm_cli.get([d_ipc(x) for x in batch])
-                    return [d_ipc(x) for x in objects]
-
-                return batch_decoder
-
-            def get_encoder() -> Callable:
-                s_ipc = self.worker._serialize_ipc
-
-                def single_encoder(data):
-                    if STAGE_EGRESS in self.worker._stage:
-                        return self.worker.serialize(data)
-                    return s_ipc(shm_cli.put(s_ipc(data)))
-
-                return single_encoder
-
-            self.get_decoder = get_decoder
-            self.get_encoder = get_encoder
-
-        else:
-
-            def get_decoder() -> Callable:
-                def batch_decoder(batch):
-                    if STAGE_INGRESS in self.worker._stage:
-                        deserialize = self.worker.deserialize
-                    else:
-                        deserialize = self.worker._deserialize_ipc
-                    return [deserialize(x) for x in batch]
-
-                return batch_decoder
-
-            def get_encoder() -> Callable:
-                if STAGE_EGRESS in self.worker._stage:
-                    return self.worker.serialize
-                return self.worker._serialize_ipc
-
-        self.decoder = get_decoder()
-        self.encoder = get_encoder()
+            self.shm_wrapper = ShmWrapper(
+                shm_cli, self.worker._serialize_ipc, self.worker._deserialize_ipc
+            )
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -174,8 +134,27 @@ class Coordinator:
 
             self.coordinate()
 
+    def get_decoder(self) -> Callable:
+        deserialize_ipc = self.worker._deserialize_ipc
+        if STAGE_INGRESS in self.worker._stage:
+            return lambda batch: [self.worker.deserialize(x) for x in batch]
+        if self.shm_wrapper is not None:
+            wrapped_decode = self.shm_wrapper.wrap_decoder(deserialize_ipc)
+            return lambda batch: wrapped_decode(batch)
+        return lambda batch: [deserialize_ipc(x) for x in batch]
+
+    def get_encoder(self) -> Callable:
+        serialize_ipc = self.worker._serialize_ipc
+        if STAGE_EGRESS in self.worker._stage:
+            return self.worker.serialize
+        if self.shm_wrapper is not None:
+            return self.shm_wrapper.wrap_encoder(serialize_ipc)
+        return serialize_ipc
+
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
+        decoder = self.get_decoder()
+        encoder = self.get_encoder()
         while not self.shutdown.is_set():
             try:
                 _, ids, payloads = self.protocol.receive()
@@ -187,14 +166,14 @@ class Coordinator:
                 break
 
             try:
-                data = self.decoder(payloads)  # batch decoder compatible with plasma
+                data = decoder(payloads)  # batch decoder compatible with plasma
                 data = (
                     self.worker.forward(data)
                     if self.worker._max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
                 status = self.protocol.FLAG_OK
-                payloads = [self.encoder(item) for item in data]
+                payloads = [encoder(item) for item in data]
                 if len(data) != len(payloads):
                     raise ValueError(
                         "returned data doesn't match the input data:"
