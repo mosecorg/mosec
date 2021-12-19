@@ -5,7 +5,6 @@ import os
 import signal
 import subprocess
 import traceback
-from functools import partial
 from multiprocessing.synchronize import Event
 from os.path import exists
 from pathlib import Path
@@ -17,6 +16,8 @@ import pkg_resources
 
 from .args import ArgParser
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from .plugins import IPCWrapper
+from .utils import Deferred
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -40,19 +41,18 @@ class Server:
     > The user may spawn multiple processes for any stage when the
     corresponding worker is appended, by setting the `num`.
 
-    ###### Shared Memory
-    > The user may enable plasma-based shared memory for IPC, after
-    installing `pyarrow` as the required third party.
+    ###### IPC Wrapper
+    > The user may wrap the inter-process communication to use shared memory,
+    e.g. pyarrow plasma, by providing the IPC wrapper for the server.
     """
 
-    def __init__(self, plasma_shm: int = 0):
+    def __init__(self, ipc_wrapper: Optional[Deferred[IPCWrapper]] = None):
         """Initialize a MOSEC Server
 
         Args:
-            plasma_shm (int, optional): Size of plasma shared memory for IPC
-                in bytes, 0 for disable. Defaults to 0.
+            ipc_wrapper (Deferred, optional): A deferred IPCWrapper. Defaults to None.
         """
-        self._plasma_shm = plasma_shm
+        self.ipc_wrapper = ipc_wrapper
 
         self._worker_cls: List[Type[Worker]] = []
         self._worker_num: List[int] = []
@@ -65,6 +65,8 @@ class Server:
         self._coordinator_shutdown_notify: Event = mp.get_context("spawn").Event()
 
         self._controller_process: Optional[mp.Process] = None
+
+        self._daemon: Dict[str, mp.Process] = {}
 
         self._configs: dict = {}
 
@@ -122,6 +124,16 @@ class Server:
         self._configs = vars(ArgParser.parse())
         logger.info(f"Mosec Server Configurations: {self._configs}")
 
+    def _check_daemon(self):
+        for name, proc in self._daemon.items():
+            if proc is not None:
+                exitcode = proc.poll()
+                if exitcode:
+                    self._terminate(
+                        exitcode,
+                        f"mosec daemon [{name}] exited on error: {exitcode}",
+                    )
+
     def _controller_args(self):
         args = []
         for k, v in self._configs.items():
@@ -140,6 +152,7 @@ class Server:
             self._controller_process = subprocess.Popen(
                 [path] + self._controller_args()
             )
+            self.register_daemon("controller", self._controller_process)
 
     def _terminate(self, signum, framestack):
         logger.info(f"[{signum}] terminating server [{framestack}] ...")
@@ -156,10 +169,6 @@ class Server:
 
     def _manage_coordinators(self):
         first = True
-        daemon_processes = {
-            "controller": self._controller_process,
-            "shared_memory": self._shm_process,
-        }
         while not self._server_shutdown:
             for stage_id, (w_cls, w_num, w_mbs, c_ctx, c_env) in enumerate(
                 zip(
@@ -210,7 +219,7 @@ class Server:
                             self._configs["path"],
                             stage_id + 1,
                             worker_id + 1,
-                            self._shm_path,
+                            self.ipc_wrapper,
                         ),
                         daemon=True,
                     )
@@ -220,16 +229,7 @@ class Server:
 
                     self._coordinator_pools[stage_id][worker_id] = coordinator_process
             first = False
-
-            for name, proc in daemon_processes.items():
-                if proc is not None:
-                    exitcode = proc.poll()
-                    if exitcode:
-                        self._terminate(
-                            exitcode,
-                            f"mosec {name} exited on error: {exitcode}",
-                        )
-
+            self._check_daemon()
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
@@ -258,6 +258,19 @@ class Server:
 
         logger.info("mosec server exited. see you.")
 
+    def register_daemon(self, name: str, proc: mp.Process):
+        """This method registers a daemon to be monitored.
+
+        Args:
+            name (str): the name of this daemon
+            proc (mp.Process): the process handle of the daemon
+        """
+        assert isinstance(name, str), "daemon name should be a string"
+        assert isinstance(
+            proc, (mp.Process, subprocess.Popen)
+        ), f"{type(proc)} is not a process or subprocess"
+        self._daemon[name] = proc
+
     def append_worker(
         self,
         worker: Type[Worker],
@@ -277,7 +290,6 @@ class Server:
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
         """
-
         self._validate_arguments(worker, num, max_batch_size, start_method, env)
         self._worker_cls.append(worker)
         self._worker_num.append(num)
@@ -294,24 +306,7 @@ class Server:
         self._parse_args()
         self._start_controller()
         try:
-            runtime_ctx = partial(env_var_context, env=None, id=0)
-            if self._plasma_shm:
-                from pyarrow import plasma  # type: ignore
-
-                runtime_ctx = partial(
-                    plasma.start_plasma_store, plasma_store_memory=self._plasma_shm
-                )
-            with runtime_ctx() as (self._shm_path, self._shm_process):
-                if self._shm_path:
-                    logger.info(
-                        f"Plasma object store server started at {self._shm_path}"
-                    )
-                self._manage_coordinators()
-        except ImportError:
-            logger.error(
-                "Please install pyarrow (https://pypi.org/project/pyarrow/) "
-                "before using plasma_shm."
-            )
+            self._manage_coordinators()
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()

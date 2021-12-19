@@ -6,11 +6,13 @@ import struct
 import time
 import traceback
 from multiprocessing.synchronize import Event
-from typing import Callable, Type
+from typing import Any, Callable, List, Optional, Tuple, Type
+
+from mosec.utils import Deferred
 
 from .errors import DecodingError, ValidationError
+from .plugins.ipc_wrapper import IPCWrapper
 from .protocol import Protocol
-from .shm import ShmClient, ShmWrapper
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
-        shm_path: str = "",
+        ipc_wrapper: Deferred[IPCWrapper],
     ):
         """Initialize the mosec coordinator
 
@@ -55,7 +57,7 @@ class Coordinator:
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
                 stage.
-            shm_path (str): path of plasma shared memory if enabled.
+            ipc_wrapper (Deferred[IPCWrapper]): deferred IPC wrapper to be initialized.
         """
         worker._id = worker_id
         self.worker = worker()
@@ -70,13 +72,10 @@ class Coordinator:
             timeout=PROTOCOL_TIMEOUT,
         )
 
-        # optional plugin features - plasma object store as shared memory
-        self.shm_wrapper = None
-        if shm_path != "":
-            shm_cli = ShmClient(shm_path)
-            self.shm_wrapper = ShmWrapper(
-                shm_cli, self.worker._serialize_ipc, self.worker._deserialize_ipc
-            )
+        # optional plugin features - ipc wrapper
+        self.ipc_wrapper: Optional[IPCWrapper] = None
+        if ipc_wrapper is not None:
+            self.ipc_wrapper = ipc_wrapper.initialize()
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -134,30 +133,50 @@ class Coordinator:
 
             self.coordinate()
 
-    def get_decoder(self) -> Callable:
-        deserialize_ipc = self.worker._deserialize_ipc
+    def get_decoder(self) -> Callable[[bytes], Any]:
         if STAGE_INGRESS in self.worker._stage:
-            return lambda batch: [self.worker.deserialize(x) for x in batch]
-        if self.shm_wrapper is not None:
-            wrapped_decode = self.shm_wrapper.wrap_decoder(deserialize_ipc)
-            return lambda batch: wrapped_decode(batch)
-        return lambda batch: [deserialize_ipc(x) for x in batch]
+            return self.worker.deserialize
+        return self.worker._deserialize_ipc
 
-    def get_encoder(self) -> Callable:
-        serialize_ipc = self.worker._serialize_ipc
+    def get_encoder(self) -> Callable[[Any], bytes]:
         if STAGE_EGRESS in self.worker._stage:
             return self.worker.serialize
-        if self.shm_wrapper is not None:
-            return self.shm_wrapper.wrap_encoder(serialize_ipc)
-        return serialize_ipc
+        return self.worker._serialize_ipc
+
+    def protocol_send(self, data: Any) -> None:
+        if self.ipc_wrapper is None:
+            return self.protocol.send(*data)
+
+    def get_protocol_recv(self) -> Callable[[], Tuple[bytes, List[bytes], List[bytes]]]:
+        if STAGE_INGRESS in self.worker._stage or self.ipc_wrapper is None:
+            return self.protocol.receive
+
+        def wrapped_recv():
+            flag, ids, payloads = self.protocol.receive()
+            payloads = self.ipc_wrapper.get(payloads)
+            return flag, ids, payloads
+
+        return wrapped_recv
+
+    def get_protocol_send(self) -> Callable[[int, List[bytes], List[bytes]], None]:
+        if STAGE_EGRESS in self.worker._stage or self.ipc_wrapper is None:
+            return self.protocol.send
+
+        def wrapped_send(flag: int, ids: List[bytes], payloads: List[bytes]):
+            payloads = self.ipc_wrapper.put(payloads)  # type: ignore
+            return self.protocol.send(flag, ids, payloads)
+
+        return wrapped_send
 
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
         decoder = self.get_decoder()
         encoder = self.get_encoder()
+        protocol_recv = self.get_protocol_recv()
+        protocol_send = self.get_protocol_send()
         while not self.shutdown.is_set():
             try:
-                _, ids, payloads = self.protocol.receive()
+                _, ids, payloads = protocol_recv()
             except socket.timeout:
                 continue
             except (struct.error, OSError) as err:
@@ -166,7 +185,7 @@ class Coordinator:
                 break
 
             try:
-                data = decoder(payloads)  # batch decoder compatible with plasma
+                data = [decoder(item) for item in payloads]
                 data = (
                     self.worker.forward(data)
                     if self.worker._max_batch_size > 1
@@ -199,7 +218,7 @@ class Coordinator:
                 payloads = ("inference internal error".encode(),)
 
             try:
-                self.protocol.send(status, ids, payloads)
+                protocol_send((status, ids, payloads))
             except OSError as err:
                 logger.error(f"{self.name} socket send error: {err}")
                 break
