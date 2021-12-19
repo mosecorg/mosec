@@ -2,6 +2,7 @@ import logging
 import socket
 import struct
 from itertools import zip_longest
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class Protocol:
         self.name = name
         self.addr = addr
 
-    def receive(self):
+    def receive(self) -> Tuple[bytes, List[bytes], List[bytes]]:
         """Receive tasks from the server"""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
@@ -77,7 +78,7 @@ class Protocol:
             )
         return flag, ids, payloads
 
-    def send(self, flag, ids, payloads):
+    def send(self, flag: int, ids: List[bytes], payloads: List[bytes]):
         """Send results to the server"""
         data = bytearray()
         data.extend(struct.pack(self.FORMAT_FLAG, flag))

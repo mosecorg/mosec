@@ -1,7 +1,11 @@
 from typing import List
 
+from pyarrow import plasma  # type: ignore
+
 from mosec import Server, Worker
 from mosec.errors import ValidationError
+from mosec.plugins import PlasmaShmWrapper
+from mosec.utils import Deferred
 
 
 class SquareService(Worker):
@@ -21,7 +25,18 @@ class DummyPostprocess(Worker):
 
 
 if __name__ == "__main__":
-    server = Server(plasma_shm=1000 * 1000 * 20)
-    server.append_worker(SquareService, max_batch_size=8)
-    server.append_worker(DummyPostprocess, num=2)
-    server.run()
+    # initialize a 20Mb object store as shared memory
+    with plasma.start_plasma_store(plasma_store_memory=20 * 10e6) as (
+        shm_path,
+        shm_process,
+    ):
+        server = Server(
+            ipc_wrapper=Deferred(  # defer the wrapper init to worker processes
+                PlasmaShmWrapper,
+                shm_path=shm_path,
+            )
+        )
+        server.register_daemon("plasma_server", shm_process)
+        server.append_worker(SquareService, max_batch_size=8)
+        server.append_worker(DummyPostprocess, num=2)
+        server.run()
