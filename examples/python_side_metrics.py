@@ -1,8 +1,8 @@
 import logging
+import multiprocessing as mp
 import os
 import pathlib
 import tempfile
-import threading
 from typing import List
 from wsgiref.simple_server import make_server
 
@@ -76,11 +76,12 @@ class Inference(Worker):
 
 
 if __name__ == "__main__":
-    # Run the metrics server in another thread.
-    metric_thread = threading.Thread(target=metric_service, daemon=True)
-    metric_thread.start()
+    # Run the metrics server in another process.
+    metric_process = mp.Process(target=metric_service, daemon=True)
+    metric_process.start()
 
     # Run the inference server
     server = Server()
+    server.register_daemon("metric_process", metric_process)
     server.append_worker(Inference, num=2, max_batch_size=8)
     server.run()

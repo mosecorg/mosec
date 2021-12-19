@@ -218,7 +218,7 @@ class Coordinator:
                 payloads = ("inference internal error".encode(),)
 
             try:
-                protocol_send((status, ids, payloads))
+                protocol_send(status, ids, payloads)
             except OSError as err:
                 logger.error(f"{self.name} socket send error: {err}")
                 break

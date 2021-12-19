@@ -46,7 +46,7 @@ class PlasmaShmWrapper(IPCWrapper):
 
     def put_plasma(self, data: List[bytes]) -> List[plasma.ObjectID]:
         """Batch put into plasma memory store"""
-        return self.client.put(data)
+        return [self.client.put(x) for x in data]
 
     def get_plasma(self, object_ids: List[plasma.ObjectID]) -> List[bytes]:
         """Batch get from plasma memory store"""
