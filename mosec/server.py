@@ -64,9 +64,9 @@ class Server:
         self._coordinator_shutdown: Event = mp.get_context("spawn").Event()
         self._coordinator_shutdown_notify: Event = mp.get_context("spawn").Event()
 
-        self._controller_process: Optional[mp.Process] = None
+        self._controller_process: Optional[subprocess.Popen] = None
 
-        self._daemon: Dict[str, mp.Process] = {}
+        self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
 
         self._configs: dict = {}
 
@@ -127,11 +127,16 @@ class Server:
     def _check_daemon(self):
         for name, proc in self._daemon.items():
             if proc is not None:
-                exitcode = proc.poll()
-                if exitcode:
+                terminate = False
+                if isinstance(proc, mp.Process) and proc.exitcode is not None:
+                    terminate = True
+                elif isinstance(proc, subprocess.Popen) and proc.poll():
+                    terminate = True
+
+                if terminate:
                     self._terminate(
-                        exitcode,
-                        f"mosec daemon [{name}] exited on error: {exitcode}",
+                        2,
+                        f"mosec daemon [{name}] exited on error",
                     )
 
     def _controller_args(self):

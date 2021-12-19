@@ -26,7 +26,7 @@ class DummyPostprocess(Worker):
 
 if __name__ == "__main__":
     # initialize a 20Mb object store as shared memory
-    with plasma.start_plasma_store(plasma_store_memory=20 * 10e6) as (
+    with plasma.start_plasma_store(plasma_store_memory=20 * 1000 * 1000) as (
         shm_path,
         shm_process,
     ):
