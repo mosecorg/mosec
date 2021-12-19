@@ -8,11 +8,10 @@ import traceback
 from multiprocessing.synchronize import Event
 from typing import Any, Callable, List, Optional, Tuple, Type
 
-from mosec.utils import Deferred
-
 from .errors import DecodingError, ValidationError
 from .plugins.ipc_wrapper import IPCWrapper
 from .protocol import Protocol
+from .utils import Deferred
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -142,10 +141,6 @@ class Coordinator:
         if STAGE_EGRESS in self.worker._stage:
             return self.worker.serialize
         return self.worker._serialize_ipc
-
-    def protocol_send(self, data: Any) -> None:
-        if self.ipc_wrapper is None:
-            return self.protocol.send(*data)
 
     def get_protocol_recv(self) -> Callable[[], Tuple[bytes, List[bytes], List[bytes]]]:
         if STAGE_INGRESS in self.worker._stage or self.ipc_wrapper is None:
