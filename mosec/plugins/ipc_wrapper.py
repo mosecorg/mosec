@@ -1,5 +1,4 @@
 import abc
-import pickle
 from typing import List
 
 try:
@@ -56,8 +55,8 @@ class PlasmaShmWrapper(IPCWrapper):
 
     def put(self, data: List[bytes]) -> List[bytes]:
         object_ids = self.put_plasma(data)
-        return [pickle.dumps(id) for id in object_ids]
+        return [id.binary() for id in object_ids]
 
     def get(self, ids: List[bytes]) -> List[bytes]:
-        object_ids = [pickle.loads(id) for id in ids]
+        object_ids = [plasma.ObjectID(bytes(id)) for id in ids]
         return self.get_plasma(object_ids)

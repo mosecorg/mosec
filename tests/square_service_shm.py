@@ -1,3 +1,4 @@
+from functools import partial
 from typing import List
 
 from pyarrow import plasma  # type: ignore
@@ -5,7 +6,6 @@ from pyarrow import plasma  # type: ignore
 from mosec import Server, Worker
 from mosec.errors import ValidationError
 from mosec.plugins import PlasmaShmWrapper
-from mosec.utils import Deferred
 
 
 class SquareService(Worker):
@@ -31,7 +31,7 @@ if __name__ == "__main__":
         shm_process,
     ):
         server = Server(
-            ipc_wrapper=Deferred(  # defer the wrapper init to worker processes
+            ipc_wrapper=partial(  # defer the wrapper init to worker processes
                 PlasmaShmWrapper,
                 shm_path=shm_path,
             )
