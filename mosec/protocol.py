@@ -118,4 +118,4 @@ def _recv_all(conn, length):
         packet = conn.recv_into(mv)
         mv = mv[packet:]
         size += packet
-    return buffer
+    return bytes(buffer)

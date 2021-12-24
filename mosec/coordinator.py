@@ -147,7 +147,7 @@ class Coordinator:
 
         def wrapped_recv():
             flag, ids, payloads = self.protocol.receive()
-            payloads = self.ipc_wrapper.get(payloads)
+            payloads = self.ipc_wrapper.get([bytes(x) for x in payloads])
             return flag, ids, payloads
 
         return wrapped_recv

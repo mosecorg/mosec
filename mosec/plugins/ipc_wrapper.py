@@ -11,6 +11,11 @@ except ImportError:
 
 
 class IPCWrapper(abc.ABC):
+    """
+    This public class defines the mosec IPC wrapper plugin interface.
+    The wrapper has to at least implement `put` and `get` method.
+    """
+
     @abc.abstractmethod
     def put(self, data: List[bytes]) -> List[bytes]:
         """Put bytes to somewhere to get ids, which are sent via protocol.
@@ -35,6 +40,12 @@ class IPCWrapper(abc.ABC):
 
 
 class PlasmaShmWrapper(IPCWrapper):
+    """
+    This public class is an example implementation of the `IPCWrapper`.
+    It utilizes `pyarrow.plasma` as the in-memory object store for
+    potentially more efficient data transfer.
+    """
+
     def __init__(self, shm_path: str) -> None:
         """Initialize the IPC Wrapper as a plasma client.
 
@@ -43,20 +54,20 @@ class PlasmaShmWrapper(IPCWrapper):
         """
         self.client = plasma.connect(shm_path)
 
-    def put_plasma(self, data: List[bytes]) -> List[plasma.ObjectID]:
+    def _put_plasma(self, data: List[bytes]) -> List[plasma.ObjectID]:
         """Batch put into plasma memory store"""
         return [self.client.put(x) for x in data]
 
-    def get_plasma(self, object_ids: List[plasma.ObjectID]) -> List[bytes]:
+    def _get_plasma(self, object_ids: List[plasma.ObjectID]) -> List[bytes]:
         """Batch get from plasma memory store"""
         objects = self.client.get(object_ids)
         self.client.delete(object_ids)
         return objects
 
     def put(self, data: List[bytes]) -> List[bytes]:
-        object_ids = self.put_plasma(data)
+        object_ids = self._put_plasma(data)
         return [id.binary() for id in object_ids]
 
     def get(self, ids: List[bytes]) -> List[bytes]:
-        object_ids = [plasma.ObjectID(bytes(id)) for id in ids]
-        return self.get_plasma(object_ids)
+        object_ids = [plasma.ObjectID(id) for id in ids]
+        return self._get_plasma(object_ids)
