@@ -76,6 +76,15 @@ class Inference(Worker):
 
 
 if __name__ == "__main__":
+    """
+    This example uses a dedicated process for metrics server.
+    We also register the metrics server process as a daemon, so
+    that when it exits the service is able to gracefully shutdown
+    and restarted by the orchestrator.
+
+    If you are concerned about the process consuming much resource,
+    you could use a thread for the metrics server.
+    """
     # Run the metrics server in another process.
     metric_process = mp.Process(target=metric_service, daemon=True)
     metric_process.start()

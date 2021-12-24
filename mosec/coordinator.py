@@ -11,7 +11,6 @@ from typing import Any, Callable, List, Optional, Tuple, Type
 from .errors import DecodingError, ValidationError
 from .plugins.ipc_wrapper import IPCWrapper
 from .protocol import Protocol
-from .utils import Deferred
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
-        ipc_wrapper: Deferred[IPCWrapper],
+        ipc_wrapper: Type[IPCWrapper],
     ):
         """Initialize the mosec coordinator
 
@@ -56,7 +55,7 @@ class Coordinator:
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
                 stage.
-            ipc_wrapper (Deferred[IPCWrapper]): deferred IPC wrapper to be initialized.
+            ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
         """
         worker._id = worker_id
         self.worker = worker()
@@ -74,7 +73,7 @@ class Coordinator:
         # optional plugin features - ipc wrapper
         self.ipc_wrapper: Optional[IPCWrapper] = None
         if ipc_wrapper is not None:
-            self.ipc_wrapper = ipc_wrapper.initialize()
+            self.ipc_wrapper = ipc_wrapper()
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)

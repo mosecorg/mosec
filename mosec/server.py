@@ -5,6 +5,7 @@ import os
 import signal
 import subprocess
 import traceback
+from functools import partial
 from multiprocessing.synchronize import Event
 from os.path import exists
 from pathlib import Path
@@ -17,7 +18,6 @@ import pkg_resources
 from .args import ArgParser
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from .plugins import IPCWrapper
-from .utils import Deferred
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -46,11 +46,14 @@ class Server:
     e.g. pyarrow plasma, by providing the IPC wrapper for the server.
     """
 
-    def __init__(self, ipc_wrapper: Optional[Deferred[IPCWrapper]] = None):
+    def __init__(
+        self, ipc_wrapper: Optional[Union[IPCWrapper, partial[IPCWrapper]]] = None
+    ):
         """Initialize a MOSEC Server
 
         Args:
-            ipc_wrapper (Deferred, optional): A deferred IPCWrapper. Defaults to None.
+            ipc_wrapper (Optional[IPCWrapper], optional): IPCWrapper class.
+                Defaults to None.
         """
         self.ipc_wrapper = ipc_wrapper
 
@@ -128,15 +131,17 @@ class Server:
         for name, proc in self._daemon.items():
             if proc is not None:
                 terminate = False
-                if isinstance(proc, mp.Process) and proc.exitcode is not None:
-                    terminate = True
-                elif isinstance(proc, subprocess.Popen) and proc.poll():
+                if isinstance(proc, mp.Process):
+                    code = proc.exitcode
+                elif isinstance(proc, subprocess.Popen):
+                    code = proc.poll()
+                if code:
                     terminate = True
 
                 if terminate:
                     self._terminate(
-                        2,
-                        f"mosec daemon [{name}] exited on error",
+                        code,
+                        f"mosec daemon [{name}] exited on error code: {code}",
                     )
 
     def _controller_args(self):
@@ -325,7 +330,7 @@ def env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
             for k, v in env[id].items():
                 default[k] = os.getenv(k, "")
                 os.environ[k] = v
-        yield "", None  # compatible with start_plasma_store
+        yield None
     finally:
         for k, v in default.items():
             os.environ[k] = v
