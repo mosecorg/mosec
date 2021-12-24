@@ -5,6 +5,7 @@ import socket
 import struct
 import time
 import traceback
+from functools import partial
 from multiprocessing.synchronize import Event
 from typing import Any, Callable, List, Optional, Tuple, Type
 
@@ -73,6 +74,12 @@ class Coordinator:
         # optional plugin features - ipc wrapper
         self.ipc_wrapper: Optional[IPCWrapper] = None
         if ipc_wrapper is not None:
+            if not isinstance(ipc_wrapper, partial):
+                constructor = ipc_wrapper
+                assert issubclass(
+                    constructor, IPCWrapper
+                ), "ipc_wrapper must be inherited from mosec.plugins.IPCWrapper"
+
             self.ipc_wrapper = ipc_wrapper()
 
         # ignore termination & interruption signal

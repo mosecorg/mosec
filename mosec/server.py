@@ -47,13 +47,14 @@ class Server:
     """
 
     def __init__(
-        self, ipc_wrapper: Optional[Union[IPCWrapper, partial[IPCWrapper]]] = None
+        self,
+        ipc_wrapper: Optional[Union[IPCWrapper, partial]] = None,
     ):
         """Initialize a MOSEC Server
 
         Args:
-            ipc_wrapper (Optional[IPCWrapper], optional): IPCWrapper class.
-                Defaults to None.
+            ipc_wrapper (Optional[Union[IPCWrapper, partial]], optional):
+                IPCWrapper class. Defaults to None.
         """
         self.ipc_wrapper = ipc_wrapper
 
