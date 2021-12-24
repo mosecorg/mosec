@@ -96,9 +96,6 @@ setup(
     ],
     python_requires=">=3.6",
     extras_require={
-        "shm": [
-            "pyarrow~=6.0.1",
-        ],
         "dev": [
             "pytest>=6",
             "pytest-mock>=3.5",
