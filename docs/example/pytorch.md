@@ -39,8 +39,6 @@ We enable multiprocessing for `Preprocess` stage, so that it can produce enough 
 
 When instantiating the `Server`, we enable `plasma_shm`, which utilizes the [`pyarrow.plasma`](https://arrow.apache.org/docs/python/plasma.html) as a shared memory data store for IPC. This could benefit the data transfer, especially when the data is large (preprocessed image data in this case), since its implementation uses [`nogil`](https://cython.readthedocs.io/en/latest/src/userguide/external_C_code.html#releasing-the-gil) to escape the limitation of GIL. Note that you need to use `pip install -U "mosec[shm]"` to install necessary dependencies.
 
-We also demonstrate how to customized **validation** on the data content through this example. In the `forward` method of the `Preprocess` worker, we firstly check the key of the input, then try to decode the str and load it into array. If any of these steps fails, we raise the `ValidationError`. The status will be finally returned to our clients as [HTTP 422](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422).
-
 ##### Server
 
     python resnet50_server.py
