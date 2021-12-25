@@ -79,6 +79,7 @@ def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
             socket_prefix,
             config["stage_id"],
             config["worker_id"],
+            None,
         ),
         daemon=True,
     )
@@ -101,6 +102,7 @@ def test_socket_file_not_found(mocker, base_test_config):
                 shutdown=shutdown,
                 shutdown_notify=shutdown_notify,
                 socket_prefix=socket_prefix,
+                ipc_wrapper=None,
                 **base_test_config,
             )
 
@@ -127,6 +129,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
                 shutdown=shutdown,
                 shutdown_notify=shutdown_notify,
                 socket_prefix=socket_prefix,
+                ipc_wrapper=None,
                 **base_test_config,
             )
 
@@ -143,6 +146,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
                 shutdown=shutdown,
                 shutdown_notify=shutdown_notify,
                 socket_prefix=socket_prefix,
+                ipc_wrapper=None,
                 **base_test_config,
             )
 
@@ -174,9 +178,14 @@ def test_incorrect_socket_file(mocker, base_test_config):
         ),
     ],
 )
-def test_echo(mocker, base_test_config, test_data, worker, deserializer):
+def test_echo_batch(mocker, base_test_config, test_data, worker, deserializer):
+    """To test the batched data echo functionality. The batch size is automatically
+    determined by the data's size.
+    """
     mocker.patch("mosec.coordinator.logger", MockLogger())
     c_ctx = base_test_config.pop("c_ctx")
+    # whatever value greater than 1, so that coordinator
+    # knows this stage enables batching
     base_test_config["max_batch_size"] = 8
 
     sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
@@ -191,7 +200,11 @@ def test_echo(mocker, base_test_config, test_data, worker, deserializer):
         sock.listen()
 
         coordinator_process = make_coordinator_process(
-            worker, c_ctx, shutdown, shutdown_notify, base_test_config
+            worker,
+            c_ctx,
+            shutdown,
+            shutdown_notify,
+            base_test_config,
         )
         coordinator_process.start()
 

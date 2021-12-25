@@ -5,10 +5,12 @@ import socket
 import struct
 import time
 import traceback
+from functools import partial
 from multiprocessing.synchronize import Event
-from typing import Callable, Type
+from typing import Any, Callable, List, Optional, Tuple, Type
 
 from .errors import DecodingError, ValidationError
+from .plugins.ipc_wrapper import IPCWrapper
 from .protocol import Protocol
 from .worker import Worker
 
@@ -40,6 +42,7 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
+        ipc_wrapper: Type[IPCWrapper],
     ):
         """Initialize the mosec coordinator
 
@@ -53,6 +56,7 @@ class Coordinator:
             stage_id (int): identification number for worker stages.
             worker_id (int): identification number for worker processes at the same
                 stage.
+            ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
         """
         worker._id = worker_id
         self.worker = worker()
@@ -66,6 +70,17 @@ class Coordinator:
             addr=os.path.join(socket_prefix, f"ipc_{stage_id}.socket"),
             timeout=PROTOCOL_TIMEOUT,
         )
+
+        # optional plugin features - ipc wrapper
+        self.ipc_wrapper: Optional[IPCWrapper] = None
+        if ipc_wrapper is not None:
+            if not isinstance(ipc_wrapper, partial):
+                constructor = ipc_wrapper
+                assert issubclass(
+                    constructor, IPCWrapper
+                ), "ipc_wrapper must be inherited from mosec.plugins.IPCWrapper"
+
+            self.ipc_wrapper = ipc_wrapper()
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -123,23 +138,48 @@ class Coordinator:
 
             self.coordinate()
 
-    def get_decoder(self) -> Callable:
+    def get_decoder(self) -> Callable[[bytes], Any]:
         if STAGE_INGRESS in self.worker._stage:
             return self.worker.deserialize
         return self.worker._deserialize_ipc
 
-    def get_encoder(self) -> Callable:
+    def get_encoder(self) -> Callable[[Any], bytes]:
         if STAGE_EGRESS in self.worker._stage:
             return self.worker.serialize
         return self.worker._serialize_ipc
+
+    def get_protocol_recv(
+        self,
+    ) -> Callable[[], Tuple[bytes, List[bytes], List[bytearray]]]:
+        if STAGE_INGRESS in self.worker._stage or self.ipc_wrapper is None:
+            return self.protocol.receive
+
+        def wrapped_recv():
+            flag, ids, payloads = self.protocol.receive()
+            payloads = self.ipc_wrapper.get([bytes(x) for x in payloads])
+            return flag, ids, payloads
+
+        return wrapped_recv
+
+    def get_protocol_send(self) -> Callable[[int, List[bytes], List[bytes]], None]:
+        if STAGE_EGRESS in self.worker._stage or self.ipc_wrapper is None:
+            return self.protocol.send
+
+        def wrapped_send(flag: int, ids: List[bytes], payloads: List[bytes]):
+            payloads = self.ipc_wrapper.put(payloads)  # type: ignore
+            return self.protocol.send(flag, ids, payloads)
+
+        return wrapped_send
 
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass"""
         decoder = self.get_decoder()
         encoder = self.get_encoder()
+        protocol_recv = self.get_protocol_recv()
+        protocol_send = self.get_protocol_send()
         while not self.shutdown.is_set():
             try:
-                _, ids, payloads = self.protocol.receive()
+                _, ids, payloads = protocol_recv()
             except socket.timeout:
                 continue
             except (struct.error, OSError) as err:
@@ -181,7 +221,7 @@ class Coordinator:
                 payloads = ("inference internal error".encode(),)
 
             try:
-                self.protocol.send(status, ids, payloads)
+                protocol_send(status, ids, payloads)
             except OSError as err:
                 logger.error(f"{self.name} socket send error: {err}")
                 break

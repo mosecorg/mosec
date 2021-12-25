@@ -23,8 +23,8 @@ def echo(p: Protocol, datum: List[bytes]):
     assert all(
         [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
     )
-
-    p.send(sent_status, got_ids, got_payloads)  # client echo
+    got_payload_bytes = [bytes(x) for x in got_payloads]
+    p.send(sent_status, got_ids, got_payload_bytes)  # client echo
     got_status, got_ids, got_payloads = p.receive()  # server recv (symmetric protocol)
 
     assert len(p.socket.buffer) == 0  # type: ignore
