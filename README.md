@@ -36,8 +36,9 @@ Mosec is a high-performance and flexible model serving framework for building ML
 
 Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://pypi.org/project/mosec/) with:
 
-    pip install -U mosec
-
+```shell
+$ pip install -U mosec
+```
 
 ## Usage
 
@@ -96,19 +97,19 @@ if __name__ == "__main__":
 
 After merging the snippets above into a file named `server.py`, we can first have a look at the command line arguments:
 
-```bash
+```shell
 $ python server.py --help
 ```
 
 Then let's start the server...
 
-```bash
+```shell
 $ python server.py
 ```
 
 and in another terminal, test it:
 
-```bash
+```shell
 $ curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 {
   "y": 7.38905609893065
@@ -120,7 +121,7 @@ validation error: cannot find key 'x'
 
 or check the metrics:
 
-```bash
+```shell
 $ curl http://127.0.0.1:8000/metrics
 ```
 
@@ -141,13 +142,13 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 |                                                             | Batcher | Pipeline | Parallel | I/O Format<sup>(1)</sup>                                                                                                                    | Framework<sup>(2)</sup> | Backend | Activity                                                                      |
 | ----------------------------------------------------------- | :-----: | :------: | :------: | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------- |
-| [TF Serving](https://github.com/tensorflow/serving)         |   ✅    |    ✅    |    ✅    | Limited<a href="https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/api_rest.md#request-format-1"><sup>(a)</sup></a> | Heavily TF              | C++     | ![](https://img.shields.io/github/last-commit/tensorflow/serving)             |
-| [Triton](https://github.com/triton-inference-server/server) |   ✅    |    ✅    |    ✅    | Limited                                                                                                                                     | Multiple                | C++     | ![](https://img.shields.io/github/last-commit/triton-inference-server/server) |
-| [MMS](https://github.com/awslabs/multi-model-server)        |   ✅    |    ❌    |    ✅    | Limited                                                                                                                                     | Heavily MX              | Java    | ![](https://img.shields.io/github/last-commit/awslabs/multi-model-server)     |
-| [BentoML](https://github.com/bentoml/BentoML)               |   ✅    |    ❌    |    ❌    | Limited<a href="https://docs.bentoml.org/en/latest/concepts.html#api-function-return-value"><sup>(b)</sup></a>                              | Multiple                | Python  | ![](https://img.shields.io/github/last-commit/bentoml/BentoML)                |
-| [Streamer](https://github.com/ShannonAI/service-streamer)   |   ✅    |    ❌    |    ✅    | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/ShannonAI/service-streamer)     |
-| [Flask](https://github.com/pallets/flask)<sup>(3)</sup>     |   ❌    |    ❌    |    ❌    | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/pallets/flask)                  |
-| **[Mosec](https://github.com/mosecorg/mosec)**              |   ✅    |    ✅    |    ✅    | Customizable                                                                                                                                | Agnostic                | Rust    | ![](https://img.shields.io/github/last-commit/mosecorg/mosec)                 |
+| [TF Serving](https://github.com/tensorflow/serving)         |    ✅    |    ✅     |    ✅     | Limited<a href="https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/api_rest.md#request-format-1"><sup>(a)</sup></a> | Heavily TF              | C++     | ![](https://img.shields.io/github/last-commit/tensorflow/serving)             |
+| [Triton](https://github.com/triton-inference-server/server) |    ✅    |    ✅     |    ✅     | Limited                                                                                                                                     | Multiple                | C++     | ![](https://img.shields.io/github/last-commit/triton-inference-server/server) |
+| [MMS](https://github.com/awslabs/multi-model-server)        |    ✅    |    ❌     |    ✅     | Limited                                                                                                                                     | Heavily MX              | Java    | ![](https://img.shields.io/github/last-commit/awslabs/multi-model-server)     |
+| [BentoML](https://github.com/bentoml/BentoML)               |    ✅    |    ❌     |    ❌     | Limited<a href="https://docs.bentoml.org/en/latest/concepts.html#api-function-return-value"><sup>(b)</sup></a>                              | Multiple                | Python  | ![](https://img.shields.io/github/last-commit/bentoml/BentoML)                |
+| [Streamer](https://github.com/ShannonAI/service-streamer)   |    ✅    |    ❌     |    ✅     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/ShannonAI/service-streamer)     |
+| [Flask](https://github.com/pallets/flask)<sup>(3)</sup>     |    ❌    |    ❌     |    ❌     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/pallets/flask)                  |
+| **[Mosec](https://github.com/mosecorg/mosec)**              |    ✅    |    ✅     |    ✅     | Customizable                                                                                                                                | Agnostic                | Rust    | ![](https://img.shields.io/github/last-commit/mosecorg/mosec)                 |
 
 <sup>\*As accessed on 08 Oct 2021. By no means is this comparison showing that other frameworks are inferior, but rather it is used to illustrate the trade-off. The information is not guaranteed to be absolutely accurate. Please let us know if you find anything that may be incorrect.</sup>
 
