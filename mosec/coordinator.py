@@ -148,7 +148,9 @@ class Coordinator:
             return self.worker.serialize
         return self.worker._serialize_ipc
 
-    def get_protocol_recv(self) -> Callable[[], Tuple[bytes, List[bytes], List[bytes]]]:
+    def get_protocol_recv(
+        self,
+    ) -> Callable[[], Tuple[bytes, List[bytes], List[bytearray]]]:
         if STAGE_INGRESS in self.worker._stage or self.ipc_wrapper is None:
             return self.protocol.receive
 

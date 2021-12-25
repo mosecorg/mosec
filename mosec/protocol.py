@@ -53,7 +53,7 @@ class Protocol:
         self.name = name
         self.addr = addr
 
-    def receive(self) -> Tuple[bytes, List[bytes], List[bytes]]:
+    def receive(self) -> Tuple[bytes, List[bytes], List[bytearray]]:
         """Receive tasks from the server"""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
@@ -118,4 +118,4 @@ def _recv_all(conn, length):
         packet = conn.recv_into(mv)
         mv = mv[packet:]
         size += packet
-    return bytes(buffer)
+    return buffer
