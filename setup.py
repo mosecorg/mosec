@@ -113,6 +113,7 @@ setup(
             "mkdocstrings>=0.16.0",
             "mkdocs-material>=7.3.0",
             "mkdocs-gen-files>=0.3.3",
+            "pyarrow>=6.0.1",
         ],
     },
     zip_safe=False,
