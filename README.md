@@ -37,7 +37,7 @@ Mosec is a high-performance and flexible model serving framework for building ML
 Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://pypi.org/project/mosec/) with:
 
 ```shell
-$ pip install -U mosec
+> pip install -U mosec
 ```
 
 ## Usage
@@ -98,31 +98,31 @@ if __name__ == "__main__":
 After merging the snippets above into a file named `server.py`, we can first have a look at the command line arguments:
 
 ```shell
-$ python server.py --help
+> python server.py --help
 ```
 
 Then let's start the server...
 
 ```shell
-$ python server.py
+> python server.py
 ```
 
 and in another terminal, test it:
 
-```shell
-$ curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
+```console
+> curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
 {
   "y": 7.38905609893065
 }
 
-$ curl -X POST http://127.0.0.1:8000/inference -d '{"input": 2}' # wrong schema
+> curl -X POST http://127.0.0.1:8000/inference -d '{"input": 2}' # wrong schema
 validation error: cannot find key 'x'
 ```
 
 or check the metrics:
 
 ```shell
-$ curl http://127.0.0.1:8000/metrics
+> curl http://127.0.0.1:8000/metrics
 ```
 
 That's it! You have just hosted your **_exponential-computing model_** as a server! 😉
@@ -149,6 +149,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 | [Streamer](https://github.com/ShannonAI/service-streamer)   |    ✅    |    ❌     |    ✅     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/ShannonAI/service-streamer)     |
 | [Flask](https://github.com/pallets/flask)<sup>(3)</sup>     |    ❌    |    ❌     |    ❌     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/pallets/flask)                  |
 | **[Mosec](https://github.com/mosecorg/mosec)**              |    ✅    |    ✅     |    ✅     | Customizable                                                                                                                                | Agnostic                | Rust    | ![](https://img.shields.io/github/last-commit/mosecorg/mosec)                 |
+
 
 <sup>\*As accessed on 08 Oct 2021. By no means is this comparison showing that other frameworks are inferior, but rather it is used to illustrate the trade-off. The information is not guaranteed to be absolutely accurate. Please let us know if you find anything that may be incorrect.</sup>
 
