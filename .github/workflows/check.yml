@@ -62,5 +62,4 @@ jobs:
           make dev
       - name: Test
         run: |
-          make semantic_lint
-          make test
+          make semantic_lint test_main test_plugin

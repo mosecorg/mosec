@@ -19,6 +19,15 @@ test: dev
 	pytest tests -vv -s -m "arrow"
 	RUST_BACKTRACE=1 cargo test -vv
 
+test_main: dev
+	pytest tests -vv -s -m "not arrow"
+	RUST_BACKTRACE=1 cargo test -vv
+
+test_plugin: dev
+	pip install -e .[plugin]
+	pytest tests -vv -s -m "arrow"
+	RUST_BACKTRACE=1 cargo test -vv
+
 doc:
 	mkdocs serve
 

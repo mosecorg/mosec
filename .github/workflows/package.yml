@@ -43,7 +43,7 @@ jobs:
           pip install -e .[dev]
           make dev
       - name: Test
-        run: make test
+        run: make test_main test_plugin
 
   build:
     name: "Build PyPI Package"
