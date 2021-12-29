@@ -14,17 +14,11 @@ dev:
 	pip install -e .
 
 test: dev
+	echo "Running tests for the main logic"
 	pytest tests -vv -s -m "not arrow"
 	pip install -e .[plugin]
-	pytest tests -vv -s -m "arrow"
-	RUST_BACKTRACE=1 cargo test -vv
-
-test_main: dev
-	pytest tests -vv -s -m "not arrow"
-	RUST_BACKTRACE=1 cargo test -vv
-
-test_plugin: dev
-	pip install -e .[plugin]
+	sleep 1
+	echo "Running tests for the plugin"
 	pytest tests -vv -s -m "arrow"
 	RUST_BACKTRACE=1 cargo test -vv
 
