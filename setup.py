@@ -87,10 +87,10 @@ setup(
     packages=find_packages(exclude=["examples*", "tests*"]),
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
@@ -106,7 +106,7 @@ setup(
             "autoflake>=1.4",
             "msgpack>=1.0.2",
             "pre-commit>=2.15.0",
-            "httpx>=0.19.0",
+            "httpx~=0.20.0",
         ],
         "plugin": ["pyarrow>=0.6.1"],
         "doc": [
