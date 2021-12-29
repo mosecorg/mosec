@@ -17,7 +17,6 @@ test: dev
 	echo "Running tests for the main logic"
 	pytest tests -vv -s -m "not arrow"
 	pip install -e .[plugin]
-	sleep 1
 	echo "Running tests for the plugin"
 	pytest tests -vv -s -m "arrow"
 	RUST_BACKTRACE=1 cargo test -vv

@@ -24,7 +24,7 @@ def http_client():
 @pytest.fixture(scope="module")
 def mosec_service(request):
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{request.param}.py --port f{TEST_PORT}"),
+        shlex.split(f"python -u tests/{request.param}.py --port {TEST_PORT}"),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
@@ -48,7 +48,6 @@ def mosec_service(request):
     indirect=["mosec_service", "http_client"],
 )
 def test_square_service(mosec_service, http_client):
-    assert not mosec_service.poll(), mosec_service.stdout.read().decode()
     resp = http_client.get(URL)
     assert resp.status_code == 200
     assert f"mosec/{mosec.__version__}" == resp.headers["server"]
