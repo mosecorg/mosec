@@ -12,6 +12,9 @@ PACKAGE_NAME = "mosec"
 with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
 
+with open(os.path.join(here, "requirements_dev.txt"), encoding="utf-8") as f:
+    dev_requirements = f.read().splitlines()
+
 
 def get_version():
     """Use rust package version as the single source for versioning"""
@@ -96,18 +99,7 @@ setup(
     ],
     python_requires=">=3.6",
     extras_require={
-        "dev": [
-            "pytest>=6",
-            "pytest-mock>=3.5",
-            "mypy>=0.910",
-            "flake8>=3.8",
-            "black>=20.8b1",
-            "isort>=5.6",
-            "autoflake>=1.4",
-            "msgpack>=1.0.2",
-            "pre-commit>=2.15.0",
-            "requests~=2.26",
-        ],
+        "dev": dev_requirements,
         "plugin": ["pyarrow>=0.6.1"],
         "doc": [
             "mkdocstrings>=0.16.0",
