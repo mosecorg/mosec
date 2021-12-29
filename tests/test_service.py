@@ -4,8 +4,8 @@ import subprocess
 import time
 from threading import Thread
 
+import httpx  # type: ignore
 import pytest
-import requests  # type: ignore
 
 import mosec
 
@@ -15,7 +15,7 @@ URL = f"http://0.0.0.0:{TEST_PORT}"
 
 @pytest.fixture
 def http_client():
-    client = requests.Session()
+    client = httpx.Client()
     yield client
     client.close()
 
@@ -57,7 +57,7 @@ def test_square_service(mosec_service, http_client):
     resp = http_client.post(f"{URL}/inference", json={"msg": 2})
     assert resp.status_code == 422
 
-    resp = http_client.post(f"{URL}/inference", data=b"bad-binary-request")
+    resp = http_client.post(f"{URL}/inference", content=b"bad-binary-request")
     assert resp.status_code == 400
 
     validate_square_service(http_client, URL, 2)

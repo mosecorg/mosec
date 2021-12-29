@@ -8,3 +8,4 @@ autoflake>=1.4
 msgpack>=1.0.2
 pre-commit>=2.15.0
 requests~=2.26
+httpx>=0.21.0
