@@ -13,14 +13,14 @@ TEST_PORT = "5000"
 URL = f"http://localhost:{TEST_PORT}"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def http_client():
     client = requests.Session()
     yield client
     client.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def mosec_service(request):
     service = subprocess.Popen(
         ["python", f"tests/{request.param}.py", "--port", TEST_PORT],
