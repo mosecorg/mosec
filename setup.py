@@ -107,7 +107,6 @@ setup(
             "msgpack>=1.0.2",
             "pre-commit>=2.15.0",
             "httpx>=0.19.0",
-            "pyarrow>=6.0.1",
         ],
         "doc": [
             "mkdocstrings>=0.16.0",
