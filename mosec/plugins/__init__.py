@@ -1,3 +1,3 @@
-from .ipc_wrapper import IPCWrapper, PlasmaShmWrapper
+from .plasma_shm import PlasmaShmWrapper
 
-__all__ = ["IPCWrapper", "PlasmaShmWrapper"]
+__all__ = ["PlasmaShmWrapper"]

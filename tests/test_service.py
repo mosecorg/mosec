@@ -44,10 +44,12 @@ def square_service():
 @pytest.fixture(scope="session")
 def square_service_shm():
     port = "8091"
+    subprocess.call(["pip", "install", "pyarrow"])
     service = start_service("square_service_shm", port)
     time.sleep(2)  # wait for service to start
     assert not service.poll(), service.stdout.read().decode("utf-8")
     yield port
+    subprocess.call(["pip", "uninstall", "pyarrow", "-y"])
     service.terminate()
 
 
