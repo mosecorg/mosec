@@ -46,6 +46,8 @@ lint:
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
+
+semantic_lint:
 	cargo clippy
 
 .PHONY: test doc

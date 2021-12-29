@@ -61,4 +61,6 @@ jobs:
           pip install -e .[dev]
           make dev
       - name: Test
-        run: make test
+        run: |
+          make semantic_lint
+          make test
