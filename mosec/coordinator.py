@@ -10,7 +10,7 @@ from multiprocessing.synchronize import Event
 from typing import Any, Callable, List, Optional, Tuple, Type
 
 from .errors import DecodingError, ValidationError
-from .plugins.ipc_wrapper import IPCWrapper
+from .ipc import IPCWrapper
 from .protocol import Protocol
 from .worker import Worker
 

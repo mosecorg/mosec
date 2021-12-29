@@ -17,7 +17,7 @@ import pkg_resources
 
 from .args import ArgParser
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
-from .plugins import IPCWrapper
+from .ipc import IPCWrapper
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
