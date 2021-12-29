@@ -32,61 +32,73 @@ def start_service(service_name, port):
 
 
 @pytest.fixture(scope="session")
-def square_service():
-    port = "8090"
-    service = start_service("square_service", port)
+def mosec_service(request):
+    name, port = request.param
+    service = start_service(name, port)
     time.sleep(2)  # wait for service to start
     assert not service.poll(), service.stdout.read().decode("utf-8")
     yield port
     service.terminate()
 
 
-@pytest.fixture(scope="session")
-def square_service_shm():
-    port = "8091"
-    subprocess.call(["pip", "install", "pyarrow"])
-    service = start_service("square_service_shm", port)
-    time.sleep(2)  # wait for service to start
-    assert not service.poll(), service.stdout.read().decode("utf-8")
-    yield port
-    subprocess.call(["pip", "uninstall", "pyarrow", "-y"])
-    service.terminate()
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param(("square_service", "8090"), "", id="normal"),
+        pytest.param(
+            ("square_service_shm", "8091"),
+            "",
+            marks=pytest.mark.arrow,
+            id="shm_arrow",
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_square_service(mosec_service, http_client):
+    uri = get_uri(mosec_service)
+    resp = http_client.get(uri)
+    assert resp.status_code == 200
+    assert f"mosec/{mosec.__version__}" == resp.headers["server"]
+
+    resp = http_client.get(f"{uri}/metrics")
+    assert resp.status_code == 200
+
+    resp = http_client.post(f"{uri}/inference", json={"msg": 2})
+    assert resp.status_code == 422
+
+    resp = http_client.post(f"{uri}/inference", content=b"bad-binary-request")
+    assert resp.status_code == 400
+
+    validate_square_service(http_client, uri, 2)
 
 
-def test_square_service(square_service, square_service_shm, http_client):
-    for port in [square_service, square_service_shm]:
-        uri = get_uri(port)
-        resp = http_client.get(uri)
-        assert resp.status_code == 200
-        assert f"mosec/{mosec.__version__}" == resp.headers["server"]
-
-        resp = http_client.get(f"{uri}/metrics")
-        assert resp.status_code == 200
-
-        resp = http_client.post(f"{uri}/inference", json={"msg": 2})
-        assert resp.status_code == 422
-
-        resp = http_client.post(f"{uri}/inference", content=b"bad-binary-request")
-        assert resp.status_code == 400
-
-        validate_square_service(http_client, uri, 2)
-
-
-def test_square_service_mp(square_service, square_service_shm, http_client):
-    for port in [square_service, square_service_shm]:
-        uri = get_uri(port)
-        threads = []
-        for _ in range(20):
-            t = Thread(
-                target=validate_square_service,
-                args=(http_client, uri, random.randint(-500, 500)),
-            )
-            t.start()
-            threads.append(t)
-        for t in threads:
-            t.join()
-        assert_batch_larger_than_one(http_client, uri)
-        assert_empty_queue(http_client, uri)
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param(("square_service", "8090"), "", id="normal"),
+        pytest.param(
+            ("square_service_shm", "8091"),
+            "",
+            marks=pytest.mark.arrow,
+            id="shm_arrow",
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_square_service_mp(mosec_service, http_client):
+    uri = get_uri(mosec_service)
+    threads = []
+    for _ in range(20):
+        t = Thread(
+            target=validate_square_service,
+            args=(http_client, uri, random.randint(-500, 500)),
+        )
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
+    assert_batch_larger_than_one(http_client, uri)
+    assert_empty_queue(http_client, uri)
 
 
 def validate_square_service(http_client, uri, x):
