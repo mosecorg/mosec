@@ -11,7 +11,8 @@ repos:
     hooks:
       - id: make-lint
         name: Lint
-        entry: make lint && make semantic_lint
+        entry: make lint semantic_lint
         language: system
         types: [python, rust]
         pass_filenames: false
+        always_run: true
