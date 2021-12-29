@@ -106,7 +106,7 @@ setup(
             "autoflake>=1.4",
             "msgpack>=1.0.2",
             "pre-commit>=2.15.0",
-            "httpx~=0.20.0",
+            "requests~=2.26",
         ],
         "plugin": ["pyarrow>=0.6.1"],
         "doc": [
