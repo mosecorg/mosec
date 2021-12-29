@@ -1,5 +1,6 @@
 import random
 import re
+import shlex
 import subprocess
 import time
 from threading import Thread
@@ -23,20 +24,20 @@ def http_client():
 @pytest.fixture(scope="module")
 def mosec_service(request):
     service = subprocess.Popen(
-        ["python", f"tests/{request.param}.py", "--port", TEST_PORT],
+        shlex.split(f"python -u tests/{request.param}.py --port f{TEST_PORT}"),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
     time.sleep(2)  # wait for service to start
     assert not service.poll(), service.stdout.read().decode("utf-8")
-    yield service
+    yield None
     service.terminate()
 
 
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param("square_service", "", id="normal"),
+        pytest.param("square_service", "", id="basic"),
         pytest.param(
             "square_service_shm",
             "",
@@ -47,6 +48,7 @@ def mosec_service(request):
     indirect=["mosec_service", "http_client"],
 )
 def test_square_service(mosec_service, http_client):
+    assert not mosec_service.poll(), mosec_service.stdout.read().decode()
     resp = http_client.get(URL)
     assert resp.status_code == 200
     assert f"mosec/{mosec.__version__}" == resp.headers["server"]
@@ -66,7 +68,7 @@ def test_square_service(mosec_service, http_client):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param("square_service", "", id="normal"),
+        pytest.param("square_service", "", id="basic"),
         pytest.param(
             "square_service_shm",
             "",
