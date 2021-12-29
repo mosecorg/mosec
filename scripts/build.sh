@@ -9,7 +9,7 @@ source ${HOME}/.bashrc
 OS_NAME=$(uname -s)
 
 # Support multiple python versions
-for VERSION in 3.6 3.7 3.8 3.9; do
+for VERSION in 3.7 3.8 3.9 3.10; do
   conda create -y -n py$VERSION python=$VERSION
   conda activate py$VERSION
   which python
