@@ -10,7 +10,7 @@ import requests  # type: ignore
 import mosec
 
 TEST_PORT = "5000"
-URL = f"http://localhost:{TEST_PORT}"
+URL = f"http://127.0.0.1:{TEST_PORT}"
 
 
 @pytest.fixture
