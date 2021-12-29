@@ -29,7 +29,6 @@ def mosec_service(request):
         stderr=subprocess.STDOUT,
     )
     time.sleep(2)  # wait for service to start
-    assert not service.poll(), service.stdout.read().decode("utf-8")
     yield None
     service.terminate()
 
