@@ -9,7 +9,7 @@ import requests  # type: ignore
 
 import mosec
 
-TEST_PORT = "8090"
+TEST_PORT = "5000"
 URL = f"http://localhost:{TEST_PORT}"
 
 
