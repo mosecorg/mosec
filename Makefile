@@ -15,7 +15,7 @@ dev:
 
 test: dev
 	pytest tests -vv -s -m "not arrow"
-	pip install -e .[3rd]
+	pip install -e .[plugin]
 	pytest tests -vv -s -m "arrow"
 	RUST_BACKTRACE=1 cargo test -vv
 

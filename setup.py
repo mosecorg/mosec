@@ -108,7 +108,7 @@ setup(
             "pre-commit>=2.15.0",
             "httpx>=0.19.0",
         ],
-        "3rd": ["pyarrow>=0.6.1"],
+        "plugin": ["pyarrow>=0.6.1"],
         "doc": [
             "mkdocstrings>=0.16.0",
             "mkdocs-material>=7.3.0",
