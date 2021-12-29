@@ -4,8 +4,8 @@ import subprocess
 import time
 from threading import Thread
 
-import requests  # type: ignore
 import pytest
+import requests  # type: ignore
 
 import mosec
 
