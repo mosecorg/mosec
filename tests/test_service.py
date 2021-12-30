@@ -30,6 +30,7 @@ def mosec_service(request):
     assert service.poll() is None, "service failed to start"
     yield service
     service.terminate()
+    time.sleep(2)  # wait for service to stop
 
 
 @pytest.mark.parametrize(
