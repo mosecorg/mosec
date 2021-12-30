@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
+          pip install -r requirements/dev.txt
           rustup toolchain install nightly
           rustup component add rustfmt --toolchain nightly
       - name: Lint
@@ -28,7 +28,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
         os: [ubuntu-latest , macos-latest]
 
     steps:
@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-18.04, macos-10.15]
 
     steps:
       - uses: actions/checkout@v2

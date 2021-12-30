@@ -14,10 +14,15 @@ dev:
 	pip install -e .
 
 test: dev
+	echo "Running tests for the main logic"
 	pytest tests -vv -s -m "not arrow"
-	pip install -e .[plugin]
-	pytest tests -vv -s -m "arrow"
 	RUST_BACKTRACE=1 cargo test -vv
+
+test_plugin: dev
+	pip install -r requirements/plugin.txt
+	echo "Running tests for the plugin"
+	pytest tests -vv -s -m "arrow"
+	pip uninstall -y -r requirements/plugin.txt
 
 doc:
 	mkdocs serve
@@ -46,6 +51,8 @@ lint:
 	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
+
+semantic_lint:
 	cargo clippy
 
 .PHONY: test doc

@@ -107,6 +107,12 @@ Then let's start the server...
 > python server.py
 ```
 
+Run with Rust debug info:
+
+```shell
+> RUST_LOG=debug python server.py
+```
+
 and in another terminal, test it:
 
 ```console

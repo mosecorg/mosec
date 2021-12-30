@@ -27,13 +27,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.8
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
+          pip install -r requirements/dev.txt
           rustup toolchain install nightly
           rustup component add rustfmt --toolchain nightly
       - name: Lint
@@ -41,17 +41,18 @@ jobs:
 
   test:
     runs-on: ${{ matrix.os }}
+    needs: [lint]
     timeout-minutes: 10
     strategy:
       max-parallel: 5
       matrix:
         python-version: [3.7]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -60,4 +61,5 @@ jobs:
           pip install -e .[dev]
           make dev
       - name: Test
-        run: make test
+        run: |
+          make semantic_lint test

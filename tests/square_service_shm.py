@@ -21,6 +21,7 @@ class DummyPostprocess(Worker):
     """This dummy stage is added to test the shm IPC"""
 
     def forward(self, data: dict) -> dict:
+        assert isinstance(data.get("x"), int), f"wrong data type: {data}"
         return data
 
 

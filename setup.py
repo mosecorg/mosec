@@ -12,6 +12,15 @@ PACKAGE_NAME = "mosec"
 with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
 
+with open(os.path.join(here, "requirements/dev.txt"), encoding="utf-8") as f:
+    dev_requirements = f.read().splitlines()
+
+with open(os.path.join(here, "requirements/doc.txt"), encoding="utf-8") as f:
+    doc_requirements = f.read().splitlines()
+
+with open(os.path.join(here, "requirements/plugin.txt"), encoding="utf-8") as f:
+    plugin_requirements = f.read().splitlines()
+
 
 def get_version():
     """Use rust package version as the single source for versioning"""
@@ -87,33 +96,18 @@ setup(
     packages=find_packages(exclude=["examples*", "tests*"]),
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.6",
     extras_require={
-        "dev": [
-            "pytest>=6",
-            "pytest-mock>=3.5",
-            "mypy>=0.910",
-            "flake8>=3.8",
-            "black>=20.8b1",
-            "isort>=5.6",
-            "autoflake>=1.4",
-            "msgpack>=1.0.2",
-            "pre-commit>=2.15.0",
-            "httpx>=0.19.0",
-        ],
-        "plugin": ["pyarrow>=0.6.1"],
-        "doc": [
-            "mkdocstrings>=0.16.0",
-            "mkdocs-material>=7.3.0",
-            "mkdocs-gen-files>=0.3.3",
-        ],
+        "dev": dev_requirements,
+        "plugin": plugin_requirements,
+        "doc": doc_requirements,
     },
     zip_safe=False,
     entry_points={

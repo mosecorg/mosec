@@ -1,0 +1,11 @@
+pytest>=6
+pytest-mock>=3.5
+mypy>=0.910
+flake8>=3.8
+black>=20.8b1
+isort>=5.6
+autoflake>=1.4
+msgpack>=1.0.2
+pre-commit>=2.15.0
+requests~=2.26
+httpx>=0.21.0
