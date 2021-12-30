@@ -12,8 +12,14 @@ PACKAGE_NAME = "mosec"
 with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = f.read()
 
-with open(os.path.join(here, "requirements_dev.txt"), encoding="utf-8") as f:
+with open(os.path.join(here, "requirements/dev.txt"), encoding="utf-8") as f:
     dev_requirements = f.read().splitlines()
+
+with open(os.path.join(here, "requirements/doc.txt"), encoding="utf-8") as f:
+    doc_requirements = f.read().splitlines()
+
+with open(os.path.join(here, "requirements/plugin.txt"), encoding="utf-8") as f:
+    plugin_requirements = f.read().splitlines()
 
 
 def get_version():
@@ -100,12 +106,8 @@ setup(
     python_requires=">=3.6",
     extras_require={
         "dev": dev_requirements,
-        "plugin": ["pyarrow>=0.6.1"],
-        "doc": [
-            "mkdocstrings>=0.16.0",
-            "mkdocs-material>=7.3.0",
-            "mkdocs-gen-files>=0.3.3",
-        ],
+        "plugin": plugin_requirements,
+        "doc": doc_requirements,
     },
     zip_safe=False,
     entry_points={
