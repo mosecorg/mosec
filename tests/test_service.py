@@ -25,11 +25,10 @@ def http_client():
 def mosec_service(request):
     service = subprocess.Popen(
         shlex.split(f"python -u tests/{request.param}.py --port {TEST_PORT}"),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
     )
     time.sleep(2)  # wait for service to start
-    yield None
+    assert service.poll() is None, "service failed to start"
+    yield service
     service.terminate()
 
 
