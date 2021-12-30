@@ -107,12 +107,6 @@ Then let's start the server...
 > python server.py
 ```
 
-Run with Rust debug info:
-
-```shell
-> RUST_LOG=debug python server.py
-```
-
 and in another terminal, test it:
 
 ```console
@@ -129,6 +123,16 @@ or check the metrics:
 
 ```shell
 > curl http://127.0.0.1:8000/metrics
+```
+
+For more debug logs, you can enable it by changing the Python & Rust log level:
+
+```python
+logger.setLevel(logging.DEBUG)
+```
+
+```shell
+> RUST_LOG=debug python server.py
 ```
 
 That's it! You have just hosted your **_exponential-computing model_** as a server! 😉
