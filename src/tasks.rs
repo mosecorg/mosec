@@ -21,23 +21,55 @@ pub(crate) enum TaskCode {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Task {
-    pub(crate) code: TaskCode,
-    pub(crate) data: Bytes,
-    pub(crate) create_at: Instant,
+    code: TaskCode,
+    data: Vec<Bytes>,
+    target: u32, // max number of parallel stage: 32
+    ready: u32,
+    create_at: Instant,
 }
 
 impl Task {
-    fn new(data: Bytes) -> Self {
-        Self {
-            code: TaskCode::InternalError,
-            data,
+    fn new(data: Bytes, num: u32) -> Self {
+        let data_arr = Vec::with_capacity(num as usize);
+        data_arr.push(data);
+        let task = Task {
+            code: TaskCode::Normal,
+            data: data_arr,
+            target: 0,
+            ready: num,
             create_at: Instant::now(),
+        };
+        task.update_num(num);
+        task
+    }
+
+    fn is_ready(&self) -> bool {
+        self.ready == self.target
+    }
+
+    fn update_num(&mut self, num: u32) {
+        let target = 1u32;
+        while num > 1 {
+            target = (target << 1) | 1;
+            num -= 1;
         }
     }
 
-    fn update(&mut self, code: TaskCode, data: &Bytes) {
-        self.code = code;
-        self.data = data.clone();
+    fn reset(&mut self) {
+        self.ready = 0;
+    }
+
+    pub fn duration_sec(&self) -> f64 {
+        self.create_at.elapsed().as_secs_f64()
+    }
+
+    fn update_data_with_index(&mut self, code: TaskCode, data: &Bytes, index: usize) {
+        self.code = match self.code {
+            TaskCode::Normal => code,
+            _ => self.code, // abnormal code
+        };
+        self.data[index] = data.clone();
+        self.ready |= 1 << index;
     }
 }
 

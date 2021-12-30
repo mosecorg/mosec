@@ -10,6 +10,7 @@ use tokio::sync::Barrier;
 use tracing::{debug, error, info};
 
 use crate::metrics::Metrics;
+use crate::args::BatchSize;
 use crate::tasks::{TaskCode, TaskManager};
 
 const FLAG_U8_SIZE: usize = 2;
@@ -25,7 +26,7 @@ const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn communicate(
     path: PathBuf,
-    batch_size: usize,
+    batch_size: BatchSize,
     wait_time: Duration,
     stage_id: String,
     receiver: Receiver<u32>,
