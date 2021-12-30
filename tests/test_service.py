@@ -21,12 +21,13 @@ def http_client():
     client.close()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mosec_service(request):
+    name, wait = request.param
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{request.param}.py --port {TEST_PORT}"),
+        shlex.split(f"python -u tests/{name}.py --port {TEST_PORT}"),
     )
-    time.sleep(2)  # wait for service to start
+    time.sleep(wait)  # wait for service to start
     assert service.poll() is None, "service failed to start"
     yield service
     service.terminate()
@@ -36,9 +37,9 @@ def mosec_service(request):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param("square_service", "", id="basic"),
+        pytest.param(("square_service", 2), "", id="basic"),
         pytest.param(
-            "square_service_shm",
+            ("square_service_shm", 5),
             "",
             marks=pytest.mark.arrow,
             id="shm_arrow",
@@ -66,9 +67,9 @@ def test_square_service(mosec_service, http_client):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param("square_service", "", id="basic"),
+        pytest.param(("square_service", 2), "", id="basic"),
         pytest.param(
-            "square_service_shm",
+            ("square_service_shm", 5),
             "",
             marks=pytest.mark.arrow,
             id="shm_arrow",
