@@ -18,9 +18,9 @@ runs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-cache-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-          ${{ runner.os }}-cargo-
+          ${{ runner.os }}-cargo-cache-
 
     - name: Get pip cache dir
       id: pip-cache-dir
@@ -34,6 +34,6 @@ runs:
       uses: actions/cache@v2
       with:
         path: ${{ steps.pip-cache-dir.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/*.txt') }}
+        key: ${{ runner.os }}-pip-cache-${{ hashFiles('requirements/*.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-pip-cache-
