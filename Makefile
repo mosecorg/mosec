@@ -53,6 +53,6 @@ lint:
 	cargo +nightly fmt -- --check
 
 semantic_lint:
-	cargo clippy
+	cargo clippy -- -D warnings
 
 .PHONY: test doc
