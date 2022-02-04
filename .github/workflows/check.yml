@@ -21,6 +21,10 @@ on:
       - 'examples/**'
       - 'setup.py'
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -30,6 +34,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.8
+      - uses: ./.github/actions/cache
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -55,6 +60,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: ./.github/actions/cache
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
