@@ -19,6 +19,8 @@ runs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
 
     - name: Get pip cache dir
       id: pip-cache-dir
