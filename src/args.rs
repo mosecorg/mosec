@@ -1,8 +1,7 @@
-use clap::{crate_version, AppSettings, Clap};
+use clap::Parser;
 
-#[derive(Clap, Debug)]
-#[clap(version = crate_version!())]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
 pub(crate) struct Opts {
     /// Unix domain socket directory path
     #[clap(long, default_value = "")]

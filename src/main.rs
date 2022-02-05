@@ -8,7 +8,7 @@ mod tasks;
 use std::net::SocketAddr;
 
 use bytes::Bytes;
-use clap::Clap;
+use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response, StatusCode};
 use prometheus::{Encoder, TextEncoder};
