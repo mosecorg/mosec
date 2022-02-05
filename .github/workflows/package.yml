@@ -84,6 +84,7 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
+      - uses: actions/checkout@v2
       - uses: ./.github/actions/cache
       - name: Publish PyPI
         env:
@@ -94,7 +95,6 @@ jobs:
           pip install setuptools wheel twine
           ls
           twine upload *
-      - uses: actions/checkout@v2
       - name: Publish Crates
         env:
           CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
