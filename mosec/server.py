@@ -124,10 +124,6 @@ class Server:
             start_method in NEW_PROCESS_METHOD
         ), f"start method must be one of {NEW_PROCESS_METHOD}"
 
-    def _parse_args(self):
-        self._configs = vars(ArgParser.parse())
-        logger.info(f"Mosec Server Configurations: {self._configs}")
-
     def _check_daemon(self):
         for name, proc in self._daemon.items():
             if proc is not None:
@@ -149,11 +145,14 @@ class Server:
         args = []
         for k, v in self._configs.items():
             args.extend([f"--{k}", str(v)])
-        args.extend(["--batches"] + list(map(str, self._worker_mbs)))
+        for batch_size in self._worker_mbs:
+            args.extend(["--batches", str(batch_size)])
+        logger.info("Mosec Server Configurations: %s", args)
         return args
 
     def _start_controller(self):
         """Subprocess to start controller program"""
+        self._configs = vars(ArgParser.parse())
         if not self._server_shutdown:
             path = self._configs["path"]
             if exists(path):
@@ -314,7 +313,6 @@ class Server:
         This method starts the mosec model server!
         """
         self._validate_server()
-        self._parse_args()
         self._start_controller()
         try:
             self._manage_coordinators()
