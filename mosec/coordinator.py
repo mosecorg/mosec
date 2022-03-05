@@ -75,9 +75,8 @@ class Coordinator:
         self.ipc_wrapper: Optional[IPCWrapper] = None
         if ipc_wrapper is not None:
             if not isinstance(ipc_wrapper, partial):
-                constructor = ipc_wrapper
                 assert issubclass(
-                    constructor, IPCWrapper
+                    ipc_wrapper, IPCWrapper
                 ), "ipc_wrapper must be inherited from mosec.plugins.IPCWrapper"
 
             self.ipc_wrapper = ipc_wrapper()
@@ -166,7 +165,8 @@ class Coordinator:
             return self.protocol.send
 
         def wrapped_send(flag: int, ids: List[bytes], payloads: List[bytes]):
-            payloads = self.ipc_wrapper.put(payloads)  # type: ignore
+            if flag == Protocol.FLAG_OK:
+                payloads = self.ipc_wrapper.put(payloads)  # type: ignore
             return self.protocol.send(flag, ids, payloads)
 
         return wrapped_send

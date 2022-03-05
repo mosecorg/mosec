@@ -24,6 +24,12 @@ test_plugin: dev
 	pytest tests -vv -s -m "arrow"
 	pip uninstall -y -r requirements/plugin.txt
 
+test_all: dev
+	pip install -r requirements/plugin.txt
+	echo "Running tests for the all features"
+	pytest tests -vv -s
+	RUST_BACKTRACE=1 cargo test -vv
+
 doc:
 	mkdocs serve
 
