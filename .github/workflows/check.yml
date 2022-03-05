@@ -68,3 +68,6 @@ jobs:
       - name: Test
         run: |
           make semantic_lint test
+      - name: Test plugins
+        if: matrix.os == "ubuntu-latest"
+        run: make test_plugin
