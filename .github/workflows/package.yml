@@ -51,7 +51,7 @@ jobs:
       - name: Test
         run: make test
       - name: Test plugins
-        if: matrix.os == "ubuntu-latest"
+        if: startsWith(matrix.os, 'ubuntu')
         run: make test_plugin
 
   build:
