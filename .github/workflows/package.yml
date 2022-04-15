@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v1
         with:
           python-version: 3.8
@@ -37,7 +37,7 @@ jobs:
         os: [ubuntu-latest , macos-latest]
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
         with:
@@ -63,7 +63,7 @@ jobs:
         os: [ubuntu-18.04, macos-10.15]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: ./.github/actions/cache
       - name: Build
         run: |
@@ -96,7 +96,7 @@ jobs:
           pip install setuptools wheel twine
           ls
           twine upload *
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: ./.github/actions/cache
       - name: Publish Crates
         env:
