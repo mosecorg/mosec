@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Yang"
+  given-names: "Keming"
+  orcid: "https://orcid.org/0000-0002-1351-2342"
+- family-names: "Liu"
+  given-names: "Zichen"
+  orcid: "https://orcid.org/0000-0001-9451-8625"
+title: "MOSEC: Model Serving made Efficient in the Cloud"
+url: "https://github.com/mosecorg/mosec"
+type: software
+date-released: 2021-09-27
