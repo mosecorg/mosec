@@ -1,6 +1,6 @@
 [package]
 name = "mosec"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
