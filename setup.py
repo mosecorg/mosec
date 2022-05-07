@@ -94,6 +94,7 @@ setup(
     url="https://github.com/mosecorg/mosec",
     license="Apache License 2.0",
     packages=find_packages(exclude=["examples*", "tests*"]),
+    include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",

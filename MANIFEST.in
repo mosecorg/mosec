@@ -1,0 +1,6 @@
+include Cargo.*
+include src/*.rs
+include scripts/*.sh
+include CITATION.cff
+include LICENSE
+include README.md
