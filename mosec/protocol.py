@@ -102,12 +102,12 @@ class Protocol:
     def open(self):
         """Open the socket connection"""
         self.socket.connect(self.addr)
-        logger.info(f"{self.name} socket connected to {self.addr}")
+        logger.info("%s socket connected to %s", self.name, self.addr)
 
     def close(self):
         """Close the socket connection"""
         self.socket.close()
-        logger.info(f"{self.name} socket closed")
+        logger.info("%s socket closed", self.name)
 
 
 def _recv_all(conn, length):
