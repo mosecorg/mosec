@@ -96,7 +96,7 @@ class Server:
             assert isinstance(
                 number, int
             ), f"{name} must be integer but you give {type(number)}"
-            assert number >= 1, f"{name} must be greater than 1"
+            assert number >= 1, f"{name} must be no less than 1"
 
         def validate_env():
             if env is None:
