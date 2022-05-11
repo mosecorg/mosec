@@ -6,6 +6,8 @@ RUST_SOURCE_FILES=src/*
 install:
 	pip install -e .[dev,doc]
 	pre-commit install
+	rustup toolchain install nightly
+	rustup component add rustfmt --toolchain nightly
 
 dev:
 	cargo build
