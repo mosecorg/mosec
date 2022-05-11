@@ -92,7 +92,7 @@ class Coordinator:
         self.run()
 
     def exit(self):
-        logger.info(f"{self.name} exiting...")
+        logger.info("%s exiting...", self.name)
 
     def init_protocol(self):
         """Check socket readiness"""
@@ -102,13 +102,18 @@ class Coordinator:
                 return
             retry_count += 1
             logger.debug(
-                f"{self.name} trying to find the socket file: {self.protocol.addr}"
-                f" ({retry_count}/{CONN_MAX_RETRY})"
+                "%s trying to find the socket file: %s (%d/%d)",
+                self.name,
+                self.protocol.addr,
+                retry_count,
+                CONN_MAX_RETRY,
             )
             time.sleep(CONN_CHECK_INTERVAL)
             continue
 
-        logger.error(f"{self.name} cannot find the socket file: {self.protocol.addr}")
+        logger.error(
+            "%s cannot find the socket file: %s", self.name, self.protocol.addr
+        )
         self.exit()
 
     def init_worker(self):
@@ -117,11 +122,13 @@ class Coordinator:
             if self.worker.example is not None:
                 try:
                     self.worker.forward(self.worker.example)
-                    logger.info(f"{self.name} warmup successfully")
+                    logger.info("%s warmup successfully", self.name)
                 except Exception as err:
                     logger.error(
-                        f"{self.name} warmup failed: {err}\nplease ensure"
-                        " worker's example meets its forward input format"
+                        "%s warmup failed: %s\nplease ensure"
+                        " worker's example meets its forward input format",
+                        self.name,
+                        err,
                     )
 
     def run(self):
@@ -132,7 +139,7 @@ class Coordinator:
                 self.protocol.open()
             except OSError as err:
                 if not self.shutdown_notify.is_set():
-                    logger.error(f"{self.name} socket connection error: {err}")
+                    logger.error("%s socket connection error: %s", self.name, err)
                 break
 
             self.coordinate()
@@ -184,7 +191,7 @@ class Coordinator:
                 continue
             except (struct.error, OSError) as err:
                 if not self.shutdown_notify.is_set():
-                    logger.error(f"{self.name} socket receive error: {err}")
+                    logger.error("%s socket receive error: %s", self.name, err)
                 break
 
             try:
@@ -203,16 +210,14 @@ class Coordinator:
                     )
             except DecodingError as err:
                 err_msg = str(err).replace("\n", " - ")
-                err_msg = (
-                    err_msg if len(err_msg) else "cannot deserialize request bytes"
-                )
-                logger.info(f"{self.name} decoding error: {err_msg}")
+                err_msg = err_msg if err_msg else "cannot deserialize request bytes"
+                logger.info("%s decoding error: %s", self.name, err_msg)
                 status = self.protocol.FLAG_BAD_REQUEST
                 payloads = (f"decoding error: {err_msg}".encode(),)
             except ValidationError as err:
                 err_msg = str(err)
-                err_msg = err_msg if len(err_msg) else "invalid data format"
-                logger.info(f"{self.name} validation error: {err_msg}")
+                err_msg = err_msg if err_msg else "invalid data format"
+                logger.info("%s validation error: %s", self.name, err_msg)
                 status = self.protocol.FLAG_VALIDATION_ERROR
                 payloads = (f"validation error: {err_msg}".encode(),)
             except Exception:
@@ -223,7 +228,7 @@ class Coordinator:
             try:
                 protocol_send(status, ids, payloads)
             except OSError as err:
-                logger.error(f"{self.name} socket send error: {err}")
+                logger.error("%s socket send error: %s", self.name, err)
                 break
 
         self.protocol.close()

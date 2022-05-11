@@ -112,7 +112,7 @@ class Server:
             valid = True
             if not isinstance(env, List):
                 valid = False
-            elif not all([isinstance(x, Dict) and validate_str_dict(x) for x in env]):
+            elif not all(isinstance(x, Dict) and validate_str_dict(x) for x in env):
                 valid = False
             assert valid, "env must be a list of string dictionary"
 
@@ -156,7 +156,7 @@ class Server:
         if not self._server_shutdown:
             path = self._configs["path"]
             if exists(path):
-                logger.info(f"path already exists, try to remove it: {path}")
+                logger.info("path already exists, try to remove it: %s", path)
                 rmtree(path)
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
             self._controller_process = subprocess.Popen(
@@ -165,7 +165,7 @@ class Server:
             self.register_daemon("controller", self._controller_process)
 
     def _terminate(self, signum, framestack):
-        logger.info(f"[{signum}] terminating server [{framestack}] ...")
+        logger.info("[%s] terminating server [%s] ...", signum, framestack)
         self._server_shutdown = True
 
     @staticmethod
@@ -256,7 +256,7 @@ class Server:
                 if ctr_exitcode is not None:  # exited
                     if ctr_exitcode:  # on error
                         logger.error(
-                            f"mosec controller halted on error: {ctr_exitcode}"
+                            "mosec controller halted on error: %d", ctr_exitcode
                         )
                     else:
                         logger.info("mosec controller halted normally")
