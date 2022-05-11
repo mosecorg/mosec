@@ -82,7 +82,7 @@ class Worker(abc.ABC):
         try:
             data_bytes = json.dumps(data, indent=2).encode()
         except Exception as err:
-            raise ValueError(err)
+            raise ValueError from err
         return data_bytes
 
     def deserialize(self, data: bytes) -> Any:
@@ -100,7 +100,7 @@ class Worker(abc.ABC):
         try:
             data_json = json.loads(data) if data else {}
         except Exception as err:
-            raise DecodingError(err)
+            raise DecodingError from err
         return data_json
 
     @abc.abstractmethod
