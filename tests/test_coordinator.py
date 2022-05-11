@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing as mp
 import os
 import random
@@ -17,11 +18,14 @@ from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coo
 from mosec.protocol import Protocol, _recv_all
 from mosec.worker import Worker
 
-from .mock_logger import MockLogger
 from .utils import imitate_controller_send
 
 socket_prefix = join(tempfile.gettempdir(), "test-mosec")
 stage = STAGE_INGRESS + STAGE_EGRESS
+
+
+logger = logging.getLogger()
+logger.addHandler(logging.StreamHandler())
 
 
 def clean_dir():
@@ -85,17 +89,16 @@ def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
     )
 
 
-def test_socket_file_not_found(mocker, base_test_config):
-    mocker.patch("mosec.coordinator.logger", MockLogger())
+def test_socket_file_not_found(mocker, base_test_config, caplog):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
-    mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.1)
+    mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
 
     c_ctx = base_test_config.pop("c_ctx")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
-        with pytest.raises(RuntimeError, match=r".*cannot find.*"):
+        with caplog.at_level(logging.ERROR):
             _ = Coordinator(
                 EchoWorkerJSON,
                 stage=stage,
@@ -105,12 +108,13 @@ def test_socket_file_not_found(mocker, base_test_config):
                 ipc_wrapper=None,
                 **base_test_config,
             )
+            record = caplog.records[0]
+            assert "cannot find the socket file" in record.message
 
 
-def test_incorrect_socket_file(mocker, base_test_config):
-    mocker.patch("mosec.coordinator.logger", MockLogger())
+def test_incorrect_socket_file(mocker, base_test_config, caplog):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
-    mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.1)
+    mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
 
     sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
     c_ctx = base_test_config.pop("c_ctx")
@@ -122,7 +126,7 @@ def test_incorrect_socket_file(mocker, base_test_config):
         # create non-socket file
         open(sock_addr, "w").close()
 
-        with pytest.raises(RuntimeError, match=r".*connection error*"):
+        with caplog.at_level(logging.ERROR):
             _ = Coordinator(
                 EchoWorkerJSON,
                 stage=stage,
@@ -132,6 +136,8 @@ def test_incorrect_socket_file(mocker, base_test_config):
                 ipc_wrapper=None,
                 **base_test_config,
             )
+            record = caplog.records[0]
+            assert "connection error" in record.message
 
     with CleanDirContext():
         os.makedirs(socket_prefix, exist_ok=False)
@@ -139,7 +145,8 @@ def test_incorrect_socket_file(mocker, base_test_config):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sock_addr)
 
-        with pytest.raises(RuntimeError, match=r".*Connection refused.*"):
+        with caplog.at_level(logging.ERROR):
+            # with pytest.raises(RuntimeError, match=r".*Connection refused.*"):
             _ = Coordinator(
                 EchoWorkerJSON,
                 stage=stage,
@@ -149,6 +156,8 @@ def test_incorrect_socket_file(mocker, base_test_config):
                 ipc_wrapper=None,
                 **base_test_config,
             )
+            record = caplog.records[0]
+            assert "socket connection error" in record.message
 
 
 @pytest.mark.parametrize(
@@ -182,7 +191,6 @@ def test_echo_batch(mocker, base_test_config, test_data, worker, deserializer):
     """To test the batched data echo functionality. The batch size is automatically
     determined by the data's size.
     """
-    mocker.patch("mosec.coordinator.logger", MockLogger())
     c_ctx = base_test_config.pop("c_ctx")
     # whatever value greater than 1, so that coordinator
     # knows this stage enables batching
