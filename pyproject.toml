@@ -20,6 +20,17 @@ changelog = "https://github.com/mosecorg/mosec/releases"
 [tool.isort]
 profile = "black"
 
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.pylint.reports]
+output-format = "colorized"
+reports = "no"
+score = "yes"
+
+[tool.pylint.messages_control]
+disable = []
+
 [tool.pytest.ini_options]
 markers = [
     "arrow: mark a test requires 'pyarrow'",

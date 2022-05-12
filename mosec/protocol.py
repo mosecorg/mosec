@@ -112,10 +112,10 @@ class Protocol:
 
 def _recv_all(conn, length):
     buffer = bytearray(length)
-    mv = memoryview(buffer)
+    view = memoryview(buffer)
     size = 0
     while size < length:
-        packet = conn.recv_into(mv)
-        mv = mv[packet:]
+        packet = conn.recv_into(view)
+        view = view[packet:]
         size += packet
     return buffer

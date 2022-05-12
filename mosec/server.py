@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Type, Union
 
 import pkg_resources
 
-from .args import ArgParser
+from .args import parse_arguments
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from .ipc import IPCWrapper
 from .worker import Worker
@@ -152,7 +152,7 @@ class Server:
 
     def _start_controller(self):
         """Subprocess to start controller program"""
-        self._configs = vars(ArgParser.parse())
+        self._configs = vars(parse_arguments())
         if not self._server_shutdown:
             path = self._configs["path"]
             if exists(path):

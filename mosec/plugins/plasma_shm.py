@@ -1,3 +1,4 @@
+import warnings
 from typing import List
 
 try:
@@ -7,6 +8,9 @@ except ImportError:
     We do not enforce the installation of third party libaries for
     plugins, because users may not enable them.
     """
+    warnings.warn(
+        "pyarrow is not installed. PlasmaShmWrapper is not available.", ImportWarning
+    )
 
 from ..ipc import IPCWrapper
 
