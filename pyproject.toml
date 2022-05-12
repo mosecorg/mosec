@@ -1,0 +1,26 @@
+# https://peps.python.org/pep-0621/
+[project]
+name = "mosec"
+description = "Model Serving made Efficient in the Cloud"
+readme = "README.md"
+authors = [
+    {name = "Keming", email = "kemingy94@gmail.com"},
+    {name = "Zichen", email = "lkevinzc@gmail.com"}
+]
+license = {file = "LICENSE"}
+keywords = ["machine learning", "deep learning", "model serving"]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://mosecorg.github.io/"
+documentation = "https://mosecorg.github.io/mosec/"
+repository = "https://github.com/mosecorg/mosec"
+changelog = "https://github.com/mosecorg/mosec/releases"
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+markers = [
+    "arrow: mark a test requires 'pyarrow'",
+]
