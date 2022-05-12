@@ -1,18 +1,16 @@
 import warnings
 from typing import List
 
+from ..ipc import IPCWrapper
+
+# We do not enforce the installation of third party libaries for
+# plugins, because users may not enable them.
 try:
     from pyarrow import plasma  # type: ignore
 except ImportError:
-    """
-    We do not enforce the installation of third party libaries for
-    plugins, because users may not enable them.
-    """
     warnings.warn(
         "pyarrow is not installed. PlasmaShmWrapper is not available.", ImportWarning
     )
-
-from ..ipc import IPCWrapper
 
 
 class PlasmaShmWrapper(IPCWrapper):
