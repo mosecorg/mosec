@@ -63,4 +63,7 @@ lint:
 semantic_lint:
 	cargo clippy -- -D warnings
 
+add_license:
+	addlicense -c "MOSEC Authors" **/*.py **/*.rs **/**/*.py
+
 .PHONY: test doc
