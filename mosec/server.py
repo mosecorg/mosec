@@ -117,8 +117,8 @@ class Server:
                 return
 
             def validate_str_dict(dictionary: Dict):
-                for k, v in dictionary.items():
-                    if not (isinstance(k, str) and isinstance(v, str)):
+                for key, value in dictionary.items():
+                    if not (isinstance(key, str) and isinstance(value, str)):
                         return False
                 return True
 
@@ -157,8 +157,8 @@ class Server:
 
     def _controller_args(self):
         args = []
-        for k, v in self._configs.items():
-            args.extend([f"--{k}", str(v)])
+        for key, value in self._configs.items():
+            args.extend([f"--{key}", str(value)])
         for batch_size in self._worker_mbs:
             args.extend(["--batches", str(batch_size)])
         logger.info("Mosec Server Configurations: %s", args)
@@ -186,8 +186,8 @@ class Server:
     def _clean_pools(
         processes: List[Union[mp.Process, None]],
     ) -> List[Union[mp.Process, None]]:
-        for i, p in enumerate(processes):
-            if p is None or p.exitcode is not None:
+        for i, process in enumerate(processes):
+            if process is None or process.exitcode is not None:
                 processes[i] = None
         return processes
 
@@ -337,13 +337,14 @@ class Server:
 
 @contextlib.contextmanager
 def env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
+    """manage the environment variables for a worker process"""
     default: Dict = {}
     try:
         if env is not None:
-            for k, v in env[id].items():
-                default[k] = os.getenv(k, "")
-                os.environ[k] = v
+            for key, value in env[id].items():
+                default[key] = os.getenv(key, "")
+                os.environ[key] = value
         yield None
     finally:
-        for k, v in default.items():
-            os.environ[k] = v
+        for key, value in default.items():
+            os.environ[key] = value

@@ -105,9 +105,6 @@ class Coordinator:
         self.init_protocol()
         self.run()
 
-    def exit(self):
-        logger.info("%s exiting...", self.name)
-
     def init_protocol(self):
         """Check socket readiness"""
         retry_count = 0
@@ -128,7 +125,7 @@ class Coordinator:
         logger.error(
             "%s cannot find the socket file: %s", self.name, self.protocol.addr
         )
-        self.exit()
+        logger.info("%s exiting...", self.name)
 
     def init_worker(self):
         """Optional warmup to allocate resources (useful for GPU workload)"""
@@ -159,11 +156,19 @@ class Coordinator:
             self.coordinate()
 
     def get_decoder(self) -> Callable[[bytes], Any]:
+        """get the decoder function for this stage
+
+        the first stage will use the worker's deserialize function
+        """
         if STAGE_INGRESS in self.worker._stage:
             return self.worker.deserialize
         return self.worker._deserialize_ipc
 
     def get_encoder(self) -> Callable[[Any], bytes]:
+        """get the encoder function for this stage
+
+        the last stage will use the worker's serialize function
+        """
         if STAGE_EGRESS in self.worker._stage:
             return self.worker.serialize
         return self.worker._serialize_ipc
@@ -171,6 +176,10 @@ class Coordinator:
     def get_protocol_recv(
         self,
     ) -> Callable[[], Tuple[bytes, List[bytes], List[bytearray]]]:
+        """get the protocol receive function for this stage
+
+        IPC wrapper will be used if it's provided and the stage is not the first one
+        """
         if STAGE_INGRESS in self.worker._stage or self.ipc_wrapper is None:
             return self.protocol.receive
 
@@ -182,6 +191,10 @@ class Coordinator:
         return wrapped_recv
 
     def get_protocol_send(self) -> Callable[[int, List[bytes], List[bytes]], None]:
+        """get the protocol send function for this stage
+
+        IPC wrapper will be used if it's provided and the stage is not the last one
+        """
         if STAGE_EGRESS in self.worker._stage or self.ipc_wrapper is None:
             return self.protocol.send
 

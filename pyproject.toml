@@ -29,7 +29,9 @@ reports = "no"
 score = "yes"
 
 [tool.pylint.messages_control]
-disable = []
+disable = [
+    "missing-module-docstring",
+]
 
 [tool.pytest.ini_options]
 markers = [

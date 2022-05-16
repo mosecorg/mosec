@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""MOSEC is a machine learning model serving framework."""
+
 import logging
 
 from ._version import __version__  # noqa
