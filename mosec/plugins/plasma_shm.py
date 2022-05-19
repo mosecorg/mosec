@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Provide another data transfer way between workers.
+
+The data will be stored in plasma shared memory, while the object ID will be
+send via the original way.
+
+    use case: large image tensors
+    benefits: more stable P99 latency
+"""
+
 import warnings
 from typing import List
 

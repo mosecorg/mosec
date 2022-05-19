@@ -37,7 +37,7 @@ doc:
 
 clean:
 	cargo clean
-	rm -rf build/ dist/ site/ *.egg-info .pytest_cache
+	rm -rf build/ dist/ site/ *.egg-info .pytest_cache .mypy_cache
 	find . -name '*.pyc' -type f -exec rm -rf {} +
 	find . -name '__pycache__' -exec rm -rf {} +
 
@@ -56,7 +56,7 @@ format:
 lint:
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
-	flake8 ${PY_SOURCE_FILES} --count --show-source --statistics
+	pylint -j 8 --recursive=y mosec
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
 

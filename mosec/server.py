@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+MOSEC server interface.
+
+This module provides a way to define the service components for machine learning
+model serving.
+"""
+
 import contextlib
 import logging
 import multiprocessing as mp
@@ -60,6 +67,7 @@ class Server:
     e.g. pyarrow plasma, by providing the IPC wrapper for the server.
     """
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         ipc_wrapper: Optional[Union[IPCWrapper, partial]] = None,
@@ -173,6 +181,7 @@ class Server:
                 logger.info("path already exists, try to remove it: %s", path)
                 rmtree(path)
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
+            # pylint: disable=consider-using-with
             self._controller_process = subprocess.Popen(
                 [path] + self._controller_args()
             )
@@ -330,18 +339,19 @@ class Server:
         self._start_controller()
         try:
             self._manage_coordinators()
+        # pylint: disable=broad-except
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
 
 
 @contextlib.contextmanager
-def env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
+def env_var_context(env: Union[None, List[Dict[str, str]]], index: int):
     """manage the environment variables for a worker process"""
     default: Dict = {}
     try:
         if env is not None:
-            for key, value in env[id].items():
+            for key, value in env[index].items():
                 default[key] = os.getenv(key, "")
                 os.environ[key] = value
         yield None

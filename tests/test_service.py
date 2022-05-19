@@ -19,7 +19,7 @@ import subprocess
 import time
 from threading import Thread
 
-import httpx  # type: ignore
+import httpx
 import pytest
 
 import mosec

@@ -27,10 +27,11 @@ max-line-length = 88
 output-format = "colorized"
 reports = "no"
 score = "yes"
+max-args = 7
 
 [tool.pylint.messages_control]
 disable = [
-    "missing-module-docstring",
+    "missing-module-docstring", # __version__ file
 ]
 
 [tool.pytest.ini_options]

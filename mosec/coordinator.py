@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+The Coordinator is used to control the data flow between the Worker and the Server.
+"""
+
 import logging
 import os
 import signal
@@ -46,6 +50,7 @@ class Coordinator:
     to receive tasks via `Protocol` and process them via `Worker`.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         worker: Type[Worker],
@@ -72,10 +77,10 @@ class Coordinator:
                 stage.
             ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
         """
-        worker._id = worker_id
+        worker._worker_id = worker_id
         self.worker = worker()
-        self.worker._set_mbs(max_batch_size)
-        self.worker._set_stage(stage)
+        self.worker.max_batch_size = max_batch_size
+        self.worker.stage = stage
 
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 
@@ -134,6 +139,7 @@ class Coordinator:
                 try:
                     self.worker.forward(self.worker.example)
                     logger.info("%s warmup successfully", self.name)
+                # pylint: disable=broad-except
                 except Exception as err:
                     logger.error(
                         "%s warmup failed: %s\nplease ensure"
@@ -160,18 +166,18 @@ class Coordinator:
 
         the first stage will use the worker's deserialize function
         """
-        if STAGE_INGRESS in self.worker._stage:
+        if STAGE_INGRESS in self.worker.stage:
             return self.worker.deserialize
-        return self.worker._deserialize_ipc
+        return self.worker.deserialize_ipc
 
     def get_encoder(self) -> Callable[[Any], bytes]:
         """get the encoder function for this stage
 
         the last stage will use the worker's serialize function
         """
-        if STAGE_EGRESS in self.worker._stage:
+        if STAGE_EGRESS in self.worker.stage:
             return self.worker.serialize
-        return self.worker._serialize_ipc
+        return self.worker.serialize_ipc
 
     def get_protocol_recv(
         self,
@@ -180,7 +186,7 @@ class Coordinator:
 
         IPC wrapper will be used if it's provided and the stage is not the first one
         """
-        if STAGE_INGRESS in self.worker._stage or self.ipc_wrapper is None:
+        if STAGE_INGRESS in self.worker.stage or self.ipc_wrapper is None:
             return self.protocol.receive
 
         def wrapped_recv():
@@ -195,7 +201,7 @@ class Coordinator:
 
         IPC wrapper will be used if it's provided and the stage is not the last one
         """
-        if STAGE_EGRESS in self.worker._stage or self.ipc_wrapper is None:
+        if STAGE_EGRESS in self.worker.stage or self.ipc_wrapper is None:
             return self.protocol.send
 
         def wrapped_send(flag: int, ids: List[bytes], payloads: List[bytes]):
@@ -221,11 +227,12 @@ class Coordinator:
                     logger.error("%s socket receive error: %s", self.name, err)
                 break
 
+            # pylint: disable=broad-except
             try:
                 data = [decoder(item) for item in payloads]
                 data = (
                     self.worker.forward(data)
-                    if self.worker._max_batch_size > 1
+                    if self.worker.max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
                 status = self.protocol.FLAG_OK

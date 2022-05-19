@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+MOSEC worker interface.
+
+This module provides the interface to define a worker with such behaviors:
+
+    1. initialize
+    2. serialize/deserialize data from and to another worker
+    3. serialize/deserialize data from and to the client side
+    4. data processing
+"""
+
 import abc
 import json
 import logging
@@ -51,35 +62,49 @@ class Worker(abc.ABC):
     will follow the "_same type_" constraint.
     """
 
+    # pylint: disable=no-self-use
+
     example: Any = None
-    _id: int = 0
+    _worker_id: int = 0
 
     def __init__(self):
-        self._stage = None
-        self._max_batch_size = 1
+        self._stage: str = ""
+        self._max_batch_size: int = 1
 
-    def _serialize_ipc(self, data):
+    def serialize_ipc(self, data) -> bytes:
         """Define IPC serialize method"""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def _deserialize_ipc(self, data):
+    def deserialize_ipc(self, data) -> Any:
         """Define IPC deserialize method"""
         return pickle.loads(data)
 
-    def _set_stage(self, stage):
+    @property
+    def stage(self) -> str:
+        """Return the stage name"""
+        return self._stage
+
+    @stage.setter
+    def stage(self, stage):
         self._stage = stage
 
-    def _set_mbs(self, mbs):
-        self._max_batch_size = mbs
+    @property
+    def max_batch_size(self) -> int:
+        """Return the maximum batch size"""
+        return self._max_batch_size
+
+    @max_batch_size.setter
+    def max_batch_size(self, max_batch_size):
+        self._max_batch_size = max_batch_size
 
     @property
-    def id(self) -> int:
+    def worker_id(self) -> int:
         """
         This property returns the worker id in the range of [1, ... ,`num`]
         (`num` as defined [here][mosec.server.Server--multiprocess])
         to differentiate workers in the same stage.
         """
-        return self._id
+        return self._worker_id
 
     def serialize(self, data: Any) -> bytes:
         """

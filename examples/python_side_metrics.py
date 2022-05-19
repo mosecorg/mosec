@@ -39,7 +39,7 @@ if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
     pathlib.Path(metric_dir_path).mkdir(parents=True, exist_ok=True)
     os.environ["PROMETHEUS_MULTIPROC_DIR"] = metric_dir_path
 
-from prometheus_client import (  # type: ignore  # noqa: E402
+from prometheus_client import (  # type: ignore
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,

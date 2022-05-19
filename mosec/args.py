@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Arguments parsing for two parts:
+
+    * prepared for the Rust service part
+    * consumed by the Python worker part
+"""
+
 import argparse
 import os
 import tempfile

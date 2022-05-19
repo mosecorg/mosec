@@ -16,7 +16,7 @@
 
 import logging
 
-from ._version import __version__  # noqa
+from ._version import __version__
 from .server import Server
 from .worker import Worker
 

@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Wrapper layer for IPC between workers.
+
+This will be called before sending data or after receiving data through the Protocol.
+"""
+
 import abc
 from typing import List
 

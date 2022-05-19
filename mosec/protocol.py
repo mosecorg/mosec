@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Server-Worker communication protocol."""
+
 import logging
 import socket
 import struct
@@ -23,9 +25,8 @@ logger = logging.getLogger(__name__)
 
 class Protocol:
     """
-    This private class implements the client-side
-    protocol based on uds to communicate with the
-    server hosted on mosec controller side.
+    This private class implements the client-side protocol through Unix domain socket
+    to communicate with the server.
     """
 
     # byte formats (https://docs.python.org/3/library/struct.html#format-characters)
@@ -56,7 +57,7 @@ class Protocol:
 
         Args:
             name (str): name of its belonging coordinator.
-            addr (str): unix domain socket address in file system's namespace.
+            addr (str): Unix domain socket address in file system's namespace.
             timeout (float, optional): socket timeout. Defaults to 2.0 seconds.
         """
         self.socket = socket.socket(
