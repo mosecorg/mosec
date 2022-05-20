@@ -17,8 +17,8 @@
 This module provides the interface to define a worker with such behaviors:
 
     1. initialize
-    2. serialize/deserialize data from and to another worker
-    3. serialize/deserialize data from and to the client side
+    2. serialize/deserialize data to/from another worker
+    3. serialize/deserialize data to/from the client side
     4. data processing
 """
 
