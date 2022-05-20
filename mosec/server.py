@@ -71,7 +71,7 @@ class Server:
         self,
         ipc_wrapper: Optional[Union[IPCWrapper, partial]] = None,
     ):
-        """Initialize a MOSEC Server
+        """Initialize a MOSEC Server.
 
         Args:
             ipc_wrapper (Optional[Union[IPCWrapper, partial]], optional):
@@ -172,7 +172,7 @@ class Server:
         return args
 
     def _start_controller(self):
-        """Subprocess to start controller program"""
+        """Subprocess to start controller program."""
         self._configs = vars(parse_arguments())
         if not self._server_shutdown:
             path = self._configs["path"]
@@ -265,7 +265,7 @@ class Server:
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
-        """Graceful shutdown"""
+        """Graceful shutdown."""
         # notify coordinators for the shutdown
         self._coordinator_shutdown_notify.set()
 
@@ -291,7 +291,7 @@ class Server:
         logger.info("mosec server exited. see you.")
 
     def register_daemon(self, name: str, proc: mp.Process):
-        """This method registers a daemon to be monitored.
+        """Register a daemon to be monitored.
 
         Args:
             name (str): the name of this daemon
@@ -311,7 +311,7 @@ class Server:
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
     ):
-        """This method sequentially appends workers to the workflow pipeline.
+        """Sequentially appends workers to the workflow pipeline.
 
         Arguments:
             worker: the class you inherit from `Worker` which implements
@@ -330,7 +330,7 @@ class Server:
         self._coordinator_pools.append([None] * num)
 
     def run(self):
-        """This method starts the mosec model server!"""
+        """Start the mosec model server."""
         self._validate_server()
         self._start_controller()
         try:
@@ -343,7 +343,7 @@ class Server:
 
 @contextlib.contextmanager
 def env_var_context(env: Union[None, List[Dict[str, str]]], index: int):
-    """manage the environment variables for a worker process"""
+    """Manage the environment variables for a worker process."""
     default: Dict = {}
     try:
         if env is not None:

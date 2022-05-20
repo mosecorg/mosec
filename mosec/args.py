@@ -26,7 +26,7 @@ import tempfile
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Parsing user configurations"""
+    """Parse user configurations."""
     parser = argparse.ArgumentParser(
         description="Mosec Server Configurations",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

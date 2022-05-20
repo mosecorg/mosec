@@ -57,6 +57,7 @@ lint:
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
 	pylint -j 8 --recursive=y mosec
+	pydocstyle mosec
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
 

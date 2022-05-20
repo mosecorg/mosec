@@ -62,7 +62,7 @@ class Coordinator:
         worker_id: int,
         ipc_wrapper: Type[IPCWrapper],
     ):
-        """Initialize the mosec coordinator
+        """Initialize the mosec coordinator.
 
         Args:
             worker (Worker): subclass of `mosec.Worker` implemented by users.
@@ -110,7 +110,7 @@ class Coordinator:
         self.run()
 
     def init_protocol(self):
-        """Check socket readiness"""
+        """Check socket readiness."""
         retry_count = 0
         while retry_count < CONN_MAX_RETRY and not self.shutdown.is_set():
             if os.path.exists(self.protocol.addr):
@@ -132,7 +132,7 @@ class Coordinator:
         logger.info("%s exiting...", self.name)
 
     def init_worker(self):
-        """Optional warmup to allocate resources (useful for GPU workload)"""
+        """Warmup to allocate resources (useful for GPU workload)[Optional]."""
         if not self.shutdown.is_set():
             if self.worker.example is not None:
                 try:
@@ -148,7 +148,7 @@ class Coordinator:
                     )
 
     def run(self):
-        """Maintain the protocol connection and run the coordination"""
+        """Maintain the protocol connection and run the coordination."""
         while not self.shutdown.is_set():
             # reconnect if needed
             try:
@@ -211,7 +211,7 @@ class Coordinator:
         return wrapped_send
 
     def coordinate(self):
-        """Start coordinating the protocol's communication and worker's forward pass"""
+        """Start coordinating the protocol's communication and worker's forward pass."""
         decoder = self.get_decoder()
         encoder = self.get_encoder()
         protocol_recv = self.get_protocol_recv()

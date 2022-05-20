@@ -67,20 +67,21 @@ class Worker(abc.ABC):
     _worker_id: int = 0
 
     def __init__(self):
+        """Initialize the worker."""
         self._stage: str = ""
         self._max_batch_size: int = 1
 
     def serialize_ipc(self, data) -> bytes:
-        """Define IPC serialize method"""
+        """Define IPC serialize method."""
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
     def deserialize_ipc(self, data) -> Any:
-        """Define IPC deserialize method"""
+        """Define IPC deserialize method."""
         return pickle.loads(data)
 
     @property
     def stage(self) -> str:
-        """Return the stage name"""
+        """Return the stage name."""
         return self._stage
 
     @stage.setter
@@ -89,7 +90,7 @@ class Worker(abc.ABC):
 
     @property
     def max_batch_size(self) -> int:
-        """Return the maximum batch size"""
+        """Return the maximum batch size."""
         return self._max_batch_size
 
     @max_batch_size.setter
@@ -98,7 +99,7 @@ class Worker(abc.ABC):
 
     @property
     def worker_id(self) -> int:
-        """Returns the id of this worker instance.
+        """Return the id of this worker instance.
 
         This property returns the worker id in the range of [1, ... ,`num`]
         (`num` as defined [here][mosec.server.Server--multiprocess])
@@ -107,7 +108,7 @@ class Worker(abc.ABC):
         return self._worker_id
 
     def serialize(self, data: Any) -> bytes:
-        """Serialization method for the last stage (egress).
+        """Serialize method for the last stage (egress).
 
         No need to override this method by default, but overridable.
 
@@ -128,7 +129,7 @@ class Worker(abc.ABC):
         return data_bytes
 
     def deserialize(self, data: bytes) -> Any:
-        """Deserialization method for the first stage (ingress).
+        """Deserialize method for the first stage (ingress).
 
         No need to override this method by default, but overridable.
 

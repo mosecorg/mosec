@@ -38,6 +38,9 @@ disable = [
     "missing-module-docstring", # __version__ file
 ]
 
+[pydocstyle]
+convention = "google"
+
 [tool.pytest.ini_options]
 markers = [
     "arrow: mark a test requires 'pyarrow'",

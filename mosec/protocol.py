@@ -54,7 +54,7 @@ class Protocol:
         addr: str,
         timeout: float = 2.0,
     ):
-        """Initialize the protocol client
+        """Initialize the protocol client.
 
         Args:
             name (str): name of its belonging coordinator.
@@ -70,7 +70,7 @@ class Protocol:
         self.addr = addr
 
     def receive(self) -> Tuple[bytes, List[bytes], List[bytearray]]:
-        """Receive tasks from the server"""
+        """Receive tasks from the server."""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
         batch_size = struct.unpack(self.FORMAT_BATCH, batch_size_bytes)[0]
@@ -95,7 +95,7 @@ class Protocol:
         return flag, ids, payloads
 
     def send(self, flag: int, ids: List[bytes], payloads: List[bytes]):
-        """Send results to the server"""
+        """Send results to the server."""
         data = bytearray()
         data.extend(struct.pack(self.FORMAT_FLAG, flag))
         batch_size = len(ids)
@@ -116,12 +116,12 @@ class Protocol:
             )
 
     def open(self):
-        """Open the socket connection"""
+        """Open the socket connection."""
         self.socket.connect(self.addr)
         logger.info("%s socket connected to %s", self.name, self.addr)
 
     def close(self):
-        """Close the socket connection"""
+        """Close the socket connection."""
         self.socket.close()
         logger.info("%s socket closed", self.name)
 
