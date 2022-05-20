@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Provide another data transfer way between workers.
+"""Provide another data transfer way between workers.
 
 The data will be stored in plasma shared memory, while the object ID will be
-send via the original way.
+sent via the original way.
 
     use case: large image tensors
     benefits: more stable P99 latency
@@ -38,7 +37,8 @@ except ImportError:
 
 
 class PlasmaShmWrapper(IPCWrapper):
-    """
+    """Shared memory wrapper using `pyarrow` Plasma.
+
     This public class is an example implementation of the `IPCWrapper`.
     It utilizes `pyarrow.plasma` as the in-memory object store for
     potentially more efficient data transfer.

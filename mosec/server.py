@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-MOSEC server interface.
+"""MOSEC server interface.
 
 This module provides a way to define the service components for machine learning
 model serving.
@@ -49,9 +48,9 @@ NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 
 class Server:
-    """
-    This public class defines the mosec server interface. It allows
-    users to sequentially append workers they implemented, builds
+    """MOSEC server interface.
+
+    It allows users to sequentially append workers they implemented, builds
     the workflow pipeline automatically and starts up the server.
 
     ###### Batching
@@ -312,8 +311,7 @@ class Server:
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
     ):
-        """
-        This method sequentially appends workers to the workflow pipeline.
+        """This method sequentially appends workers to the workflow pipeline.
 
         Arguments:
             worker: the class you inherit from `Worker` which implements
@@ -332,9 +330,7 @@ class Server:
         self._coordinator_pools.append([None] * num)
 
     def run(self):
-        """
-        This method starts the mosec model server!
-        """
+        """This method starts the mosec model server!"""
         self._validate_server()
         self._start_controller()
         try:

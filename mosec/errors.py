@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
+"""Exceptions used in the Worker.
+
 Suppose the input dataflow of our model server is as follows:
 
 **bytes** --- *deserialize*<sup>(decoding)</sup> ---> **data**
@@ -25,7 +26,8 @@ implemented by users), the `ValidationError` should be raised.
 
 
 class DecodingError(Exception):
-    """
+    """De-serialization error.
+
     The `DecodingError` should be raised in user-implemented codes
     when the de-serialization for the request bytes fails. This error
     will set the status code to
@@ -35,7 +37,8 @@ class DecodingError(Exception):
 
 
 class ValidationError(Exception):
-    """
+    """Request data validation error.
+
     The `ValidationError` should be raised in user-implemented codes,
     where the validation for the input data fails. Usually, it should be
     put after the data de-serialization, which converts the raw bytes

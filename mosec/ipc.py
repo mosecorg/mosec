@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Wrapper layer for IPC between workers.
+"""Wrapper layer for IPC between workers.
 
 This will be called before sending data or after receiving data through the Protocol.
 """
@@ -23,9 +22,9 @@ from typing import List
 
 
 class IPCWrapper(abc.ABC):
-    """
-    This public class defines the mosec IPC wrapper plugin interface.
-    The wrapper has to at least implement `put` and `get` method.
+    """This public class defines the mosec IPC wrapper plugin interface.
+
+    The wrapper has to implement at least `put` and `get` method.
     """
 
     @abc.abstractmethod

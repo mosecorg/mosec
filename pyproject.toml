@@ -20,6 +20,10 @@ changelog = "https://github.com/mosecorg/mosec/releases"
 [tool.isort]
 profile = "black"
 
+[tool.pylint.master]
+load-plugins = "pylint.extensions.docparams,pylint.extensions.docstyle"
+default-docstring-type = "google"
+
 [tool.pylint.format]
 max-line-length = 88
 

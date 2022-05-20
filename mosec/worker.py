@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-MOSEC worker interface.
+"""MOSEC worker interface.
 
 This module provides the interface to define a worker with such behaviors:
 
@@ -35,11 +34,11 @@ logger = logging.getLogger(__name__)
 
 
 class Worker(abc.ABC):
-    """
-    This public class defines the mosec worker interface. It provides
-    default IPC (de)serialization methods, stores the worker meta data
-    including its stage and maximum batch size, and leaves the `forward`
-    method to be implemented by the users.
+    """MOSEC worker interface.
+
+    It provides default IPC (de)serialization methods, stores the worker meta data
+    including its stage and maximum batch size, and leaves the `forward` method to
+    be implemented by the users.
 
     By default, we use [JSON](https://www.json.org/) encoding. But users
     are free to customize via simply overridding the `deserialize` method
@@ -99,7 +98,8 @@ class Worker(abc.ABC):
 
     @property
     def worker_id(self) -> int:
-        """
+        """Returns the id of this worker instance.
+
         This property returns the worker id in the range of [1, ... ,`num`]
         (`num` as defined [here][mosec.server.Server--multiprocess])
         to differentiate workers in the same stage.
@@ -107,8 +107,8 @@ class Worker(abc.ABC):
         return self._worker_id
 
     def serialize(self, data: Any) -> bytes:
-        """
-        This method defines serialization of the last stage (egress).
+        """Serialization method for the last stage (egress).
+
         No need to override this method by default, but overridable.
 
         Arguments:
@@ -117,6 +117,9 @@ class Worker(abc.ABC):
 
         Returns:
             the bytes you want to put into the response body
+
+        Raises:
+            ValueError: if the data cannot be serialized with JSON
         """
         try:
             data_bytes = json.dumps(data, indent=2).encode()
@@ -125,8 +128,8 @@ class Worker(abc.ABC):
         return data_bytes
 
     def deserialize(self, data: bytes) -> Any:
-        """
-        This method defines the deserialization of the first stage (ingress).
+        """Deserialization method for the first stage (ingress).
+
         No need to override this method by default, but overridable.
 
         Arguments:
@@ -135,6 +138,9 @@ class Worker(abc.ABC):
         Returns:
             the [_*same type_][mosec.worker.Worker--note] as the argument of
             the `forward` you implement
+
+        Raises:
+            DecodingError: if the data cannot be deserialized with JSON
         """
         try:
             data_json = json.loads(data) if data else {}
@@ -144,9 +150,9 @@ class Worker(abc.ABC):
 
     @abc.abstractmethod
     def forward(self, data: Any) -> Any:
-        """
-        This method defines the worker's main logic, be it data processing,
-        computation or model inference. __Must be overridden__ by the subclass.
+        """Model inference, data processing or computation logic.
+
+        __Must be overridden__ by the subclass.
         The implementation should make sure:
 
         - (for a single-stage worker)

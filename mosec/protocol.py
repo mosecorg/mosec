@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 class Protocol:
-    """
+    """IPC protocol.
+
     This private class implements the client-side protocol through Unix domain socket
     to communicate with the server.
     """

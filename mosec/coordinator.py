@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-The Coordinator is used to control the data flow between the Worker and the Server.
-"""
+"""The Coordinator is used to control the data flow between `Worker` and `Server`."""
 
 import logging
 import os
@@ -45,7 +43,8 @@ PROTOCOL_TIMEOUT = 2.0
 
 
 class Coordinator:
-    """
+    """Coordinator controls the data flow.
+
     This private class defines a set of coordination behaviors
     to receive tasks via `Protocol` and process them via `Worker`.
     """
@@ -162,18 +161,18 @@ class Coordinator:
             self.coordinate()
 
     def get_decoder(self) -> Callable[[bytes], Any]:
-        """get the decoder function for this stage
+        """Get the decoder function for this stage.
 
-        the first stage will use the worker's deserialize function
+        The first stage will use the worker's deserialize function.
         """
         if STAGE_INGRESS in self.worker.stage:
             return self.worker.deserialize
         return self.worker.deserialize_ipc
 
     def get_encoder(self) -> Callable[[Any], bytes]:
-        """get the encoder function for this stage
+        """Get the encoder function for this stage.
 
-        the last stage will use the worker's serialize function
+        The last stage will use the worker's serialize function.
         """
         if STAGE_EGRESS in self.worker.stage:
             return self.worker.serialize
@@ -182,9 +181,9 @@ class Coordinator:
     def get_protocol_recv(
         self,
     ) -> Callable[[], Tuple[bytes, List[bytes], List[bytearray]]]:
-        """get the protocol receive function for this stage
+        """Get the protocol receive function for this stage.
 
-        IPC wrapper will be used if it's provided and the stage is not the first one
+        IPC wrapper will be used if it's provided and the stage is not the first one.
         """
         if STAGE_INGRESS in self.worker.stage or self.ipc_wrapper is None:
             return self.protocol.receive
@@ -197,9 +196,9 @@ class Coordinator:
         return wrapped_recv
 
     def get_protocol_send(self) -> Callable[[int, List[bytes], List[bytes]], None]:
-        """get the protocol send function for this stage
+        """Get the protocol send function for this stage.
 
-        IPC wrapper will be used if it's provided and the stage is not the last one
+        IPC wrapper will be used if it's provided and the stage is not the last one.
         """
         if STAGE_EGRESS in self.worker.stage or self.ipc_wrapper is None:
             return self.protocol.send
