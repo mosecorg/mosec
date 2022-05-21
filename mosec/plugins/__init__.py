@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Provide useful tools to extend MOSEC."""
+
 from .plasma_shm import PlasmaShmWrapper
 
 __all__ = ["PlasmaShmWrapper"]

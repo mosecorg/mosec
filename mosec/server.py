@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""MOSEC server interface.
+
+This module provides a way to define the service components for machine learning
+model serving.
+"""
+
 import contextlib
 import logging
 import multiprocessing as mp
@@ -29,7 +35,7 @@ from typing import Dict, List, Optional, Type, Union
 
 import pkg_resources
 
-from .args import ArgParser
+from .args import parse_arguments
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from .ipc import IPCWrapper
 from .worker import Worker
@@ -42,9 +48,9 @@ NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 
 class Server:
-    """
-    This public class defines the mosec server interface. It allows
-    users to sequentially append workers they implemented, builds
+    """MOSEC server interface.
+
+    It allows users to sequentially append workers they implemented, builds
     the workflow pipeline automatically and starts up the server.
 
     ###### Batching
@@ -60,11 +66,12 @@ class Server:
     e.g. pyarrow plasma, by providing the IPC wrapper for the server.
     """
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         ipc_wrapper: Optional[Union[IPCWrapper, partial]] = None,
     ):
-        """Initialize a MOSEC Server
+        """Initialize a MOSEC Server.
 
         Args:
             ipc_wrapper (Optional[Union[IPCWrapper, partial]], optional):
@@ -117,8 +124,8 @@ class Server:
                 return
 
             def validate_str_dict(dictionary: Dict):
-                for k, v in dictionary.items():
-                    if not (isinstance(k, str) and isinstance(v, str)):
+                for key, value in dictionary.items():
+                    if not (isinstance(key, str) and isinstance(value, str)):
                         return False
                 return True
 
@@ -157,22 +164,23 @@ class Server:
 
     def _controller_args(self):
         args = []
-        for k, v in self._configs.items():
-            args.extend([f"--{k}", str(v)])
+        for key, value in self._configs.items():
+            args.extend([f"--{key}", str(value)])
         for batch_size in self._worker_mbs:
             args.extend(["--batches", str(batch_size)])
         logger.info("Mosec Server Configurations: %s", args)
         return args
 
     def _start_controller(self):
-        """Subprocess to start controller program"""
-        self._configs = vars(ArgParser.parse())
+        """Subprocess to start controller program."""
+        self._configs = vars(parse_arguments())
         if not self._server_shutdown:
             path = self._configs["path"]
             if exists(path):
                 logger.info("path already exists, try to remove it: %s", path)
                 rmtree(path)
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
+            # pylint: disable=consider-using-with
             self._controller_process = subprocess.Popen(
                 [path] + self._controller_args()
             )
@@ -186,8 +194,8 @@ class Server:
     def _clean_pools(
         processes: List[Union[mp.Process, None]],
     ) -> List[Union[mp.Process, None]]:
-        for i, p in enumerate(processes):
-            if p is None or p.exitcode is not None:
+        for i, process in enumerate(processes):
+            if process is None or process.exitcode is not None:
                 processes[i] = None
         return processes
 
@@ -257,7 +265,7 @@ class Server:
             sleep(GUARD_CHECK_INTERVAL)
 
     def _halt(self):
-        """Graceful shutdown"""
+        """Graceful shutdown."""
         # notify coordinators for the shutdown
         self._coordinator_shutdown_notify.set()
 
@@ -283,7 +291,7 @@ class Server:
         logger.info("mosec server exited. see you.")
 
     def register_daemon(self, name: str, proc: mp.Process):
-        """This method registers a daemon to be monitored.
+        """Register a daemon to be monitored.
 
         Args:
             name (str): the name of this daemon
@@ -303,8 +311,7 @@ class Server:
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
     ):
-        """
-        This method sequentially appends workers to the workflow pipeline.
+        """Sequentially appends workers to the workflow pipeline.
 
         Arguments:
             worker: the class you inherit from `Worker` which implements
@@ -323,27 +330,27 @@ class Server:
         self._coordinator_pools.append([None] * num)
 
     def run(self):
-        """
-        This method starts the mosec model server!
-        """
+        """Start the mosec model server."""
         self._validate_server()
         self._start_controller()
         try:
             self._manage_coordinators()
+        # pylint: disable=broad-except
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
 
 
 @contextlib.contextmanager
-def env_var_context(env: Union[None, List[Dict[str, str]]], id: int):
+def env_var_context(env: Union[None, List[Dict[str, str]]], index: int):
+    """Manage the environment variables for a worker process."""
     default: Dict = {}
     try:
         if env is not None:
-            for k, v in env[id].items():
-                default[k] = os.getenv(k, "")
-                os.environ[k] = v
+            for key, value in env[index].items():
+                default[key] = os.getenv(key, "")
+                os.environ[key] = value
         yield None
     finally:
-        for k, v in default.items():
-            os.environ[k] = v
+        for key, value in default.items():
+            os.environ[key] = value

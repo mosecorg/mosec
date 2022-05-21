@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Server-Worker communication protocol."""
+
 import logging
 import socket
 import struct
@@ -22,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 class Protocol:
-    """
-    This private class implements the client-side
-    protocol based on uds to communicate with the
-    server hosted on mosec controller side.
+    """IPC protocol.
+
+    This private class implements the client-side protocol through Unix domain socket
+    to communicate with the server.
     """
 
     # byte formats (https://docs.python.org/3/library/struct.html#format-characters)
@@ -52,11 +54,11 @@ class Protocol:
         addr: str,
         timeout: float = 2.0,
     ):
-        """Initialize the protocol client
+        """Initialize the protocol client.
 
         Args:
             name (str): name of its belonging coordinator.
-            addr (str): unix domain socket address in file system's namespace.
+            addr (str): Unix domain socket address in file system's namespace.
             timeout (float, optional): socket timeout. Defaults to 2.0 seconds.
         """
         self.socket = socket.socket(
@@ -68,7 +70,7 @@ class Protocol:
         self.addr = addr
 
     def receive(self) -> Tuple[bytes, List[bytes], List[bytearray]]:
-        """Receive tasks from the server"""
+        """Receive tasks from the server."""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
         batch_size = struct.unpack(self.FORMAT_BATCH, batch_size_bytes)[0]
@@ -93,7 +95,7 @@ class Protocol:
         return flag, ids, payloads
 
     def send(self, flag: int, ids: List[bytes], payloads: List[bytes]):
-        """Send results to the server"""
+        """Send results to the server."""
         data = bytearray()
         data.extend(struct.pack(self.FORMAT_FLAG, flag))
         batch_size = len(ids)
@@ -114,22 +116,22 @@ class Protocol:
             )
 
     def open(self):
-        """Open the socket connection"""
+        """Open the socket connection."""
         self.socket.connect(self.addr)
         logger.info("%s socket connected to %s", self.name, self.addr)
 
     def close(self):
-        """Close the socket connection"""
+        """Close the socket connection."""
         self.socket.close()
         logger.info("%s socket closed", self.name)
 
 
 def _recv_all(conn, length):
     buffer = bytearray(length)
-    mv = memoryview(buffer)
+    view = memoryview(buffer)
     size = 0
     while size < length:
-        packet = conn.recv_into(mv)
-        mv = mv[packet:]
+        packet = conn.recv_into(view)
+        view = view[packet:]
         size += packet
     return buffer
