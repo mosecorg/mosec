@@ -69,7 +69,7 @@ def metric_service(host="", port=8080):
 class Inference(Worker):
     def __init__(self):
         super().__init__()
-        self.worker_id = str(self.id)
+        self.worker_id = str(self.worker_id)
 
     def deserialize(self, data: bytes) -> int:
         json_data = super().deserialize(data)
