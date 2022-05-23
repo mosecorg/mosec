@@ -30,6 +30,7 @@ logger.addHandler(sh)
 
 class Inference(Worker):
     def __init__(self):
+        super().__init__()
         # initialize your models here and allocate dedicated device to it
         device = os.environ["CUDA_VISIBLE_DEVICES"]
         logger.info(f"Initializing model on device={device}")
