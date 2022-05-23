@@ -24,7 +24,7 @@ from mosec.plugins import PlasmaShmWrapper
 class DataProducer(Worker):
     def forward(self, data: dict) -> bytes:
         try:
-            data_bytes = b"a" * data["size"]
+            data_bytes = b"a" * int(data["size"])
         except KeyError as err:
             raise ValidationError(err)
         return data_bytes
