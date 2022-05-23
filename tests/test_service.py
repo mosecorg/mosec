@@ -109,7 +109,7 @@ def test_square_service_mp(mosec_service, http_client):
 
 def validate_square_service(http_client, url, x):
     resp = http_client.post(f"{url}/inference", json={"x": x})
-    assert resp.json()["x"] == x**2
+    assert resp.json()["x"] == x ** 2
 
 
 def assert_batch_larger_than_one(http_client, url):
