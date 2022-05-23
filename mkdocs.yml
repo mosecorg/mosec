@@ -18,6 +18,7 @@ nav:
       - Echo: "example/echo.md"
       - PyTorch: "example/pytorch.md"
       - Metrics: "example/metric.md"
+      - Environments: "example/env.md"
       - Plugins - IPCWrapper: "example/ipc.md"
   # - Deploy: "deploy.md"
   # - FAQ: "faq.md"
