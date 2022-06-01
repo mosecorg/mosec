@@ -3,7 +3,7 @@ name: lint and test
 on:
   pull_request:
     types: [review_requested, ready_for_review]
-    path:
+    paths:
       - '.github/workflows/check.yml'
       - 'mosec/**'
       - 'src/**'
