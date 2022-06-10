@@ -94,6 +94,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
+          python setup.py sdist
           ls
           twine upload *
       - uses: actions/checkout@v3
