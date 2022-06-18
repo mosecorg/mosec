@@ -70,7 +70,7 @@ jobs:
           bash ./scripts/prepare.sh
           bash ./scripts/build.sh
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wheels_${{ github.event.release.tag_name }}
           retention-days: 1
