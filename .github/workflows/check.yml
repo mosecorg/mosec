@@ -9,6 +9,8 @@ on:
       - 'tests/**'
       - 'examples/**'
       - 'setup.py'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
   push:
     branches:
       - main
