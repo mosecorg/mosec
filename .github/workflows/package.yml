@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint,test,build]
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wheels_${{ github.event.release.tag_name }}
       - uses: actions/setup-python@v4
