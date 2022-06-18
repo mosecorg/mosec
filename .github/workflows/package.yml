@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8
       - uses: ./.github/actions/cache
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - uses: ./.github/actions/cache
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: wheels_${{ github.event.release.tag_name }}
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: Publish PyPI
