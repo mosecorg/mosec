@@ -33,4 +33,4 @@ updates:
     reviewers:
       - "kemingy"
     commit-message:
-      prefix: "chore(github-actions)"
+      prefix: "chore(actions)"
