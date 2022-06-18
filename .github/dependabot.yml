@@ -14,7 +14,7 @@ updates:
       - "kemingy"
     commit-message:
       prefix: "chore(cargo)"
-      
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -24,3 +24,13 @@ updates:
       - "kemingy"
     commit-message:
       prefix: "chore(pip)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+    reviewers:
+      - "kemingy"
+    commit-message:
+      prefix: "chore(github-actions)"
