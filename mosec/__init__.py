@@ -16,11 +16,13 @@
 
 import logging
 
-from ._version import __version__
+from setuptools_scm import get_version  # type: ignore
+
 from .server import Server
 from .worker import Worker
 
 __all__ = ["Server", "Worker"]
+__version__ = get_version(root="..", relative_to=__file__)
 
 # setup library logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())

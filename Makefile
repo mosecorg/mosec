@@ -36,10 +36,10 @@ doc:
 	mkdocs serve
 
 clean:
-	cargo clean
-	rm -rf build/ dist/ site/ *.egg-info .pytest_cache .mypy_cache
-	find . -name '*.pyc' -type f -exec rm -rf {} +
-	find . -name '__pycache__' -exec rm -rf {} +
+	@cargo clean
+	@rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache
+	@find . -name '*.pyc' -type f -exec rm -rf {} +
+	@find . -name '__pycache__' -exec rm -rf {} +
 
 package: clean
 	PRODUCTION_MODE=yes python setup.py bdist_wheel
@@ -64,7 +64,10 @@ lint:
 semantic_lint:
 	cargo clippy -- -D warnings
 
+version:
+	@python -m setuptools_scm
+
 add_license:
-	addlicense -c "MOSEC Authors" **/*.py **/*.rs **/**/*.py
+	@addlicense -c "MOSEC Authors" **/*.py **/*.rs **/**/*.py
 
 .PHONY: test doc
