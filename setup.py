@@ -25,7 +25,7 @@ with open(os.path.join(here, "requirements/plugin.txt"), encoding="utf-8") as f:
 def get_version():
     """Use rust package version as the single source for versioning"""
     version = (
-        subprocess.check_output(["cargo", "pkgid"]).decode().strip().split("#")[-1]
+        subprocess.check_output(["cargo", "pkgid"]).decode().strip().rsplit("#", 1)[-1]
     )
 
     version_str = '__version__ = "{}"'.format(version)
@@ -67,7 +67,6 @@ class RustBuildExt(_build_ext):
 
         print(f"running rust cargo package build: {build_cmd}")
         errno = subprocess.call(build_cmd)
-
         assert errno == 0, "Error occurred while building rust binary"
 
         # package the binary
