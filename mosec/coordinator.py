@@ -23,7 +23,7 @@ import time
 import traceback
 from functools import partial
 from multiprocessing.synchronize import Event
-from typing import Any, Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 from .errors import DecodingError, ValidationError
 from .ipc import IPCWrapper
@@ -60,7 +60,7 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
-        ipc_wrapper: Type[IPCWrapper],
+        ipc_wrapper: Optional[Union[IPCWrapper, partial]],
     ):
         """Initialize the mosec coordinator.
 
@@ -94,7 +94,7 @@ class Coordinator:
         if ipc_wrapper is not None:
             if not isinstance(ipc_wrapper, partial):
                 assert issubclass(
-                    ipc_wrapper, IPCWrapper
+                    ipc_wrapper, type(IPCWrapper)
                 ), "ipc_wrapper must be inherited from mosec.plugins.IPCWrapper"
 
             self.ipc_wrapper = ipc_wrapper()
@@ -180,7 +180,7 @@ class Coordinator:
 
     def get_protocol_recv(
         self,
-    ) -> Callable[[], Tuple[bytes, List[bytes], List[bytearray]]]:
+    ) -> Callable[[], Tuple[bytes, List[bytes], List[bytes]]]:
         """Get the protocol receive function for this stage.
 
         IPC wrapper will be used if it's provided and the stage is not the first one.

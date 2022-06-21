@@ -22,7 +22,7 @@ sent via the original way.
 """
 
 import warnings
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from ..ipc import IPCWrapper
 
@@ -34,6 +34,9 @@ except ImportError:
     warnings.warn(
         "pyarrow is not installed. PlasmaShmWrapper is not available.", ImportWarning
     )
+
+if TYPE_CHECKING:
+    from pyarrow import plasma
 
 
 class PlasmaShmWrapper(IPCWrapper):

@@ -147,20 +147,19 @@ class Server:
 
     def _check_daemon(self):
         for name, proc in self._daemon.items():
-            if proc is not None:
-                terminate = False
-                if isinstance(proc, mp.Process):
-                    code = proc.exitcode
-                elif isinstance(proc, subprocess.Popen):
-                    code = proc.poll()
-                if code:
-                    terminate = True
+            if proc is None:
+                continue
+            code = None
+            if isinstance(proc, mp.Process):
+                code = proc.exitcode
+            elif isinstance(proc, subprocess.Popen):
+                code = proc.poll()
 
-                if terminate:
-                    self._terminate(
-                        code,
-                        f"mosec daemon [{name}] exited on error code: {code}",
-                    )
+            if code:
+                self._terminate(
+                    code,
+                    f"mosec daemon [{name}] exited on error code: {code}",
+                )
 
     def _controller_args(self):
         args = []
@@ -290,7 +289,7 @@ class Server:
 
         logger.info("mosec server exited. see you.")
 
-    def register_daemon(self, name: str, proc: mp.Process):
+    def register_daemon(self, name: str, proc: subprocess.Popen):
         """Register a daemon to be monitored.
 
         Args:
