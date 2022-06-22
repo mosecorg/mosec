@@ -65,8 +65,10 @@ def test_square_service(mosec_service, http_client):
     resp = http_client.get(URL)
     assert resp.status_code == 200
     # only check the major and minor version since Python is using `setuptools-scm`
-    major_minor_version = "mosec/" + ".".join(mosec.__version__.split(".", 3)[:2])
-    assert resp.headers["server"].startswith(major_minor_version)
+    major_minor_version = ".".join(mosec.__version__.split(".", 3)[:2])
+    assert resp.headers["server"].startswith(
+        "mosec/" + major_minor_version
+    ), f"{mosec.__version__} ({major_minor_version}) vs {resp.headers['server']}"
 
     resp = http_client.get(f"{URL}/metrics")
     assert resp.status_code == 200

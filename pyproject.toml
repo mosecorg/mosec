@@ -53,6 +53,7 @@ profile = "black"
 [tool.pylint.master]
 load-plugins = "pylint.extensions.docparams,pylint.extensions.docstyle,pylint.extensions.no_self_use"
 default-docstring-type = "google"
+ignore-paths = ["mosec/_version.py"]
 
 [tool.pylint.format]
 max-line-length = 88
