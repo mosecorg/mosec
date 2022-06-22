@@ -20,7 +20,7 @@ from .server import Server
 from .worker import Worker
 
 try:
-    from ._version import __version__
+    from ._version import __version__  # type: ignore
 except ImportError:
     from setuptools_scm import get_version  # type: ignore
 

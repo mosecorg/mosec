@@ -37,9 +37,9 @@ doc:
 
 clean:
 	@cargo clean
-	@rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache
-	@find . -name '*.pyc' -type f -exec rm -rf {} +
-	@find . -name '__pycache__' -exec rm -rf {} +
+	@-rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache
+	@-find . -name '*.pyc' -type f -exec rm -rf {} +
+	@-find . -name '__pycache__' -exec rm -rf {} +
 
 package: clean
 	PRODUCTION_MODE=yes python setup.py bdist_wheel
@@ -58,6 +58,7 @@ lint:
 	black --check --diff ${PY_SOURCE_FILES}
 	pylint -j 8 --recursive=y mosec
 	pydocstyle mosec
+	@-rm mosec/_version.py
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
 
