@@ -18,7 +18,7 @@ from typing import List
 from urllib.request import urlretrieve
 
 import cv2  # type: ignore
-import numpy as np
+import numpy as np  # type: ignore
 import torch  # type: ignore
 import torchvision  # type: ignore
 
