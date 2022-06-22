@@ -14,7 +14,7 @@
 
 import base64
 
-import httpx  # type: ignore
+import httpx
 
 dog_bytes = httpx.get(
     "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg"
