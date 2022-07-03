@@ -34,7 +34,6 @@ class DataProducer(Worker):
     """Sample Data Producer."""
 
     def forward(self, data: dict) -> bytes:
-        """Need help here."""
         try:
             data_bytes = b"a" * int(data["size"])
         except KeyError as err:
@@ -46,7 +45,6 @@ class DataConsumer(Worker):
     """Sample Data Consumer."""
 
     def forward(self, data: bytes) -> dict:
-        """Need help here."""
         return {"ipc test data length": len(data)}
 
 
