@@ -56,7 +56,7 @@ format:
 lint:
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
-	pylint -j 8 --recursive=y mosec
+	pylint -j 8 --recursive=y mosec examples
 	pydocstyle mosec
 	@-rm mosec/_version.py
 	mypy --install-types --non-interactive ${PY_SOURCE_FILES}

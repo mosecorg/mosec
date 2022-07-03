@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Example: Mosec with Pytorch Distil BERT."""
 
 import logging
 from typing import List, TypeVar
@@ -38,6 +39,8 @@ INFERENCE_BATCH_SIZE = 32
 
 
 class Preprocess(Worker):
+    """Preprocess BERT on current setup."""
+
     def __init__(self):
         super().__init__()
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -55,12 +58,14 @@ class Preprocess(Worker):
 
 
 class Inference(Worker):
+    """Pytorch Inference class"""
+
     def __init__(self):
         super().__init__()
         self.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
-        logger.info(f"using computing device: {self.device}")
+        logger.info("using computing device: %s", self.device)
         self.model = AutoModelForSequenceClassification.from_pretrained(
             "distilbert-base-uncased-finetuned-sst-2-english"
         )
