@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Example: Adding metrics service."""
 
 import logging
 import os
@@ -19,6 +20,14 @@ import tempfile
 import threading
 from typing import List
 from wsgiref.simple_server import make_server
+
+from prometheus_client import (  # type: ignore
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    generate_latest,
+    multiprocess,
+)
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
@@ -39,20 +48,15 @@ if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
     pathlib.Path(metric_dir_path).mkdir(parents=True, exist_ok=True)
     os.environ["PROMETHEUS_MULTIPROC_DIR"] = metric_dir_path
 
-from prometheus_client import (  # type: ignore
-    CONTENT_TYPE_LATEST,
-    CollectorRegistry,
-    Counter,
-    generate_latest,
-    multiprocess,
-)
 
 metric_registry = CollectorRegistry()
 multiprocess.MultiProcessCollector(metric_registry)
 counter = Counter("inference_result", "statistic of result", ("status", "worker_id"))
 
 
-def metric_app(environ, start_response):
+def metric_app(start_response):
+    """Sample Metric function."""
+
     data = generate_latest(metric_registry)
     start_response(
         "200 OK",
@@ -62,11 +66,15 @@ def metric_app(environ, start_response):
 
 
 def metric_service(host="", port=8080):
+    """Sample metric service."""
+
     with make_server(host, port, metric_app) as httpd:
         httpd.serve_forever()
 
 
 class Inference(Worker):
+    """Sample Inference Worker."""
+
     def __init__(self):
         super().__init__()
         self.worker_id = str(self.worker_id)
@@ -76,7 +84,7 @@ class Inference(Worker):
         try:
             res = int(json_data.get("num"))
         except Exception as err:
-            raise ValidationError(err)
+            raise ValidationError(err) from err
         return res
 
     def forward(self, data: List[int]) -> List[bool]:
