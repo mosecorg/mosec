@@ -47,9 +47,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bytes"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
+checksum = "f0b3de4a0c5e67e16066a0715723abd91edc2f9001d09c46e1dca929351e130e"
 
 [[package]]
 name = "cache-padded"
@@ -65,9 +65,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "clap"
-version = "3.2.12"
+version = "3.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab8b79fe3946ceb4a0b1c080b4018992b8d27e9ff363644c1c9b6387c854614d"
+checksum = "54635806b078b7925d6e36810b1755f2a4b5b4d57560432c1ecf60bcbe10602b"
 dependencies = [
  "atty",
  "bitflags",
@@ -700,9 +700,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a713421342a5a666b7577783721d3117f1b69a393df803ee17bb73b1e122a59"
+checksum = "60db860322da191b40952ad9affe65ea23e7dd6a5c442c2c42865810c6ab8e6b"
 dependencies = [
  "ansi_term",
  "matchers",
