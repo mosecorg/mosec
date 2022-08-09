@@ -36,7 +36,8 @@ changelog = "https://github.com/mosecorg/mosec/releases"
 
 [tool.cibuildwheel]
 build-frontend = "build"
-archs = ["x86_64"]
+skip = "cp36-*"
+archs = ["auto64"]
 before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 environment = { PRODUCTION_MODE="yes", PATH="$PATH:$HOME/.cargo/bin", PIP_NO_CLEAN="yes" }
 

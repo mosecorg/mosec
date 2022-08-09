@@ -49,7 +49,7 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     needs: [lint]
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       max-parallel: 5
       matrix:
