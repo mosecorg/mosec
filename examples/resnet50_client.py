@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Example: Sample Resnet client."""
 
 import base64
 
-import httpx  # type: ignore
+import httpx
 
 dog_bytes = httpx.get(
     "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg"

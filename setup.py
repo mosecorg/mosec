@@ -3,8 +3,8 @@ import shutil
 import subprocess
 from io import open
 
-from setuptools import Extension, find_packages, setup  # type: ignore
-from setuptools.command.build_ext import build_ext as _build_ext  # type: ignore
+from setuptools import Extension, find_packages, setup
+from setuptools.command.build_ext import build_ext as _build_ext
 
 here = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_NAME = "mosec"
@@ -20,20 +20,6 @@ with open(os.path.join(here, "requirements/doc.txt"), encoding="utf-8") as f:
 
 with open(os.path.join(here, "requirements/plugin.txt"), encoding="utf-8") as f:
     plugin_requirements = f.read().splitlines()
-
-
-def get_version():
-    """Use rust package version as the single source for versioning"""
-    version = (
-        subprocess.check_output(["cargo", "pkgid"]).decode().strip().rsplit("#", 1)[-1]
-    )
-
-    version_str = '__version__ = "{}"'.format(version)
-
-    # update py version
-    with open("mosec/_version.py", "w") as f:
-        f.write(f"{version_str}\n")
-    return version
 
 
 class RustExtension(Extension):
@@ -57,7 +43,7 @@ class RustBuildExt(_build_ext):
         if not isinstance(ext, RustExtension):
             return super().build_extension(ext)
 
-        libpath = ext.name.replace(".", os.sep)  # type: ignore
+        libpath = ext.name.replace(".", os.sep)
         build_libpath = os.path.join(self.build_lib, libpath)
 
         rust_target = os.getenv("RUST_TARGET")
@@ -84,7 +70,6 @@ class RustBuildExt(_build_ext):
 
 setup(
     name=PACKAGE_NAME,
-    version=get_version(),
     author="Keming Yang",
     author_email="kemingy94@gmail.com",
     description="Model Serving made Efficient in the Cloud.",
@@ -92,27 +77,17 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mosecorg/mosec",
     license="Apache License 2.0",
+    use_scm_version=True,
     packages=find_packages(exclude=["examples*", "tests*"]),
     include_package_data=True,
-    classifiers=[
-        "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-    ],
     python_requires=">=3.6",
+    setup_requires=["setuptools_scm>=7.0"],
     extras_require={
         "dev": dev_requirements,
         "plugin": plugin_requirements,
         "doc": doc_requirements,
     },
     zip_safe=False,
-    entry_points={
-        "console_scripts": [],
-    },
     ext_modules=ext_modules,  # type: ignore
-    cmdclass=dict(build_ext=RustBuildExt),  # type: ignore
+    cmdclass=dict(build_ext=RustBuildExt),
 )

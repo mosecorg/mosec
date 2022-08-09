@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Example: Custom Environment setup"""
 
 import logging
 import os
 
 from mosec import Server, Worker
-from mosec.errors import ValidationError
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -29,21 +29,23 @@ logger.addHandler(sh)
 
 
 class Inference(Worker):
+    """Customisable inference class."""
+
     def __init__(self):
         super().__init__()
         # initialize your models here and allocate dedicated device to it
         device = os.environ["CUDA_VISIBLE_DEVICES"]
-        logger.info(f"Initializing model on device={device}")
+        logger.info("Initializing model on device=%s", device)
 
     def forward(self, _: dict) -> dict:
         device = os.environ["CUDA_VISIBLE_DEVICES"]
         # NOTE self.worker_id is 1-indexed
-        logger.info(f"Worker={self.worker_id} on device={device} is processing...")
+        logger.info("Worker=%d on device=%s is processing...", self.worker_id, device)
         return {"device": device}
 
 
 if __name__ == "__main__":
-    num_device = 4
+    NUM_DEVICE = 4
 
     def _get_cuda_device(cid: int) -> dict:
         return {"CUDA_VISIBLE_DEVICES": str(cid)}
@@ -51,6 +53,6 @@ if __name__ == "__main__":
     server = Server()
 
     server.append_worker(
-        Inference, num=num_device, env=[_get_cuda_device(x) for x in range(num_device)]
+        Inference, num=NUM_DEVICE, env=[_get_cuda_device(x) for x in range(NUM_DEVICE)]
     )
     server.run()

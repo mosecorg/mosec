@@ -7,9 +7,26 @@ authors = [
     {name = "Keming", email = "kemingy94@gmail.com"},
     {name = "Zichen", email = "lkevinzc@gmail.com"}
 ]
-license = {file = "LICENSE"}
+license = {text = "Apache-2.0"}
 keywords = ["machine learning", "deep learning", "model serving"]
 dynamic = ["version"]
+requires-python = ">=3.6"
+classifiers = [
+    "Environment :: GPU",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Build Tools",
+]
 
 [project.urls]
 homepage = "https://mosecorg.github.io/"
@@ -23,12 +40,29 @@ archs = ["x86_64"]
 before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 environment = { PRODUCTION_MODE="yes", PATH="$PATH:$HOME/.cargo/bin", PIP_NO_CLEAN="yes" }
 
+[project.optional-dependencies]
+
+[project.scripts]
+
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=7.0"]
+
+[tool.setuptools_scm]
+write_to = "mosec/_version.py"
+
+[tool.mypy]
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+pretty = true
+
 [tool.isort]
 profile = "black"
 
 [tool.pylint.master]
 load-plugins = "pylint.extensions.docparams,pylint.extensions.docstyle,pylint.extensions.no_self_use"
 default-docstring-type = "google"
+ignore-paths = ["mosec/_version.py"]
 
 [tool.pylint.format]
 max-line-length = 88
@@ -40,9 +74,7 @@ score = "yes"
 max-args = 7
 
 [tool.pylint.messages_control]
-disable = [
-    "missing-module-docstring", # __version__ file
-]
+disable = []
 
 [pydocstyle]
 convention = "google"

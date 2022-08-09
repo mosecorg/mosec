@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Example: Sample structures for using mosec server."""
 
 import logging
 import time
@@ -29,26 +30,32 @@ logger.addHandler(sh)
 
 
 class Preprocess(Worker):
+    """Sample Class."""
+
     def forward(self, data: dict) -> float:
-        logger.debug(f"pre received {data}")
+        logger.debug("pre received %s", data)
         # Customized, simple input validation
         try:
-            time = float(data["time"])
+            count_time = float(data["time"])
         except KeyError as err:
-            raise ValidationError(f"cannot find key {err}")
-        return time
+            raise ValidationError(f"cannot find key {err}") from err
+        return count_time
 
 
 class Inference(Worker):
+    """Sample Class."""
+
     def forward(self, data: float) -> float:
-        logger.info(f"sleeping for {data} seconds")
+        logger.info("sleeping for %d seconds", data)
         time.sleep(data)
         return data
 
 
 class Postprocess(Worker):
+    """Sample Class."""
+
     def forward(self, data: float) -> dict:
-        logger.debug(f"post received {data}")
+        logger.debug("post received %f", data)
         return {"msg": f"sleep {data} seconds"}
 
 
