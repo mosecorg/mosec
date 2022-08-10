@@ -107,6 +107,10 @@ class Worker(abc.ABC):
         """
         return self._worker_id
 
+    @worker_id.setter
+    def worker_id(self, worker_id):
+        self._worker_id = worker_id
+
     def serialize(self, data: Any) -> bytes:
         """Serialize method for the last stage (egress).
 

@@ -239,7 +239,7 @@ class Server:
                     if self._coordinator_pools[stage_id][worker_id] is not None:
                         continue
 
-                    coordinator_process = mp.get_context(c_ctx).Process(
+                    coordinator_process = mp.get_context(c_ctx).Process(  # type: ignore
                         target=Coordinator,
                         args=(
                             w_cls,

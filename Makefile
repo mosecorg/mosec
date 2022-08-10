@@ -61,7 +61,8 @@ lint:
 	pylint -j 8 --recursive=y --disable=import-error examples --generated-members=numpy.*,torch.*,cv2.*,cv.*
 	pydocstyle mosec
 	@-rm mosec/_version.py
-	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
+	pyright --stats
+	mypy --non-interactive --install-types ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
 
 semantic_lint:

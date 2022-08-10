@@ -46,9 +46,13 @@ write_to = "mosec/_version.py"
 
 [tool.mypy]
 warn_redundant_casts = true
-warn_unused_ignores = true
 warn_unreachable = true
 pretty = true
+
+[tool.pyright]
+pythonPlatform = "All"
+pythonVersion = "3.7"
+include = ["mosec", "tests", "examples"]
 
 [tool.isort]
 profile = "black"
