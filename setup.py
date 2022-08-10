@@ -53,7 +53,6 @@ class RustBuildExt(_build_ext):
 
         print(f"running rust cargo package build: {build_cmd}")
         errno = subprocess.call(build_cmd)
-
         assert errno == 0, "Error occurred while building rust binary"
 
         # package the binary

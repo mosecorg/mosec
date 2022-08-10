@@ -44,6 +44,9 @@ clean:
 package: clean
 	PRODUCTION_MODE=yes python setup.py bdist_wheel
 
+cross_compile: clean
+	cibuildwheel --platform linux
+
 publish: package
 	twine upload dist/*
 

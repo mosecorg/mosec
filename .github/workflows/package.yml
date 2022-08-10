@@ -11,7 +11,7 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
         with:
@@ -61,7 +61,7 @@ jobs:
   build:
     name: "Build PyPI Package"
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-10.15]
@@ -73,14 +73,13 @@ jobs:
       - uses: ./.github/actions/cache
       - name: Build
         run: |
-          bash ./scripts/prepare.sh
-          bash ./scripts/build.sh
+          pipx run cibuildwheel
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels_${{ github.event.release.tag_name }}
           retention-days: 1
-          path: dist
+          path: ./wheelhouse/*.whl
 
   publish:
     name: "Publish PyPI Package"
