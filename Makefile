@@ -4,7 +4,7 @@ PY_SOURCE_FILES=mosec tests examples scripts setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
-	pip install -e .[dev,doc]
+	pip install -e .[dev,doc,plugin]
 	pre-commit install
 	rustup toolchain install nightly
 	rustup component add rustfmt --toolchain nightly
