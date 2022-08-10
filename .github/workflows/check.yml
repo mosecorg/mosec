@@ -43,6 +43,12 @@ jobs:
           pip install -r requirements/dev.txt
           rustup toolchain install nightly
           rustup component add rustfmt --toolchain nightly
+      - name: install node for pyright
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: install pyright
+        run: npm install -g pyright
       - name: Lint
         run: make lint
 
