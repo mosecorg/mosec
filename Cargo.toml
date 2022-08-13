@@ -18,7 +18,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["full"] }
 derive_more = { version = "0.99.0", features = ["display", "error"] }
-async-channel = { version = "1.6.1" }
+async-channel = { version = "1.7.1" }
 parking_lot = "0.12"
 once_cell = { version = "1.13", features = ["parking_lot"] }
 clap = { version = "3.2", features = ["derive"] }
