@@ -38,11 +38,13 @@ jobs:
         with:
           python-version: 3.8
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements/dev.txt
-          rustup toolchain install nightly
-          rustup component add rustfmt --toolchain nightly
+        run: make install
+      - name: install node for pyright
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: install pyright
+        run: npm install -g pyright
       - name: Lint
         run: make lint
 

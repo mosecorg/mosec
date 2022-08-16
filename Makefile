@@ -4,7 +4,7 @@ PY_SOURCE_FILES=mosec tests examples scripts setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
-	pip install -e .[dev,doc]
+	pip install -e .[dev,doc,plugin]
 	pre-commit install
 	rustup toolchain install nightly
 	rustup component add rustfmt --toolchain nightly
@@ -64,7 +64,8 @@ lint:
 	pylint -j 8 --recursive=y --disable=import-error examples --generated-members=numpy.*,torch.*,cv2.*,cv.*
 	pydocstyle mosec
 	@-rm mosec/_version.py
-	mypy --install-types --non-interactive ${PY_SOURCE_FILES}
+	pyright --stats
+	mypy --non-interactive --install-types ${PY_SOURCE_FILES}
 	cargo +nightly fmt -- --check
 
 semantic_lint:

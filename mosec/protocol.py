@@ -17,8 +17,7 @@
 import logging
 import socket
 import struct
-from itertools import zip_longest
-from typing import List, Tuple
+from typing import Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,7 @@ class Protocol:
         self.name = name
         self.addr = addr
 
-    def receive(self) -> Tuple[bytes, List[bytes], List[bytearray]]:
+    def receive(self) -> Tuple[bytes, Sequence[bytes], Sequence[bytes]]:
         """Receive tasks from the server."""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
@@ -94,14 +93,16 @@ class Protocol:
             )
         return flag, ids, payloads
 
-    def send(self, flag: int, ids: List[bytes], payloads: List[bytes]):
+    def send(self, flag: int, ids: Sequence[bytes], payloads: Sequence[bytes]):
         """Send results to the server."""
         data = bytearray()
         data.extend(struct.pack(self.FORMAT_FLAG, flag))
+        if len(ids) != len(payloads):
+            raise ValueError("`ids` have different length with `payloads`")
         batch_size = len(ids)
         data.extend(struct.pack(self.FORMAT_BATCH, batch_size))
         if batch_size > 0:
-            for task_id, payload in zip_longest(ids, payloads, fillvalue=payloads[0]):
+            for task_id, payload in zip(ids, payloads):
                 length = struct.pack(self.FORMAT_LENGTH, len(payload))
                 data.extend(task_id)
                 data.extend(length)

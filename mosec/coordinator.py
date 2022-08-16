@@ -21,9 +21,8 @@ import socket
 import struct
 import time
 import traceback
-from functools import partial
 from multiprocessing.synchronize import Event
-from typing import Any, Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
 from .errors import DecodingError, ValidationError
 from .ipc import IPCWrapper
@@ -60,7 +59,7 @@ class Coordinator:
         socket_prefix: str,
         stage_id: int,
         worker_id: int,
-        ipc_wrapper: Type[IPCWrapper],
+        ipc_wrapper: Optional[Callable[..., IPCWrapper]],
     ):
         """Initialize the mosec coordinator.
 
@@ -75,6 +74,9 @@ class Coordinator:
             worker_id (int): identification number for worker processes at the same
                 stage.
             ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
+
+        Raises:
+            TypeError: ipc_wrapper should inherit from `IPCWrapper`
         """
         worker._worker_id = worker_id
         self.worker = worker()
@@ -92,12 +94,11 @@ class Coordinator:
         # optional plugin features - ipc wrapper
         self.ipc_wrapper: Optional[IPCWrapper] = None
         if ipc_wrapper is not None:
-            if not isinstance(ipc_wrapper, partial):
-                assert issubclass(
-                    ipc_wrapper, IPCWrapper
-                ), "ipc_wrapper must be inherited from mosec.plugins.IPCWrapper"
-
             self.ipc_wrapper = ipc_wrapper()
+            if not issubclass(type(self.ipc_wrapper), IPCWrapper):
+                raise TypeError(
+                    "ipc_wrapper must be the subclass of mosec.plugins.IPCWrapper"
+                )
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -180,7 +181,7 @@ class Coordinator:
 
     def get_protocol_recv(
         self,
-    ) -> Callable[[], Tuple[bytes, List[bytes], List[bytearray]]]:
+    ) -> Callable[[], Tuple[bytes, Sequence[bytes], Sequence[bytes]]]:
         """Get the protocol receive function for this stage.
 
         IPC wrapper will be used if it's provided and the stage is not the first one.
@@ -188,14 +189,19 @@ class Coordinator:
         if STAGE_INGRESS in self.worker.stage or self.ipc_wrapper is None:
             return self.protocol.receive
 
-        def wrapped_recv():
+        # TODO(kemingy) find a better way
+        def wrapped_recv() -> Tuple[bytes, Sequence[bytes], Sequence[bytes]]:
             flag, ids, payloads = self.protocol.receive()
-            payloads = self.ipc_wrapper.get([bytes(x) for x in payloads])
+            payloads = self.ipc_wrapper.get(  # type: ignore
+                [bytes(x) for x in payloads]
+            )
             return flag, ids, payloads
 
         return wrapped_recv
 
-    def get_protocol_send(self) -> Callable[[int, List[bytes], List[bytes]], None]:
+    def get_protocol_send(
+        self,
+    ) -> Callable[[int, Sequence[bytes], Sequence[bytes]], None]:
         """Get the protocol send function for this stage.
 
         IPC wrapper will be used if it's provided and the stage is not the last one.
@@ -203,7 +209,8 @@ class Coordinator:
         if STAGE_EGRESS in self.worker.stage or self.ipc_wrapper is None:
             return self.protocol.send
 
-        def wrapped_send(flag: int, ids: List[bytes], payloads: List[bytes]):
+        # TODO(kemingy) find a better way
+        def wrapped_send(flag: int, ids: Sequence[bytes], payloads: Sequence[bytes]):
             if flag == Protocol.FLAG_OK:
                 payloads = self.ipc_wrapper.put(payloads)  # type: ignore
             return self.protocol.send(flag, ids, payloads)

@@ -17,16 +17,13 @@ import logging
 import os
 import pathlib
 import tempfile
-import threading
 from typing import List
-from wsgiref.simple_server import make_server
 
 from prometheus_client import (  # type: ignore
-    CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,
-    generate_latest,
     multiprocess,
+    start_http_server,
 )
 
 from mosec import Server, Worker
@@ -52,24 +49,6 @@ if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
 metric_registry = CollectorRegistry()
 multiprocess.MultiProcessCollector(metric_registry)
 counter = Counter("inference_result", "statistic of result", ("status", "worker_id"))
-
-
-def metric_app(start_response):
-    """Sample Metric function."""
-
-    data = generate_latest(metric_registry)
-    start_response(
-        "200 OK",
-        [("Content-Type", CONTENT_TYPE_LATEST), ("Content-Length", str(len(data)))],
-    )
-    return iter([data])
-
-
-def metric_service(host="", port=8080):
-    """Sample metric service."""
-
-    with make_server(host, port, metric_app) as httpd:
-        httpd.serve_forever()
 
 
 class Inference(Worker):
@@ -99,8 +78,7 @@ class Inference(Worker):
 
 if __name__ == "__main__":
     # Run the metrics server in another thread.
-    metric_thread = threading.Thread(target=metric_service, daemon=True)
-    metric_thread.start()
+    start_http_server(5000)
 
     # Run the inference server
     server = Server()
