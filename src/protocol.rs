@@ -21,7 +21,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::Barrier;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
@@ -118,7 +118,11 @@ pub(crate) async fn communicate(
                                     .observe(start_timer.elapsed().as_secs_f64());
                             }
                             _ => {
-                                info!(?ids, ?code, "abnormal tasks");
+                                warn!(
+                                    ?ids,
+                                    ?code,
+                                    "abnormal tasks, check Python log for more details"
+                                );
                             }
                         }
                     }
