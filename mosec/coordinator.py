@@ -241,13 +241,13 @@ class Coordinator:
                     if self.worker.max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
-                status = self.protocol.FLAG_OK
-                payloads = [encoder(item) for item in data]
                 if len(data) != len(payloads):
                     raise ValueError(
-                        "returned data doesn't match the input data:"
+                        "returned data size doesn't match the input data size:"
                         f"input({len(data)})!=output({len(payloads)})"
                     )
+                status = self.protocol.FLAG_OK
+                payloads = [encoder(item) for item in data]
             except DecodingError as err:
                 err_msg = str(err).replace("\n", " - ")
                 err_msg = err_msg if err_msg else "cannot deserialize request bytes"

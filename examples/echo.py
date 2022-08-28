@@ -15,6 +15,7 @@
 
 import logging
 import time
+from typing import List
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
@@ -45,9 +46,9 @@ class Preprocess(Worker):
 class Inference(Worker):
     """Sample Class."""
 
-    def forward(self, data: float) -> float:
-        logger.info("sleeping for %d seconds", data)
-        time.sleep(data)
+    def forward(self, data: List[float]) -> List[float]:
+        logger.info("sleeping for %s seconds", sum(data))
+        time.sleep(sum(data))
         return data
 
 
@@ -62,6 +63,6 @@ class Postprocess(Worker):
 if __name__ == "__main__":
     server = Server()
     server.append_worker(Preprocess)
-    server.append_worker(Inference)
+    server.append_worker(Inference, max_batch_size=32)
     server.append_worker(Postprocess)
     server.run()
