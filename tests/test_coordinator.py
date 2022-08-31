@@ -29,6 +29,7 @@ import msgpack  # type: ignore
 import pytest
 
 from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.mixin import MsgpackMixin
 from mosec.protocol import Protocol, _recv_all
 from mosec.worker import Worker
 
@@ -65,14 +66,8 @@ class EchoWorkerJSON(Worker):
         return data
 
 
-class EchoWorkerMSGPACK(EchoWorkerJSON):
-    @staticmethod
-    def deserialize(data):
-        return msgpack.unpackb(data)
-
-    @staticmethod
-    def serialize(data):
-        return msgpack.packb(data)
+class EchoWorkerMSGPACK(MsgpackMixin, EchoWorkerJSON):
+    """"""
 
 
 @pytest.fixture
