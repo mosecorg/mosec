@@ -28,7 +28,7 @@ import logging
 import pickle
 from typing import Any
 
-from .errors import DecodingError
+from .errors import DecodingError, EncodingError
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +124,12 @@ class Worker(abc.ABC):
             the bytes you want to put into the response body
 
         Raises:
-            ValueError: if the data cannot be serialized with JSON
+            EncodingError: if the data cannot be serialized with JSON
         """
         try:
             data_bytes = json.dumps(data, indent=2).encode()
         except Exception as err:
-            raise ValueError from err
+            raise EncodingError from err
         return data_bytes
 
     def deserialize(self, data: bytes) -> Any:

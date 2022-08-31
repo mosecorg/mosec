@@ -25,6 +25,17 @@ implemented by users), the `ValidationError` should be raised.
 """
 
 
+class EncodingError(Exception):
+    """Serialization error.
+
+    The `EncodingError` should be raised in user-implemented codes when
+    the serialization for the response bytes fails. This error will set
+    to status code to
+    [HTTP 500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500)
+    in the response.
+    """
+
+
 class DecodingError(Exception):
     """De-serialization error.
 
