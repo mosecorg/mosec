@@ -43,22 +43,22 @@ We also demonstrate how to customized **validation** on the data content through
 
 ##### Server
 
-    python resnet50_server.py
+    python resnet50_server_msgpack.py
 
 <details>
-<summary>resnet50_server.py</summary>
+<summary>resnet50_server_msgpack.py</summary>
 ```python
---8<-- "examples/resnet50_server_pytorch.py"
+--8<-- "examples/resnet50_server_msgpack.py"
 ```
 </details>
 
 ##### Client
 
-    python resnet50_client.py
+    python resnet50_client_msgpack.py
 
 <details>
 <summary>resnet50_client.py</summary>
 ```python
---8<-- "examples/resnet50_client.py"
+--8<-- "examples/resnet50_client_msgpack.py"
 ```
 </details>
