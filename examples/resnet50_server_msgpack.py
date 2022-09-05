@@ -13,18 +13,20 @@
 # limitations under the License.
 """Example: Sample Resnet server."""
 
-import base64
 import logging
+from io import BytesIO
 from typing import List
 from urllib.request import urlretrieve
 
-import cv2  # type: ignore
 import numpy as np  # type: ignore
 import torch  # type: ignore
 import torchvision  # type: ignore
+from PIL import Image  # type: ignore
+from torchvision import transforms  # type: ignore
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
+from mosec.mixin import MsgpackMixin
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -38,29 +40,31 @@ logger.addHandler(sh)
 INFERENCE_BATCH_SIZE = 16
 
 
-class Preprocess(Worker):
+class Preprocess(MsgpackMixin, Worker):
     """Sample Preprocess worker"""
 
-    def forward(self, data: dict) -> np.ndarray:
+    def __init__(self) -> None:
+        super().__init__()
+        trans = torch.nn.Sequential(
+            transforms.Resize((256, 256)),
+            transforms.CenterCrop(224),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        )
+        self.transform = torch.jit.script(trans)
+
+    def forward(self, data: dict):
         # Customized validation for input key and field content; raise
         # ValidationError so that the client can get 422 as http status
         try:
-            image = data["image"]
-            img = np.frombuffer(base64.b64decode(image), np.uint8)
-            img = cv2.imdecode(img, cv2.IMREAD_COLOR)[:, :, ::-1]  # bgr -> rgb
+            image = Image.open(BytesIO(data["image"]))
         except KeyError as err:
             raise ValidationError(f"cannot find key {err}") from err
         except Exception as err:
             raise ValidationError(f"cannot decode as image data: {err}") from err
 
-        img = cv2.resize(img, (256, 256))
-        crop_img = (
-            img[16 : 16 + 224, 16 : 16 + 224].astype(np.float32) / 255
-        )  # center crop
-        crop_img -= [0.485, 0.456, 0.406]
-        crop_img /= [0.229, 0.224, 0.225]
-        crop_img = np.transpose(crop_img, (2, 0, 1))
-        return crop_img
+        tensor = transforms.ToTensor()(image)
+        data = self.transform(tensor)
+        return data
 
 
 class Inference(Worker):
@@ -90,7 +94,7 @@ class Inference(Worker):
         return top1.cpu().tolist()
 
 
-class Postprocess(Worker):
+class Postprocess(MsgpackMixin, Worker):
     """Sample Postprocess worker"""
 
     def __init__(self):

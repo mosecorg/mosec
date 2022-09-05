@@ -13,9 +13,8 @@
 # limitations under the License.
 """Example: Sample Resnet client."""
 
-import base64
-
 import httpx
+import msgpack  # type: ignore
 
 dog_bytes = httpx.get(
     "https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg"
@@ -24,9 +23,9 @@ dog_bytes = httpx.get(
 
 prediction = httpx.post(
     "http://localhost:8000/inference",
-    json={"image": base64.b64encode(dog_bytes).decode()},
+    data=msgpack.packb({"image": dog_bytes}),
 )
 if prediction.status_code == 200:
-    print(prediction.json())
+    print(msgpack.unpackb(prediction.content))
 else:
     print(prediction.status_code, prediction.content)
