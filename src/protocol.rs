@@ -176,7 +176,15 @@ async fn read_message(
         ids.push(id);
         data.push(data_buf.into());
     }
-    debug!(?ids, ?code, ?num, ?flag, "received tasks from the stream");
+    let byte_size = data.iter().fold(0, |acc, x| acc + x.len());
+    debug!(
+        ?ids,
+        ?code,
+        ?num,
+        ?flag,
+        ?byte_size,
+        "received tasks from the stream"
+    );
     Ok(())
 }
 
