@@ -10,20 +10,31 @@ on:
       - 'mkdocs.yml'
       - 'examples/**'
       - '**.md'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
+    - name: Setup Pages
+      uses: actions/configure-pages@v2
     - name: Set up Python 3.8
       uses: actions/setup-python@v4
       with:
@@ -34,19 +45,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev,doc,plugin]
     - name: Generate docs
-      env:
-        TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         mkdocs build
         cd site
         touch .nojekyll
-        git config --global url."https://".insteadOf git://
-        git config --global url."https://github.com/".insteadOf git@github.com:
-        remote_repo="https://${GITHUB_ACTOR}:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-        remote_branch=gh-pages
-        git init
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git commit -m "Deploy GitHub Pages"
-        git push --force "${remote_repo}" master:${remote_branch}
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v1
+      with:
+        # Upload entire repository
+        path: 'site'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v1
