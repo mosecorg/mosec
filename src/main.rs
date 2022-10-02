@@ -22,7 +22,6 @@ mod tasks;
 use std::net::SocketAddr;
 
 use bytes::Bytes;
-use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response, StatusCode};
 use prometheus::{Encoder, TextEncoder};
@@ -168,7 +167,7 @@ fn init_env() {
 #[tokio::main]
 async fn main() {
     init_env();
-    let opts: Opts = Opts::parse();
+    let opts: Opts = argh::from_env();
     info!(?opts, "parse arguments");
 
     let coordinator = Coordinator::init_from_opts(&opts);
