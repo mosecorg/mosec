@@ -29,14 +29,14 @@ import tempfile
 
 
 def is_port_available(addr: str, port: int) -> bool:
-    """Check if the port is available to use"""
+    """Check if the port is available to use."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     err = sock.connect_ex((addr, port))
     sock.close()
     # https://docs.python.org/3/library/errno.html
     if 0 == err:
         return False
-    elif errno.ECONNREFUSED == err:
+    if errno.ECONNREFUSED == err:
         return True
     raise RuntimeError(
         f"Check {addr}:{port} socket connection err: {err}{errno.errorcode[err]}"
