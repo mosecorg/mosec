@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/JTWcRNGQyQ">
-    <img alt="discord invitation link" src="https://dcbadge.vercel.app/api/server/JTWcRNGQyQ?style=flat">
+  <a href="https://discord.gg/eCBFDrUS">
+    <img alt="discord invitation link" src="https://dcbadge.vercel.app/api/server/eCBFDrUS?style=flat">
   </a>
   <a href="https://pypi.org/project/mosec/">
     <img src="https://badge.fury.io/py/mosec.svg" alt="PyPI version" height="20">
