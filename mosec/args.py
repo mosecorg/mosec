@@ -22,6 +22,7 @@ Arguments parsing for two parts:
 
 import argparse
 import os
+import random
 import tempfile
 
 
@@ -36,7 +37,9 @@ def parse_arguments() -> argparse.Namespace:
         "--path",
         help="Unix Domain Socket address for internal Inter-Process Communication",
         type=str,
-        default=os.path.join(tempfile.gettempdir(), "mosec"),
+        default=os.path.join(
+            tempfile.gettempdir(), f"mosec_{random.randrange(2**32):x}"
+        ),
     )
 
     parser.add_argument(
