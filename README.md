@@ -176,4 +176,4 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 ## Contributing
 
-We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/JTWcRNGQyQ). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
+We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/eCBFDrUS). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
