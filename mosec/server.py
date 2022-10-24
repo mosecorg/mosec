@@ -22,6 +22,7 @@ import contextlib
 import logging
 import multiprocessing as mp
 import os
+import shutil
 import signal
 import subprocess
 import traceback
@@ -280,7 +281,7 @@ class Server:
 
         # shutdown coordinators
         self._coordinator_shutdown.set()
-
+        shutil.rmtree(self._configs["path"])
         logger.info("mosec server exited. see you.")
 
     def register_daemon(self, name: str, proc: subprocess.Popen):
