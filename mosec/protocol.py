@@ -17,6 +17,7 @@
 import logging
 import socket
 import struct
+from io import BytesIO
 from typing import Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -95,19 +96,19 @@ class Protocol:
 
     def send(self, flag: int, ids: Sequence[bytes], payloads: Sequence[bytes]):
         """Send results to the server."""
-        data = bytearray()
-        data.extend(struct.pack(self.FORMAT_FLAG, flag))
+        data = BytesIO()
+        data.write(struct.pack(self.FORMAT_FLAG, flag))
         if len(ids) != len(payloads):
             raise ValueError("`ids` have different length with `payloads`")
         batch_size = len(ids)
-        data.extend(struct.pack(self.FORMAT_BATCH, batch_size))
+        data.write(struct.pack(self.FORMAT_BATCH, batch_size))
         if batch_size > 0:
             for task_id, payload in zip(ids, payloads):
                 length = struct.pack(self.FORMAT_LENGTH, len(payload))
-                data.extend(task_id)
-                data.extend(length)
-                data.extend(payload)
-        self.socket.sendall(data)
+                data.write(task_id)
+                data.write(length)
+                data.write(payload)
+        self.socket.sendall(data.getbuffer())
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 "%s sent %d tasks with ids: %s",
