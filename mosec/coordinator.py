@@ -140,12 +140,12 @@ class Coordinator:
                     self.worker.forward(self.worker.example)
                     logger.info("%s warmup successfully", self.name)
                 # pylint: disable=broad-except
-                except Exception as err:
+                except Exception:
                     logger.error(
                         "%s warmup failed: %s\nplease ensure"
                         " worker's example meets its forward input format",
                         self.name,
-                        err,
+                        traceback.format_exc().replace("\n", " "),
                     )
 
     def run(self):
