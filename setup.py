@@ -89,5 +89,5 @@ setup(
     },
     zip_safe=False,
     ext_modules=ext_modules,  # type: ignore
-    cmdclass=dict(build_ext=RustBuildExt),
+    cmdclass=dict(build_ext=RustBuildExt),  # type: ignore
 )
