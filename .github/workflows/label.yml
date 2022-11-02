@@ -14,6 +14,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PR: ${{ github.event.number }}
     steps:
+      - uses: actions/checkout@v3
       - run: gh pr edit $PR --remove-label documentation --remove-label enhancement  --remove-label bug_fix  --remove-label refactoring --remove-label chore
       - run: gh pr edit $PR --add-label documentation
         if: ${{ startsWith(github.event.pull_request.title, 'doc') }}
