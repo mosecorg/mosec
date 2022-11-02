@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/JTWcRNGQyQ">
-    <img alt="discord invitation link" src="https://dcbadge.vercel.app/api/server/JTWcRNGQyQ?style=flat">
+  <a href="https://discord.gg/Jq5vxuH69W">
+    <img alt="discord invitation link" src="https://dcbadge.vercel.app/api/server/Jq5vxuH69W?style=flat">
   </a>
   <a href="https://pypi.org/project/mosec/">
     <img src="https://badge.fury.io/py/mosec.svg" alt="PyPI version" height="20">
@@ -176,4 +176,4 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 ## Contributing
 
-We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/JTWcRNGQyQ). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
+We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!

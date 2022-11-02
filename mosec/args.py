@@ -21,9 +21,26 @@ Arguments parsing for two parts:
 """
 
 import argparse
+import errno
 import os
 import random
+import socket
 import tempfile
+
+
+def is_port_available(addr: str, port: int) -> bool:
+    """Check if the port is available to use."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    err = sock.connect_ex((addr, port))
+    sock.close()
+    # https://docs.python.org/3/library/errno.html
+    if 0 == err:
+        return False
+    if errno.ECONNREFUSED == err:
+        return True
+    raise RuntimeError(
+        f"Check {addr}:{port} socket connection err: {err}{errno.errorcode[err]}"
+    )
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -86,7 +103,11 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     args = parser.parse_args()
-    return args
+    if is_port_available(args.address, args.port):
+        return args
+    raise RuntimeError(
+        f"{args.address}:{args.port} is in use. Please change to a free one (--port)."
+    )
 
 
 if __name__ == "__main__":

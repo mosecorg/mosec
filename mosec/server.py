@@ -22,14 +22,13 @@ import contextlib
 import logging
 import multiprocessing as mp
 import os
+import shutil
 import signal
 import subprocess
 import traceback
 from functools import partial
 from multiprocessing.synchronize import Event
-from os.path import exists
 from pathlib import Path
-from shutil import rmtree
 from time import monotonic, sleep
 from typing import Dict, List, Optional, Type, Union
 
@@ -174,10 +173,6 @@ class Server:
         """Subprocess to start controller program."""
         self._configs = vars(parse_arguments())
         if not self._server_shutdown:
-            path = self._configs["path"]
-            if exists(path):
-                logger.info("path already exists, try to remove it: %s", path)
-                rmtree(path)
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
             # pylint: disable=consider-using-with
             self._controller_process = subprocess.Popen(
@@ -286,7 +281,7 @@ class Server:
 
         # shutdown coordinators
         self._coordinator_shutdown.set()
-
+        shutil.rmtree(self._configs["path"])
         logger.info("mosec server exited. see you.")
 
     def register_daemon(self, name: str, proc: subprocess.Popen):
