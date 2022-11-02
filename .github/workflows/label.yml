@@ -3,6 +3,9 @@ on:
   pull_request:
     types: [opened, edited]
 
+permissions:
+  pull-requests: write
+
 # make sure you have the following labels:
 #   [documentation, enhancement, bug_fix, refactoring, chore]
 jobs:
