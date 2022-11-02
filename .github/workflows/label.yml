@@ -1,6 +1,6 @@
 name: Label
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, edited]
 
 # make sure you have the following labels:
@@ -10,7 +10,6 @@ jobs:
     name: PR label
     permissions:
       pull-requests: write
-      issues: write
       contents: read
     runs-on: ubuntu-latest
     env:
