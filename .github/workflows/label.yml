@@ -3,14 +3,15 @@ on:
   pull_request:
     types: [opened, edited]
 
-permissions:
-  pull-requests: write
-
 # make sure you have the following labels:
 #   [documentation, enhancement, bug_fix, refactoring, chore]
 jobs:
   pr_label:
     name: PR label
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
