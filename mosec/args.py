@@ -106,7 +106,7 @@ def parse_arguments() -> argparse.Namespace:
     if is_port_available(args.address, args.port):
         return args
     raise RuntimeError(
-        f"{args.address}:{args.port} is in use. Please change to a free one."
+        f"{args.address}:{args.port} is in use. Please change to a free one (--port)."
     )
 
 
