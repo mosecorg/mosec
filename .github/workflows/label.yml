@@ -1,0 +1,30 @@
+name: Label
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited]
+
+# make sure you have the following labels:
+#   [documentation, enhancement, bug_fix, refactoring, chore]
+jobs:
+  pr_label:
+    name: PR label
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.number }}
+    steps:
+      - run: gh pr edit $PR --remove-label documentation --remove-label enhancement  --remove-label bug_fix  --remove-label refactoring --remove-label chore
+      - run: gh pr edit $PR --add-label documentation
+        if: ${{ startsWith(github.event.pull_request.title, 'doc') }}
+      - run: gh pr edit $PR --add-label enhancement
+        if: ${{ startsWith(github.event.pull_request.title, 'feat') }}
+      - run: gh pr edit $PR --add-label bug_fix
+        if: ${{ startsWith(github.event.pull_request.title, 'fix') }}
+      - run: gh pr edit $PR --add-label refactoring
+        if: ${{ startsWith(github.event.pull_request.title, 'refact') }}
+      - run: gh pr edit $PR --add-label chore
+        if: ${{ startsWith(github.event.pull_request.title, 'chore') }}
+

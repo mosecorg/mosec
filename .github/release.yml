@@ -5,12 +5,21 @@ changelog:
     authors:
       - dependabot
   categories:
-    - title: Breaking Changes 🛠
+    - title: Changes 🛠
       labels:
-        - breaking-change
+        - bug_fix
     - title: Exciting New Features 🎉
       labels:
         - enhancement
-    - title: What's Changed
+    - title: More Documentation 📚
+      labels:
+        - documentation
+    - title: Refactoring 🧬
+      labels:
+        - refactoring
+    - title: Minor changes 🧹
+      labels:
+        - chore
+    - title: Others 🔔
       labels:
         - "*"
