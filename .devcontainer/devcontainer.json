@@ -1,0 +1,17 @@
+{
+	"name": "mosec",
+    "build": { "dockerfile": "Dockerfile" },
+	"extensions": [
+		"rust-lang.rust-analyzer",
+		"ms-python.python"
+	],
+	"remoteUser": "dev",
+	"updateRemoteUserUID": true,
+	"remoteEnv": { "PATH": "${containerEnv:PATH}:/home/dev/.local/bin" },
+	"settings": {
+		"editor.formatOnSave": true,
+		"files.exclude": {
+			"**/LICENSE": true
+		}
+	}
+}
