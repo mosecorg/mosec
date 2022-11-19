@@ -27,7 +27,7 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        echo "::set-output name=dir::$(pip cache dir)"
+        echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
     - name: Cache pip
       id: cache-pip
