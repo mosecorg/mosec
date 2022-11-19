@@ -110,7 +110,7 @@ def test_square_service_mp(mosec_service, http_client):
 
 
 def validate_square_service(http_client, x):
-    resp = http_client.post("inference", json={"x": x})
+    resp = http_client.post("/inference", json={"x": x})
     assert resp.json()["x"] == x**2
 
 
