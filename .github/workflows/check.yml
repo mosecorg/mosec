@@ -76,5 +76,5 @@ jobs:
         run: |
           make semantic_lint test
       - name: Test plugins
-        if: ${{ startsWith(matrix.os, 'ubuntu') && matrix.python != '3.11' }}
+        if: ${{ startsWith(matrix.os, 'ubuntu') && matrix.python-version != '3.11' }}
         run: make test_plugin
