@@ -29,7 +29,7 @@ TEST_PORT = "5000"
 
 @pytest.fixture
 def http_client():
-    with httpx.Client(base_url=f"http://0.0.0.0:{TEST_PORT}") as client:
+    with httpx.Client(base_url=f"http://127.0.0.1:{TEST_PORT}") as client:
         yield client
 
 
