@@ -1,4 +1,4 @@
-check: lint test
+.DEFAULT_GOAL:=dev
 
 PY_SOURCE_FILES=mosec tests examples scripts setup.py
 RUST_SOURCE_FILES=src/*

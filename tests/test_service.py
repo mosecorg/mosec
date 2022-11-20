@@ -25,14 +25,12 @@ import pytest
 import mosec
 
 TEST_PORT = "5000"
-URL = f"http://0.0.0.0:{TEST_PORT}"
 
 
 @pytest.fixture
 def http_client():
-    client = httpx.Client()
-    yield client
-    client.close()
+    with httpx.Client(base_url=f"http://127.0.0.1:{TEST_PORT}") as client:
+        yield client
 
 
 @pytest.fixture(scope="session")
@@ -62,7 +60,7 @@ def mosec_service(request):
     indirect=["mosec_service", "http_client"],
 )
 def test_square_service(mosec_service, http_client):
-    resp = http_client.get(URL)
+    resp = http_client.get("/")
     assert resp.status_code == 200
     # only check the major and minor version since Python is using `setuptools-scm`
     major_minor_version = ".".join(mosec.__version__.split(".", 3)[:2])
@@ -70,17 +68,17 @@ def test_square_service(mosec_service, http_client):
         "mosec/" + major_minor_version
     ), f"{mosec.__version__} ({major_minor_version}) vs {resp.headers['server']}"
 
-    resp = http_client.get(f"{URL}/metrics")
+    resp = http_client.get("/metrics")
     assert resp.status_code == 200
 
-    resp = http_client.post(f"{URL}/inference", json={"msg": 2})
+    resp = http_client.post("/inference", json={"msg": 2})
     assert resp.status_code == 422
     assert resp.text == "validation error: 'x'"
 
-    resp = http_client.post(f"{URL}/inference", content=b"bad-binary-request")
+    resp = http_client.post("/inference", content=b"bad-binary-request")
     assert resp.status_code == 400
 
-    validate_square_service(http_client, URL, 2)
+    validate_square_service(http_client, 2)
 
 
 @pytest.mark.parametrize(
@@ -101,29 +99,29 @@ def test_square_service_mp(mosec_service, http_client):
     for _ in range(20):
         t = Thread(
             target=validate_square_service,
-            args=(http_client, URL, random.randint(-500, 500)),
+            args=(http_client, random.randint(-500, 500)),
         )
         t.start()
         threads.append(t)
     for t in threads:
         t.join()
-    assert_batch_larger_than_one(http_client, URL)
-    assert_empty_queue(http_client, URL)
+    assert_batch_larger_than_one(http_client)
+    assert_empty_queue(http_client)
 
 
-def validate_square_service(http_client, url, x):
-    resp = http_client.post(f"{url}/inference", json={"x": x})
+def validate_square_service(http_client, x):
+    resp = http_client.post("/inference", json={"x": x})
     assert resp.json()["x"] == x**2
 
 
-def assert_batch_larger_than_one(http_client, url):
-    metrics = http_client.get(f"{url}/metrics").content.decode()
+def assert_batch_larger_than_one(http_client):
+    metrics = http_client.get("/metrics").content.decode()
     bs = re.findall(r"batch_size_bucket.+", metrics)
     get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
     assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
 
 
-def assert_empty_queue(http_client, url):
-    metrics = http_client.get(f"{url}/metrics").content.decode()
+def assert_empty_queue(http_client):
+    metrics = http_client.get("/metrics").content.decode()
     remain = re.findall(r"mosec_service_remaining_task \d+", metrics)[0]
     assert int(remain.split(" ")[-1]) == 0

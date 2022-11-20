@@ -53,10 +53,10 @@ jobs:
     needs: [lint]
     timeout-minutes: 20
     strategy:
-      max-parallel: 5
+      max-parallel: 10
       matrix:
-        python-version: [3.7]
-        os: [ubuntu-latest, macos-latest]
+        python-version: [3.7, 3.8, 3.9, "3.10", "3.11"]
+        os: [ubuntu-latest , macos-latest]
 
     steps:
       - uses: actions/checkout@v3
@@ -76,5 +76,5 @@ jobs:
         run: |
           make semantic_lint test
       - name: Test plugins
-        if: startsWith(matrix.os, 'ubuntu')
+        if: ${{ startsWith(matrix.os, 'ubuntu') && matrix.python-version != '3.11' }}
         run: make test_plugin
