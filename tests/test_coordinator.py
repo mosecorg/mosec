@@ -80,6 +80,24 @@ def base_test_config():
     }
 
 
+def test_coordinator_worker_property():
+    ctx = "spawn"
+    c = Coordinator(
+        EchoWorkerJSON,
+        max_batch_size=16,
+        stage=STAGE_EGRESS,
+        shutdown=mp.get_context(ctx).Event(),
+        shutdown_notify=mp.get_context(ctx).Event(),
+        socket_prefix="",
+        stage_id=2,
+        worker_id=3,
+        ipc_wrapper=None,
+    )
+    assert c.worker.stage == STAGE_EGRESS
+    assert c.worker.worker_id == 3
+    assert c.worker.max_batch_size == 16
+
+
 def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
     return mp.get_context(c_ctx).Process(
         target=Coordinator,
@@ -196,7 +214,7 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
         ),
     ],
 )
-def test_echo_batch(mocker, base_test_config, test_data, worker, deserializer):
+def test_echo_batch(base_test_config, test_data, worker, deserializer):
     """To test the batched data echo functionality. The batch size is automatically
     determined by the data's size.
     """

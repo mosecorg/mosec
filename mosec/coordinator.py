@@ -78,8 +78,8 @@ class Coordinator:
         Raises:
             TypeError: ipc_wrapper should inherit from `IPCWrapper`
         """
-        worker._worker_id = worker_id
         self.worker = worker()
+        self.worker.worker_id = worker_id
         self.worker.max_batch_size = max_batch_size
         self.worker.stage = stage
 
@@ -106,7 +106,7 @@ class Coordinator:
         self.shutdown = shutdown
         self.shutdown_notify = shutdown_notify
 
-        self.init_worker()
+        self.warmup()
         self.init_protocol()
         self.run()
 
@@ -132,21 +132,21 @@ class Coordinator:
         )
         logger.info("%s exiting...", self.name)
 
-    def init_worker(self):
+    def warmup(self):
         """Warmup to allocate resources (useful for GPU workload)[Optional]."""
-        if not self.shutdown.is_set():
-            if self.worker.example is not None:
-                try:
-                    self.worker.forward(self.worker.example)
-                    logger.info("%s warmup successfully", self.name)
-                # pylint: disable=broad-except
-                except Exception:
-                    logger.error(
-                        "%s warmup failed: %s\nplease ensure"
-                        " worker's example meets its forward input format",
-                        self.name,
-                        traceback.format_exc().replace("\n", " "),
-                    )
+        if self.shutdown.is_set() or self.worker.example is None:
+            return
+        try:
+            self.worker.forward(self.worker.example)
+            logger.info("%s warmup successfully", self.name)
+        # pylint: disable=broad-except
+        except Exception:
+            logger.error(
+                "%s warmup failed: %s\nplease ensure"
+                " worker's example meets its forward input format",
+                self.name,
+                traceback.format_exc().replace("\n", " "),
+            )
 
     def run(self):
         """Maintain the protocol connection and run the coordination."""

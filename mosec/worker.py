@@ -65,11 +65,14 @@ class Worker(abc.ABC):
 
     example: Any = None
     _worker_id: int = 0
+    _stage: str = ""
+    _max_batch_size: int = 1
 
     def __init__(self):
-        """Initialize the worker."""
-        self._stage: str = ""
-        self._max_batch_size: int = 1
+        """Initialize the worker.
+
+        This method doesn't require the child class to override.
+        """
 
     def serialize_ipc(self, data) -> bytes:
         """Define IPC serialize method."""

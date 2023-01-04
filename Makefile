@@ -11,8 +11,8 @@ install:
 
 dev:
 	cargo build
-	mkdir -p mosec/bin
-	cp ./target/debug/mosec mosec/bin/
+	@mkdir -p mosec/bin
+	@cp ./target/debug/mosec mosec/bin/
 	pip install -e .
 
 test: dev
@@ -21,13 +21,13 @@ test: dev
 	RUST_BACKTRACE=1 cargo test -vv
 
 test_plugin: dev
-	pip install -r requirements/plugin.txt
+	@pip install -q -r requirements/plugin.txt
 	echo "Running tests for the plugin"
 	pytest tests -vv -s -m "arrow"
 	pip uninstall -y -r requirements/plugin.txt
 
 test_all: dev
-	pip install -r requirements/plugin.txt
+	@pip install -q -r requirements/plugin.txt
 	echo "Running tests for the all features"
 	pytest tests -vv -s
 	RUST_BACKTRACE=1 cargo test -vv
@@ -51,13 +51,13 @@ publish: package
 	twine upload dist/*
 
 format:
-	autoflake --in-place --recursive ${PY_SOURCE_FILES}
-	isort --project=mosec ${PY_SOURCE_FILES}
-	black ${PY_SOURCE_FILES}
-	cargo +nightly fmt --all
+	@autoflake --in-place --recursive ${PY_SOURCE_FILES}
+	@isort --project=mosec ${PY_SOURCE_FILES}
+	@black ${PY_SOURCE_FILES}
+	@cargo +nightly fmt --all
 
 lint:
-	pip install -e .
+	@pip install -q -e .
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
 	pylint -j 8 --recursive=y mosec
@@ -69,7 +69,7 @@ lint:
 	cargo +nightly fmt -- --check
 
 semantic_lint:
-	cargo clippy -- -D warnings
+	@cargo clippy -- -D warnings
 
 version:
 	@python -m setuptools_scm
