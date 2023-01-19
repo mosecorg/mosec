@@ -151,6 +151,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 - Batch processing worker
 - Shared memory IPC
 - Customized GPU allocation
+- Jax jitted inference
 - PyTorch deep learning models:
   - sentiment analysis
   - image recognition
