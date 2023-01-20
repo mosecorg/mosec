@@ -16,6 +16,7 @@ nav:
   - Example:
       - Overview: "example/index.md"
       - Echo: "example/echo.md"
+      - Jax: "example/jax.md"
       - PyTorch: "example/pytorch.md"
       - Metrics: "example/metric.md"
       - Environments: "example/env.md"

@@ -57,7 +57,7 @@ We also demonstrate how to customized **validation** on the data content through
     python resnet50_client_msgpack.py
 
 <details>
-<summary>resnet50_client.py</summary>
+<summary>resnet50_client_msgpack.py</summary>
 ```python
 --8<-- "examples/resnet50_client_msgpack.py"
 ```
