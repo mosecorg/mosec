@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Example: Simple jax jitted inference."""
+"""Example: Simple jax jitted inference with a single layer classifier."""
 
 import logging
 import time
@@ -82,7 +82,6 @@ class JittedInference(Worker):
             input_array_raw = [ele["array"] for ele in data]
         except KeyError as err:
             raise ValidationError(f"cannot find key {err}") from err
-
         input_array = jnp.array(input_array_raw)
         output_array = self.batch_forward(input_array)
         output_category = output_array.tolist()
