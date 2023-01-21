@@ -134,10 +134,22 @@ class Coordinator:
 
     def warmup(self):
         """Warmup to allocate resources (useful for GPU workload)[Optional]."""
-        if self.shutdown.is_set() or self.worker.example is None:
+        need_warmup = self.worker.example or self.worker.multi_examples
+        if self.shutdown.is_set() or not need_warmup:
             return
         try:
-            self.worker.forward(self.worker.example)
+            # Prioritize multi_examples if both appear.
+            if self.worker.multi_examples:
+                num_eg = len(self.worker.multi_examples)
+                for i, example in enumerate(self.worker.multi_examples):
+                    self.worker.forward(example)
+                    logger.debug(
+                        "Warming up... (%d / %d)",
+                        i + 1,
+                        num_eg,
+                    )
+            else:
+                self.worker.forward(self.worker.example)
             logger.info("%s warmup successfully", self.name)
         # pylint: disable=broad-except
         except Exception:

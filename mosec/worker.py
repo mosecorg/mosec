@@ -26,7 +26,7 @@ import abc
 import json
 import logging
 import pickle
-from typing import Any
+from typing import Any, Sequence
 
 from .errors import DecodingError, EncodingError
 
@@ -64,6 +64,7 @@ class Worker(abc.ABC):
     # pylint: disable=no-self-use
 
     example: Any = None
+    multi_examples: Sequence[Any] = []
     _worker_id: int = 0
     _stage: str = ""
     _max_batch_size: int = 1
