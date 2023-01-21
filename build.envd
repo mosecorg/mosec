@@ -1,0 +1,42 @@
+# syntax=v1
+# You can install envd with pip: `pip install envd`.
+# Make sure you already have docker installed.
+# To start the development of mosec, just run `envd up`, then you will get an
+# isolated and clean Python & Rust development environment.
+# To access GPU, you can run `envd up :gpu`. Make sure you have nvidia-docker
+# installed.
+
+
+def rust():
+    """Install Rust."""
+    install.apt_packages(name=["build-essential"])
+    run(
+        [
+            "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+        ]
+    )
+    runtime.environ(extra_path=["/home/envd/.cargo/bin"])
+
+
+def jax():
+    install.python_packages(
+        name=[
+            "jax[cuda] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html",
+            "chex",
+        ]
+    )
+
+
+def build():
+    base(dev=True)
+    install.conda()
+    install.python()
+    install.python_packages(requirements="requirements/dev.txt")
+    rust()
+    # run(["make install"], mount_host=True)
+    runtime.init(["make install"])
+
+
+def gpu():
+    build()
+    install.cuda(version="11.6.2")

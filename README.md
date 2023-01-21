@@ -156,6 +156,12 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
   - sentiment analysis
   - image recognition
 
+## Contributing
+
+We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
+
+To start develop, you can use [envd](https://github.com/tensorchord/envd) to create an isolated and clean Python & Rust environment. Chek the [envd-docs](https://envd.tensorchord.ai/) or [build.envd](./build.envd) for more information.
+
 ## Qualitative Comparison<sup>\*</sup>
 
 |                                                             | Batcher | Pipeline | Parallel | I/O Format<sup>(1)</sup>                                                                                                                    | Framework<sup>(2)</sup> | Backend | Activity                                                                      |
@@ -174,7 +180,3 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 <sup>**(1)**: Data format of the service's request and response. "Limited" in the sense that the framework has pre-defined requirements on the format.</sup>
 <sup>**(2)**: Supported machine learning frameworks. "Heavily" means the serving framework is designed towards a specific ML framework. Thus it is hard, if not impossible, to adapt to others. "Multiple" means the serving framework provides adaptation to several existing ML frameworks. "Agnostic" means the serving framework does not necessarily care about the ML framework. Hence it supports all ML frameworks (in Python).</sup>
 <sup>**(3)**: Flask is a representative of general purpose web frameworks to host ML models.</sup>
-
-## Contributing
-
-We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
