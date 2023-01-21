@@ -14,6 +14,7 @@
 """Example: Simple jax jitted inference with a single layer classifier."""
 
 import logging
+import os
 import time
 from typing import List
 
@@ -38,7 +39,7 @@ LATENT_SIZE = 16
 OUTPUT_SIZE = 2
 
 MAX_BATCH_SIZE = 8
-USE_JIT = False
+USE_JIT = os.environ.get("USE_JIT", "false")
 
 
 class JittedInference(Worker):
@@ -59,7 +60,7 @@ class JittedInference(Worker):
         for i in range(MAX_BATCH_SIZE):
             self.multi_examples.append([{"array": dummy_array}] * (i + 1))
 
-        if USE_JIT:
+        if USE_JIT == "true":
             self.batch_forward = jax.jit(self._batch_foward)
         else:
             self.batch_forward = self._batch_foward
