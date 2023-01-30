@@ -1,7 +1,7 @@
 # syntax=v1
 
 
-def build():
+def basic():
     install.cuda(version="11.6.2")
     install.python()
     install.python_packages(
@@ -14,5 +14,15 @@ def build():
             "mosec",
         ]
     )
+    runtime.expose(envd_port=8000, host_port=8000, service="sd")
+
+
+def build():
+    base(dev=True)
+    basic()
+
+
+def serving():
+    basic()
     io.copy("server.py", "/")
-    config.entrypoint(["python", "server.py"])
+    config.entrypoint(["python", "server.py", "--timeout", "30000"])

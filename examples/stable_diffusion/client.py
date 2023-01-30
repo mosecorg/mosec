@@ -29,9 +29,14 @@ parser.add_argument(
 
 
 args = parser.parse_args()
-resp = httpx.post("http://localhost:8000/inference", data=msgpack.packb(args.prompt))
+resp = httpx.post(
+    "http://localhost:8000/inference",
+    data=msgpack.packb(args.prompt),
+    timeout=httpx.Timeout(20),
+)
 if resp.status_code == 200:
+    data = msgpack.unpackb(resp.content)
     with open(args.output, "wb") as f:
-        f.write(resp.content)
+        f.write(data)
 else:
     print(f"ERROR: <{resp.status_code}> {resp.content}")

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import logging
+from io import BytesIO
+from typing import List
 
 import torch  # ingore: type
 from diffusers import StableDiffusionPipeline  # ignore: type
@@ -30,15 +32,22 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 
 
-def StableDiffusion(MsgpackMixin, Worker):
+class StableDiffusion(MsgpackMixin, Worker):
     def __init__(self):
         self.pipe = StableDiffusionPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
         )
         self.pipe = self.pipe.to("cuda")
 
-    def forward(self, data):
-        images = self.pipe(data)
+    def forward(self, data: List[str]) -> List[bytes]:
+        logger.debug("generate images for %s", data)
+        res = self.pipe(data)
+        logger.debug("NSFW: %s", res[1])
+        images = []
+        for img in res[0]:
+            dummy_file = BytesIO()
+            img.save(dummy_file, format="PNG")
+            images.append(dummy_file.getbuffer())
         return images
 
 
