@@ -24,7 +24,7 @@ parser.add_argument(
     "-p", "--prompt", default="a photo of an astronaut riding a horse on mars"
 )
 parser.add_argument(
-    "-o", "--output", default="stable_diffusion_result.png", help="output filename"
+    "-o", "--output", default="stable_diffusion_result.jpg", help="output filename"
 )
 
 

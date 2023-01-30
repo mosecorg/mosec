@@ -46,7 +46,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         images = []
         for img in res[0]:
             dummy_file = BytesIO()
-            img.save(dummy_file, format="PNG")
+            img.save(dummy_file, format="JPEG")
             images.append(dummy_file.getbuffer())
         return images
 
