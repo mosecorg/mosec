@@ -1,0 +1,28 @@
+# syntax=v1
+
+
+def basic():
+    install.cuda(version="11.6.2")
+    install.python()
+    install.python_packages(
+        name=[
+            "torch --extra-index-url https://download.pytorch.org/whl/cu116",
+            "diffusers[torch]",
+            "transformers",
+            "accelerate",
+            "msgpack",
+            "mosec",
+        ]
+    )
+
+
+def build():
+    base(dev=True)
+    basic()
+    runtime.expose(envd_port=8000, host_port=8000, service="sd")
+
+
+def serving():
+    basic()
+    io.copy("server.py", "/")
+    config.entrypoint(["python", "server.py", "--timeout", "30000"])
