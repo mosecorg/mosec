@@ -1,5 +1,7 @@
 This example provides a demo service for stable diffusion. You can develop this in the container environment by using [envd](https://github.com/tensorchord/envd): `envd up`.
 
+You should be able to try this demo under the `mosec/examples/stable_diffusion/` directory.
+
 ##### Server
 
     envd build -t sd:serving
