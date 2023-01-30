@@ -155,6 +155,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 - PyTorch deep learning models:
   - sentiment analysis
   - image recognition
+  - stable diffusion
 
 ## Contributing
 

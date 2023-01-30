@@ -20,6 +20,7 @@ nav:
       - PyTorch: "example/pytorch.md"
       - Metrics: "example/metric.md"
       - Environments: "example/env.md"
+      - Demo - Stable Diffusion: "example/stable_diffusion.md"
       - Plugins - IPCWrapper: "example/ipc.md"
   # - Deploy: "deploy.md"
   # - FAQ: "faq.md"

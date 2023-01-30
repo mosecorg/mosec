@@ -14,12 +14,12 @@ def basic():
             "mosec",
         ]
     )
-    runtime.expose(envd_port=8000, host_port=8000, service="sd")
 
 
 def build():
     base(dev=True)
     basic()
+    runtime.expose(envd_port=8000, host_port=8000, service="sd")
 
 
 def serving():
