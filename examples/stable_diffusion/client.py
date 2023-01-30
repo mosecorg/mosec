@@ -15,7 +15,7 @@
 import argparse
 
 import httpx
-import msgpack
+import msgpack  # type: ignore
 
 parser = argparse.ArgumentParser(
     prog="stable diffusion client demo",
@@ -39,4 +39,4 @@ if resp.status_code == 200:
     with open(args.output, "wb") as f:
         f.write(data)
 else:
-    print(f"ERROR: <{resp.status_code}> {resp.content}")
+    print(f"ERROR: <{resp.status_code}> {resp.text}")

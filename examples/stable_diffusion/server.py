@@ -16,8 +16,8 @@ import logging
 from io import BytesIO
 from typing import List
 
-import torch  # ingore: type
-from diffusers import StableDiffusionPipeline  # ignore: type
+import torch  # type: ignore
+from diffusers import StableDiffusionPipeline  # type: ignore
 
 from mosec import Server, Worker
 from mosec.mixin import MsgpackMixin
@@ -39,7 +39,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         )
         self.pipe = self.pipe.to("cuda")
 
-    def forward(self, data: List[str]) -> List[bytes]:
+    def forward(self, data: List[str]) -> List[memoryview]:
         logger.debug("generate images for %s", data)
         res = self.pipe(data)
         logger.debug("NSFW: %s", res[1])
