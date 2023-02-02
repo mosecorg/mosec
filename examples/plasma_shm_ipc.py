@@ -49,7 +49,6 @@ class DataConsumer(Worker):
 
 
 if __name__ == "__main__":
-
     # 200 Mb store, adjust the size according to your requirement
     with plasma.start_plasma_store(plasma_store_memory=200 * 1000 * 1000) as (
         shm_path,
