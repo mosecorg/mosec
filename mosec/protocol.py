@@ -100,8 +100,8 @@ class Protocol:
 
         if total_bytes > IPC_LARGE_DATA_SIZE:
             warnings.warn(
-                f"IPC data ({total_bytes} bytes) is large,"
-                "this may affect the performance",
+                f"IPC data ({total_bytes} bytes) is large, "
+                "which may affect performance",
                 RuntimeWarning,
             )
         return flag, ids, payloads
