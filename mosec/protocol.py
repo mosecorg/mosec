@@ -17,10 +17,13 @@
 import logging
 import socket
 import struct
+import warnings
 from io import BytesIO
 from typing import Sequence, Tuple
 
 logger = logging.getLogger(__name__)
+
+IPC_LARGE_DATA_SIZE = 1024 * 1024  # set as 1 MB
 
 
 class Protocol:
@@ -75,6 +78,7 @@ class Protocol:
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
         batch_size = struct.unpack(self.FORMAT_BATCH, batch_size_bytes)[0]
         ids, payloads = [], []
+        total_bytes = 0
 
         while batch_size > 0:
             batch_size -= 1
@@ -84,6 +88,7 @@ class Protocol:
             payload = _recv_all(self.socket, length)
             ids.append(id_bytes)
             payloads.append(payload)
+            total_bytes += length
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(
@@ -91,6 +96,13 @@ class Protocol:
                 self.name,
                 len(ids),
                 struct.unpack("!" + "I" * len(ids), b"".join(ids)),
+            )
+
+        if total_bytes > IPC_LARGE_DATA_SIZE:
+            warnings.warn(
+                f"IPC data ({total_bytes} bytes) is large, "
+                "which may affect performance",
+                RuntimeWarning,
             )
         return flag, ids, payloads
 
