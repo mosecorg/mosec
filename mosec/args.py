@@ -102,7 +102,7 @@ def parse_arguments() -> argparse.Namespace:
         default="mosec_service",
     )
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     if is_port_available(args.address, args.port):
         return args
     raise RuntimeError(
