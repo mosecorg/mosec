@@ -21,9 +21,10 @@ use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, RwLock};
 use tokio::sync::oneshot;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::errors::ServiceError;
+use crate::metrics::Metrics;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum TaskCode {
@@ -151,6 +152,12 @@ impl TaskManager {
         if let Some(sender) = notifiers.remove(&id) {
             if !sender.is_closed() {
                 sender.send(()).unwrap();
+            } else {
+                warn!(%id, "the notifier channel is already closed, will delete it");
+                let mut table = self.table.write();
+                table.remove(&id);
+                let metrics = Metrics::global();
+                metrics.remaining_task.dec();
             }
         } else {
             // if the task is already timeout, the notifier may be removed by another thread
