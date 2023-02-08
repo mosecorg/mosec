@@ -218,7 +218,7 @@ class Server:
                     # this stage might contain bugs
                     self._terminate(
                         1,
-                        f"all workers at stage {stage_id} exited;"
+                        f"all the {w_cls.__name__} workers at stage {stage_id} exited;"
                         " please check for bugs or socket connection issues",
                     )
                     break
