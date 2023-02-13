@@ -24,7 +24,7 @@ import traceback
 from multiprocessing.synchronize import Event
 from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
-from .errors import DecodingError, ValidationError
+from .errors import DecodingError, EncodingError, ValidationError
 from .ipc import IPCWrapper
 from .protocol import Protocol
 from .worker import Worker
@@ -246,6 +246,7 @@ class Coordinator:
                 break
 
             # pylint: disable=broad-except
+            length = len(payloads)
             try:
                 data = [decoder(item) for item in payloads]
                 data = (
@@ -253,29 +254,29 @@ class Coordinator:
                     if self.worker.max_batch_size > 1
                     else (self.worker.forward(data[0]),)
                 )
-                if len(data) != len(payloads):
+                if len(data) != length:
                     raise ValueError(
                         "returned data size doesn't match the input data size:"
-                        f"input({len(data)})!=output({len(payloads)})"
+                        f"input({length})!=output({len(data)})"
                     )
                 status = self.protocol.FLAG_OK
                 payloads = [encoder(item) for item in data]
-            except DecodingError as err:
+            except (EncodingError, DecodingError) as err:
                 err_msg = str(err).replace("\n", " - ")
-                err_msg = err_msg if err_msg else "cannot deserialize request bytes"
-                logger.info("%s decoding error: %s", self.name, err_msg)
+                err_msg = err_msg if err_msg else "cannot se/deserialize request bytes"
+                logger.info("%s encoding/decoding error: %s", self.name, err_msg)
                 status = self.protocol.FLAG_BAD_REQUEST
-                payloads = (f"decoding error: {err_msg}".encode(),)
+                payloads = [f"encoding/decoding error: {err_msg}".encode()] * length
             except ValidationError as err:
                 err_msg = str(err)
                 err_msg = err_msg if err_msg else "invalid data format"
                 logger.info("%s validation error: %s", self.name, err_msg)
                 status = self.protocol.FLAG_VALIDATION_ERROR
-                payloads = (f"validation error: {err_msg}".encode(),)
+                payloads = [f"validation error: {err_msg}".encode()] * length
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
                 status = self.protocol.FLAG_INTERNAL_ERROR
-                payloads = ("inference internal error".encode(),)
+                payloads = ["inference internal error".encode()] * length
 
             try:
                 protocol_send(status, ids, payloads)
