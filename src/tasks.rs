@@ -103,7 +103,7 @@ impl TaskManager {
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
-            error!(%id, %err, "task timeout");
+            warn!(%id, %err, "task timeout");
             let mut table = self.table.write();
             let mut notifiers = self.notifiers.lock();
             table.remove(&id);
@@ -139,7 +139,7 @@ impl TaskManager {
         debug!(%id, "add a new task");
 
         if self.channel.try_send(id).is_err() {
-            error!(%id, "the first channel is full, delete this task");
+            warn!(%id, "the first channel is full, delete this task");
             table.remove(&id);
             notifiers.remove(&id);
             return Err(ServiceError::TooManyRequests);
