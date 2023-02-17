@@ -30,7 +30,7 @@ import pytest
 
 from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from mosec.mixin import MsgpackMixin
-from mosec.protocol import Protocol, _recv_all
+from mosec.protocol import HTTPStautsCode, Protocol, _recv_all
 from mosec.worker import Worker
 
 from .utils import imitate_controller_send
@@ -259,7 +259,7 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
                 got_ids.append(conn.recv(4))
                 got_length = struct.unpack("!I", conn.recv(4))[0]
                 got_payloads.append(_recv_all(conn, got_length))
-            assert got_flag == Protocol.FLAG_OK
+            assert got_flag == HTTPStautsCode.OK
             assert got_ids == sent_ids
             assert all(
                 [

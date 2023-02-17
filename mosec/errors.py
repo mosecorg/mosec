@@ -24,19 +24,60 @@ is raised; if the decoded data cannot pass the validation check (usually
 implemented by users), the `ValidationError` should be raised.
 """
 
+from .protocol import HTTPStautsCode
 
-class EncodingError(Exception):
+
+class MosecError(Exception):
+    """Mosec basic exception."""
+
+    code = HTTPStautsCode.INTERNAL_ERROR
+    msg = "mosec error"
+
+
+class ClientError(MosecError):
+    """Client side error.
+
+    This error indicates that the server cannot or will not process the request
+    due to something that is perceived to be a client error. It will return the
+    details to the client side with
+    [HTTP 400](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400).
+    """
+
+    code = HTTPStautsCode.BAD_REQUEST
+    msg = "bad request"
+
+
+class ServerError(MosecError):
+    """Server side error.
+
+    This error indicates that the server encountered an unexpected condition
+    that prevented it from fulfilling the request. It will return the details
+    to the client side with
+    [HTTP 500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500).
+
+    Attention: be careful about the returned message since it may contain some
+    sensitive information. If you don't want to return the details, just raise
+    an exception that is not inherited from `mosec.errors.MosecError`.
+    """
+
+    code = HTTPStautsCode.INTERNAL_ERROR
+    msg = "internal error"
+
+
+class EncodingError(ServerError):
     """Serialization error.
 
     The `EncodingError` should be raised in user-implemented codes when
     the serialization for the response bytes fails. This error will set
     to status code to
     [HTTP 500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500)
-    in the response.
+    and show the details in the response.
     """
 
+    msg = "encoding error"
 
-class DecodingError(Exception):
+
+class DecodingError(ClientError):
     """De-serialization error.
 
     The `DecodingError` should be raised in user-implemented codes
@@ -46,8 +87,10 @@ class DecodingError(Exception):
     in the response.
     """
 
+    msg = "decoding error"
 
-class ValidationError(Exception):
+
+class ValidationError(MosecError):
     """Request data validation error.
 
     The `ValidationError` should be raised in user-implemented codes,
@@ -57,3 +100,6 @@ class ValidationError(Exception):
     [HTTP 422](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422)
     in the response.
     """
+
+    code = HTTPStautsCode.VALIDATION_ERROR
+    msg = "request validation error"
