@@ -18,12 +18,22 @@ import logging
 import socket
 import struct
 import warnings
+from enum import IntFlag
 from io import BytesIO
 from typing import Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
 IPC_LARGE_DATA_SIZE = 1024 * 1024  # set as 1 MB
+
+
+class HTTPStautsCode(IntFlag):
+    """HTTP status code flag."""
+
+    OK = 1  # 200
+    BAD_REQUEST = 2  # 400
+    VALIDATION_ERROR = 4  # 422
+    INTERNAL_ERROR = 8  # 500
 
 
 class Protocol:
@@ -38,12 +48,6 @@ class Protocol:
     FORMAT_BATCH = "!H"
     FORMAT_ID = "!I"
     FORMAT_LENGTH = "!I"
-
-    # flags
-    FLAG_OK = 1  # 200
-    FLAG_BAD_REQUEST = 2  # 400
-    FLAG_VALIDATION_ERROR = 4  # 422
-    FLAG_INTERNAL_ERROR = 8  # 500
 
     # lengths
     LENGTH_TASK_FLAG = 2

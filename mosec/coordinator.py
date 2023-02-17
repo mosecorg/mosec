@@ -24,9 +24,9 @@ import traceback
 from multiprocessing.synchronize import Event
 from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
-from .errors import DecodingError, EncodingError, ValidationError
+from .errors import MosecError
 from .ipc import IPCWrapper
-from .protocol import Protocol
+from .protocol import HTTPStautsCode, Protocol
 from .worker import Worker
 
 logger = logging.getLogger(__name__)
@@ -144,7 +144,7 @@ class Coordinator:
                 for i, example in enumerate(self.worker.multi_examples):
                     self.worker.forward(example)
                     logger.debug(
-                        "Warming up... (%d / %d)",
+                        "warming up... (%d / %d)",
                         i + 1,
                         num_eg,
                     )
@@ -154,7 +154,7 @@ class Coordinator:
         # pylint: disable=broad-except
         except Exception:
             logger.error(
-                "%s warmup failed: %s\nplease ensure"
+                "%s warmup failed: %s, please ensure"
                 " worker's example meets its forward input format",
                 self.name,
                 traceback.format_exc().replace("\n", " "),
@@ -223,7 +223,7 @@ class Coordinator:
 
         # TODO(kemingy) find a better way
         def wrapped_send(flag: int, ids: Sequence[bytes], payloads: Sequence[bytes]):
-            if flag == Protocol.FLAG_OK:
+            if flag == HTTPStautsCode.OK:
                 payloads = self.ipc_wrapper.put(payloads)  # type: ignore
             return self.protocol.send(flag, ids, payloads)
 
@@ -259,23 +259,17 @@ class Coordinator:
                         "returned data size doesn't match the input data size:"
                         f"input({length})!=output({len(data)})"
                     )
-                status = self.protocol.FLAG_OK
+                status = HTTPStautsCode.OK
                 payloads = [encoder(item) for item in data]
-            except (EncodingError, DecodingError) as err:
+            except MosecError as err:
                 err_msg = str(err).replace("\n", " - ")
-                err_msg = err_msg if err_msg else "cannot se/deserialize request bytes"
-                logger.info("%s encoding/decoding error: %s", self.name, err_msg)
-                status = self.protocol.FLAG_BAD_REQUEST
-                payloads = [f"encoding/decoding error: {err_msg}".encode()] * length
-            except ValidationError as err:
-                err_msg = str(err)
-                err_msg = err_msg if err_msg else "invalid data format"
-                logger.info("%s validation error: %s", self.name, err_msg)
-                status = self.protocol.FLAG_VALIDATION_ERROR
-                payloads = [f"validation error: {err_msg}".encode()] * length
+                err_msg = err_msg if err_msg else err.msg
+                logger.info("%s %s: %s", self.name, err.msg, err_msg)
+                status = err.code
+                payloads = [f"{err.msg}: {err_msg}".encode()] * length
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
-                status = self.protocol.FLAG_INTERNAL_ERROR
+                status = HTTPStautsCode.INTERNAL_ERROR
                 payloads = ["inference internal error".encode()] * length
 
             try:

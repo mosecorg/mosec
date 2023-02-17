@@ -16,6 +16,13 @@
 
 import logging
 
+from .errors import (
+    ClientError,
+    DecodingError,
+    EncodingError,
+    ServerError,
+    ValidationError,
+)
 from .server import Server
 from .worker import Worker
 
@@ -26,7 +33,15 @@ except ImportError:
 
     __version__ = get_version(root="..", relative_to=__file__)
 
-__all__ = ["Server", "Worker"]
+__all__ = [
+    "Server",
+    "Worker",
+    "ServerError",
+    "ClientError",
+    "ValidationError",
+    "EncodingError",
+    "DecodingError",
+]
 
 # setup library logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())

@@ -73,7 +73,7 @@ def test_square_service(mosec_service, http_client):
 
     resp = http_client.post("/inference", json={"msg": 2})
     assert resp.status_code == 422
-    assert resp.text == "validation error: 'x'"
+    assert resp.text == "request validation error: 'x'"
 
     resp = http_client.post("/inference", content=b"bad-binary-request")
     assert resp.status_code == 400
