@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, List
 
 from ..ipc import IPCWrapper
 
-# We do not enforce the installation of third party libaries for
+# We do not enforce the installation of third party libraries for
 # plugins, because users may not enable them.
 try:
     from pyarrow import plasma  # type: ignore

@@ -14,8 +14,6 @@
 
 """MOSEC is a machine learning model serving framework."""
 
-import logging
-
 from .errors import (
     ClientError,
     DecodingError,
@@ -23,6 +21,7 @@ from .errors import (
     ServerError,
     ValidationError,
 )
+from .log import get_logger
 from .server import Server
 from .worker import Worker
 
@@ -41,7 +40,5 @@ __all__ = [
     "ValidationError",
     "EncodingError",
     "DecodingError",
+    "get_logger",
 ]
-
-# setup library logging
-logging.getLogger(__name__).addHandler(logging.NullHandler())

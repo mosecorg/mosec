@@ -27,6 +27,8 @@ import random
 import socket
 import tempfile
 
+from .log import set_logger
+
 
 def is_port_available(addr: str, port: int) -> bool:
     """Check if the port is available to use."""
@@ -102,13 +104,18 @@ def parse_arguments() -> argparse.Namespace:
         default="mosec_service",
     )
 
-    args, _ = parser.parse_known_args()
-    if is_port_available(args.address, args.port):
-        return args
-    raise RuntimeError(
-        f"{args.address}:{args.port} is in use. Please change to a free one (--port)."
+    parser.add_argument(
+        "--debug",
+        help="Enable log format",
+        action="store_true",
     )
 
+    args, _ = parser.parse_known_args()
+    set_logger(args.debug)
+    if not is_port_available(args.address, args.port):
+        raise RuntimeError(
+            f"{args.address}:{args.port} is in use. "
+            "Please change to a free one (use `--port`)."
+        )
 
-if __name__ == "__main__":
-    parse_arguments()
+    return args

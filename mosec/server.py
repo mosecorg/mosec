@@ -19,7 +19,6 @@ model serving.
 """
 
 import contextlib
-import logging
 import multiprocessing as mp
 import os
 import shutil
@@ -37,9 +36,10 @@ import pkg_resources
 from .args import parse_arguments
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from .ipc import IPCWrapper
+from .log import get_logger
 from .worker import Worker
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 GUARD_CHECK_INTERVAL = 1
@@ -163,10 +163,10 @@ class Server:
     def _controller_args(self):
         args = []
         for key, value in self._configs.items():
-            args.extend([f"--{key}", str(value)])
+            args.extend([f"--{key}", str(value).lower()])
         for batch_size in self._worker_mbs:
             args.extend(["--batches", str(batch_size)])
-        logger.info("Mosec Server Configurations: %s", args)
+        logger.info("mosec server configurations: %s", args)
         return args
 
     def _start_controller(self):
@@ -282,7 +282,7 @@ class Server:
         # shutdown coordinators
         self._coordinator_shutdown.set()
         shutil.rmtree(self._configs["path"], ignore_errors=True)
-        logger.info("mosec server exited. see you.")
+        logger.info("mosec server exited normally")
 
     def register_daemon(self, name: str, proc: subprocess.Popen):
         """Register a daemon to be monitored.

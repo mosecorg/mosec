@@ -24,13 +24,13 @@ This module provides the interface to define a worker with such behaviors:
 
 import abc
 import json
-import logging
 import pickle
 from typing import Any, Sequence
 
 from .errors import DecodingError, EncodingError
+from .log import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class Worker(abc.ABC):
@@ -41,7 +41,7 @@ class Worker(abc.ABC):
     be implemented by the users.
 
     By default, we use [JSON](https://www.json.org/) encoding. But users
-    are free to customize via simply overridding the `deserialize` method
+    are free to customize via simply overriding the `deserialize` method
     in the **first** stage (we term it as _ingress_ stage) and/or
     the `serialize` method in the **last** stage (we term it as _egress_ stage).
 

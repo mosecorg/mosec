@@ -22,7 +22,9 @@ from enum import IntFlag
 from io import BytesIO
 from typing import Sequence, Tuple
 
-logger = logging.getLogger(__name__)
+from .log import get_logger
+
+logger = get_logger()
 
 IPC_LARGE_DATA_SIZE = 1024 * 1024  # set as 1 MB
 

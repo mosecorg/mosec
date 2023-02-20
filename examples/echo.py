@@ -13,21 +13,12 @@
 # limitations under the License.
 """Example: Sample structures for using mosec server."""
 
-import logging
 import time
 from typing import List
 
-from mosec import Server, Worker
-from mosec.errors import ValidationError
+from mosec import Server, ValidationError, Worker, get_logger
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+logger = get_logger()
 
 
 class Preprocess(Worker):

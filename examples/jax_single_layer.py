@@ -13,7 +13,6 @@
 # limitations under the License.
 """Example: Simple jax jitted inference with a single layer classifier."""
 
-import logging
 import os
 import time
 from typing import List
@@ -22,17 +21,9 @@ import chex  # type: ignore
 import jax  # type: ignore
 import jax.numpy as jnp  # type: ignore
 
-from mosec import Server, Worker
-from mosec.errors import ValidationError
+from mosec import Server, ValidationError, Worker, get_logger
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+logger = get_logger()
 
 INPUT_SIZE = 3
 LATENT_SIZE = 16
@@ -61,9 +52,9 @@ class JittedInference(Worker):
             self.multi_examples.append([{"array": dummy_array}] * (i + 1))
 
         if USE_JIT == "true":
-            self.batch_forward = jax.jit(self._batch_foward)
+            self.batch_forward = jax.jit(self._batch_forward)
         else:
-            self.batch_forward = self._batch_foward
+            self.batch_forward = self._batch_forward
 
     def _forward(self, x_single: jnp.ndarray) -> jnp.ndarray:
         chex.assert_rank([x_single], [1])
@@ -73,7 +64,7 @@ class JittedInference(Worker):
         o_2 = jax.nn.softmax(h_2)
         return jnp.argmax(o_2, axis=-1)
 
-    def _batch_foward(self, x_batch: jnp.ndarray) -> jnp.ndarray:
+    def _batch_forward(self, x_batch: jnp.ndarray) -> jnp.ndarray:
         chex.assert_rank([x_batch], [2])
         return jax.vmap(self._forward)(x_batch)
 

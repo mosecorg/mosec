@@ -25,8 +25,7 @@ from functools import partial
 
 from pyarrow import plasma  # type: ignore
 
-from mosec import Server, Worker
-from mosec.errors import ValidationError
+from mosec import Server, ValidationError, Worker
 from mosec.plugins import PlasmaShmWrapper
 
 

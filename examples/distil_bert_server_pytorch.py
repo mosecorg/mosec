@@ -13,7 +13,6 @@
 # limitations under the License.
 """Example: Mosec with Pytorch Distil BERT."""
 
-import logging
 from typing import Any, List
 
 import torch  # type: ignore
@@ -22,19 +21,12 @@ from transformers import (  # type: ignore
     AutoTokenizer,
 )
 
-from mosec import Server, Worker
+from mosec import Server, Worker, get_logger
+
+logger = get_logger()
 
 # type alias
 Returns = Any
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
 
 INFERENCE_BATCH_SIZE = 32
 

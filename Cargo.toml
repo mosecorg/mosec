@@ -1,6 +1,6 @@
 [package]
 name = "mosec"
-version = "0.4.9"
+version = "0.5.0"
 authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -15,7 +15,7 @@ exclude = ["target", "examples", "tests", "scripts"]
 hyper = { version = "0.14", features = ["http1", "server", "runtime"] }
 bytes = "1"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
 derive_more = { version = "0.99", features = ["display", "error"] }
 async-channel = { version = "1" }
