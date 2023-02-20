@@ -63,11 +63,6 @@ pythonPlatform = "All"
 pythonVersion = "3.7"
 include = ["mosec", "tests", "examples"]
 
-[tool.ruff]
-select = ["A", "B", "C4", "E", "F", "I", "W", "C90", "N", "PL"]
-[tool.ruff.pylint]
-max-args = 10
-
 [tool.isort]
 profile = "black"
 
