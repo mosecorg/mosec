@@ -62,11 +62,9 @@ def mosec_service(request):
 def test_square_service(mosec_service, http_client):
     resp = http_client.get("/")
     assert resp.status_code == 200
-    # only check the major and minor version since Python is using `setuptools-scm`
-    major_minor_version = ".".join(mosec.__version__.split(".", 3)[:2])
-    assert resp.headers["server"].startswith(
-        "mosec/" + major_minor_version
-    ), f"{mosec.__version__} ({major_minor_version}) vs {resp.headers['server']}"
+    # only check the prefix since the version from setuptools_scm may not be the
+    # correct one used in `Cargo.toml`
+    assert resp.headers["server"].startswith("mosec/"), f"{resp.headers['server']}"
 
     resp = http_client.get("/metrics")
     assert resp.status_code == 200
