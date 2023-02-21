@@ -28,9 +28,6 @@ import pickle
 from typing import Any, Sequence
 
 from .errors import DecodingError, EncodingError
-from .log import get_logger
-
-logger = get_logger()
 
 
 class Worker(abc.ABC):

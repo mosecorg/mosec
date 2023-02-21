@@ -33,7 +33,7 @@ from typing import Dict, List, Optional, Type, Union
 
 import pkg_resources
 
-from .args import parse_arguments
+from .args import mosec_args
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from .ipc import IPCWrapper
 from .log import get_logger
@@ -171,7 +171,7 @@ class Server:
 
     def _start_controller(self):
         """Subprocess to start controller program."""
-        self._configs = vars(parse_arguments())
+        self._configs = vars(mosec_args)
         if not self._server_shutdown:
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
             # pylint: disable=consider-using-with

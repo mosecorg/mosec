@@ -22,6 +22,8 @@ import os
 from datetime import datetime
 from typing import Any, MutableMapping
 
+from .args import mosec_args
+
 MOSEC_LOG_NAME = __name__
 
 
@@ -142,3 +144,7 @@ def set_logger(debug=False):
     """Set the environment variable so all the sub-processes can inherit it."""
     if debug:
         os.environ[MOSEC_LOG_NAME] = str(logging.DEBUG)
+
+
+# need to configure it here to make sure all the process can get the same one
+set_logger(mosec_args.debug)
