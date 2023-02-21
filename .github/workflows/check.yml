@@ -23,6 +23,7 @@ on:
       - 'examples/**'
       - 'setup.py'
       - 'requirements/**'
+  merge_group:
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
