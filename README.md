@@ -119,7 +119,7 @@ Then let's start the server with debug logs:
 And in another terminal, test it:
 
 ```console
-> python examples/stable_diffusion/client.py --prmopt "a cut cat playing with a red ball" --output cat.jpg --port 8000
+> python examples/stable_diffusion/client.py --prompt "a cut cat playing with a red ball" --output cat.jpg --port 8000
 ```
 
 You will get an image named "cat.jpg" in the current directory.
