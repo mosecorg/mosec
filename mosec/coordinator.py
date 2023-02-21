@@ -14,7 +14,6 @@
 
 """The Coordinator is used to control the data flow between `Worker` and `Server`."""
 
-import logging
 import os
 import signal
 import socket
@@ -26,10 +25,11 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
 from .errors import MosecError
 from .ipc import IPCWrapper
+from .log import get_logger
 from .protocol import HTTPStautsCode, Protocol
 from .worker import Worker
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 CONN_MAX_RETRY = 10

@@ -13,7 +13,6 @@
 # limitations under the License.
 """Example: Adding metrics service."""
 
-import logging
 import os
 import pathlib
 import tempfile
@@ -26,17 +25,9 @@ from prometheus_client import (  # type: ignore
     start_http_server,
 )
 
-from mosec import Server, Worker
-from mosec.errors import ValidationError
+from mosec import Server, ValidationError, Worker, get_logger
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+logger = get_logger()
 
 
 # check the PROMETHEUS_MULTIPROC_DIR environment variable before import Prometheus

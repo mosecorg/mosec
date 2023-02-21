@@ -49,4 +49,8 @@ pub(crate) struct Opts {
     /// metrics namespace
     #[argh(option, short = 'n', default = "String::from(\"mosec_service\")")]
     pub(crate) namespace: String,
+
+    /// enable debug log
+    #[argh(option, short = 'd', default = "false")]
+    pub(crate) debug: bool,
 }

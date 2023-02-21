@@ -53,19 +53,9 @@ Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://py
 Import the libraries and set up a basic logger to better observe what happens.
 
 ```python
-import logging
+from mosec import Server, Worker, ValidationError, get_logger
 
-from mosec import Server, Worker
-from mosec.errors import ValidationError
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+logger = get_logger()
 ```
 
 Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g., a dictionary here (wishfully it receives data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g., no key named `"x"` or field `"x"` cannot be converted to `float`).
@@ -107,10 +97,10 @@ After merging the snippets above into a file named `server.py`, we can first hav
 > python server.py --help
 ```
 
-Then let's start the server...
+Then let's start the server with debug logs:
 
 ```shell
-> python server.py
+> python server.py --debug
 ```
 
 and in another terminal, test it:
@@ -129,16 +119,6 @@ or check the metrics:
 
 ```shell
 > curl http://127.0.0.1:8000/metrics
-```
-
-For more debug logs, you can enable it by changing the Python & Rust log level:
-
-```python
-logger.setLevel(logging.DEBUG)
-```
-
-```shell
-> RUST_LOG=debug python server.py
 ```
 
 That's it! You have just hosted your **_exponential-computing model_** as a server! 😉
@@ -161,7 +141,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
 
-To start develop, you can use [envd](https://github.com/tensorchord/envd) to create an isolated and clean Python & Rust environment. Check the [envd-docs](https://envd.tensorchord.ai/) or [build.envd](./build.envd) for more information.
+To start develop, you can use [envd](https://github.com/tensorchord/envd) to create an isolated and clean Python & Rust environment. Check the [envd-docs](https://envd.tensorchord.ai/) or [build.envd](https://github.com/mosecorg/mosec/blob/main/build.envd) for more information.
 
 ## Qualitative Comparison<sup>\*</sup>
 

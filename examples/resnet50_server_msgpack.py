@@ -13,7 +13,6 @@
 # limitations under the License.
 """Example: Sample Resnet server."""
 
-import logging
 from io import BytesIO
 from typing import List
 from urllib.request import urlretrieve
@@ -24,18 +23,10 @@ import torchvision  # type: ignore
 from PIL import Image  # type: ignore
 from torchvision import transforms  # type: ignore
 
-from mosec import Server, Worker
-from mosec.errors import ValidationError
+from mosec import Server, ValidationError, Worker, get_logger
 from mosec.mixin import MsgpackMixin
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+logger = get_logger()
 
 INFERENCE_BATCH_SIZE = 16
 

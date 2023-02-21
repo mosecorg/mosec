@@ -27,7 +27,8 @@ use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response
 use prometheus::{Encoder, TextEncoder};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::time::OffsetTime;
+use tracing_subscriber::{filter, prelude::*, Layer};
 
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
@@ -154,23 +155,9 @@ async fn shutdown_signal() {
     }
 }
 
-fn init_env() {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info")
-    }
-
-    tracing_subscriber::fmt::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
-}
-
 #[tokio::main]
-async fn main() {
-    init_env();
-    let opts: Opts = argh::from_env();
-    info!(?opts, "parse arguments");
-
-    let coordinator = Coordinator::init_from_opts(&opts);
+async fn run(opts: &Opts) {
+    let coordinator = Coordinator::init_from_opts(opts);
     let barrier = coordinator.run();
     barrier.wait().await;
 
@@ -182,4 +169,34 @@ async fn main() {
     if let Err(err) = graceful.await {
         tracing::error!(%err, "server error");
     }
+}
+
+fn main() {
+    let opts: Opts = argh::from_env();
+
+    // this has to be defined before tokio multi-threads
+    let timer = OffsetTime::local_rfc_3339().expect("local time offset");
+    if opts.debug {
+        // use colorful log for debug
+        let output = tracing_subscriber::fmt::layer().compact().with_timer(timer);
+        tracing_subscriber::registry()
+            .with(
+                output
+                    .with_filter(filter::filter_fn(|metadata| {
+                        !metadata.target().starts_with("hyper")
+                    }))
+                    .with_filter(filter::LevelFilter::DEBUG),
+            )
+            .init();
+    } else {
+        // use JSON format for production
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::INFO)
+            .json()
+            .with_timer(timer)
+            .init();
+    }
+
+    info!(?opts, "parse arguments");
+    run(&opts);
 }

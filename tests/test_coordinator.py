@@ -30,7 +30,7 @@ import pytest
 
 from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from mosec.mixin import MsgpackMixin
-from mosec.protocol import HTTPStautsCode, Protocol, _recv_all
+from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
 
 from .utils import imitate_controller_send

@@ -12,24 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from io import BytesIO
 from typing import List
 
 import torch  # type: ignore
 from diffusers import StableDiffusionPipeline  # type: ignore
 
-from mosec import Server, Worker
+from mosec import Server, Worker, get_logger
 from mosec.mixin import MsgpackMixin
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    "%(asctime)s - %(process)d - %(levelname)s - %(filename)s:%(lineno)s - %(message)s"
-)
-sh = logging.StreamHandler()
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+logger = get_logger()
 
 
 class StableDiffusion(MsgpackMixin, Worker):
