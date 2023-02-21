@@ -139,6 +139,6 @@ def get_logger():
 
 
 def set_logger(debug=False):
-    """Set the logger environment so all the sub-processing can inhirit it."""
+    """Set the environment variable so all the sub-processes can inherit it."""
     if debug:
         os.environ[MOSEC_LOG_NAME] = str(logging.DEBUG)
