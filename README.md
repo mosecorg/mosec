@@ -132,19 +132,18 @@ You can check the metrics:
 
 That's it! You have just hosted your **_stable-diffusion model_** as a server! 😉
 
-## Example
+## Examples
 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section. It includes:
 
-- Multi-stage workflow
-- Batch processing worker
-- Shared memory IPC
-- Customized GPU allocation
-- Jax jitted inference
+- [Multi-stage workflow demo](https://github.com/mosecorg/mosec/blob/main/examples/echo.py): a simple CPU demo.
+- [Shared memory IPC](https://github.com/mosecorg/mosec/blob/main/examples/plasma_shm_ipc.py)
+- [Customized GPU allocation](https://github.com/mosecorg/mosec/blob/main/examples/custom_env.py)
+- [Jax jitted inference](https://github.com/mosecorg/mosec/blob/main/examples/jax_single_layer.py)
 - PyTorch deep learning models:
-  - sentiment analysis
-  - image recognition
-  - stable diffusion
+  - [sentiment analysis](https://github.com/mosecorg/mosec/blob/main/examples/distil_bert_server_pytorch.py): a NLP demo.
+  - [image recognition](https://github.com/mosecorg/mosec/blob/main/examples/resnet50_server_msgpack.py): a CV demo.
+  - [stable diffusion](https://github.com/mosecorg/mosec/tree/main/examples/stable_diffusion): with msgpack serilization.
 
 ## Contributing
 
