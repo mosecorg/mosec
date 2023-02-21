@@ -35,7 +35,7 @@ class MosecFormat(logging.Formatter):
 
     def formatTime(self, record: logging.LogRecord, datefmt=None) -> str:
         """Convert to datetime with timezone."""
-        time = datetime.utcfromtimestamp(record.created).astimezone()
+        time = datetime.fromtimestamp(record.created).astimezone()
         return datetime.strftime(time, datefmt if datefmt else self.default_time_format)
 
 

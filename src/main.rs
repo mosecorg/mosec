@@ -178,7 +178,7 @@ fn main() {
     let timer = OffsetTime::local_rfc_3339().expect("local time offset");
     if opts.debug {
         // use colorful log for debug
-        let output = tracing_subscriber::fmt::layer().compact();
+        let output = tracing_subscriber::fmt::layer().compact().with_timer(timer);
         tracing_subscriber::registry()
             .with(
                 output
