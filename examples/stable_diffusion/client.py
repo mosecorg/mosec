@@ -26,11 +26,17 @@ parser.add_argument(
 parser.add_argument(
     "-o", "--output", default="stable_diffusion_result.jpg", help="output filename"
 )
+parser.add_argument(
+    "--port",
+    default=8000,
+    type=int,
+    help="service port",
+)
 
 
 args = parser.parse_args()
 resp = httpx.post(
-    "http://localhost:8000/inference",
+    f"http://localhost:{args.port}/inference",
     data=msgpack.packb(args.prompt),
     timeout=httpx.Timeout(20),
 )
