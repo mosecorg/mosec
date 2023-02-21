@@ -53,40 +53,53 @@ Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://py
 Import the libraries and set up a basic logger to better observe what happens.
 
 ```python
-from mosec import Server, Worker, ValidationError, get_logger
+from io import BytesIO
+from typing import List
+
+import torch  # type: ignore
+from diffusers import StableDiffusionPipeline  # type: ignore
+
+from mosec import Server, Worker, get_logger
+from mosec.mixin import MsgpackMixin
 
 logger = get_logger()
 ```
 
-Then, we **build an API** to calculate the exponential with base **e** for a given number. To achieve that, we simply inherit the `Worker` class and override the `forward` method. Note that the input `req` is by default a JSON-decoded object, e.g., a dictionary here (wishfully it receives data like `{"x": 1}`). We also enclose the input parsing part with a `try...except...` block to reject invalid input (e.g., no key named `"x"` or field `"x"` cannot be converted to `float`).
+Then, we **build an API** to generate the images for a given prompt. To achieve that, we simply inherit the `MsgpackMixin` and `Worker` class, then override the `forward` method. Note that the input `data` is by default a JSON-decoded object, but `MsgpackMixin` will override it to use [msgpack](https://msgpack.org/index.html) for the request and response data, e.g., wishfully it receives data like `[b'a cut cat playing with a red ball']`. Noted that the returned objects will also be encoded by the `MsgpackMixin`.
 
 ```python
-import math
+class StableDiffusion(MsgpackMixin, Worker):
+    def __init__(self):
+        """Init the model for inference."""
+        self.pipe = StableDiffusionPipeline.from_pretrained(
+            "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
+        )
+        self.pipe = self.pipe.to("cuda")
 
-
-class CalculateExp(Worker):
-    def forward(self, req: dict) -> dict:
-        try:
-            x = float(req["x"])
-        except KeyError:
-            raise ValidationError("cannot find key 'x'")
-        except ValueError:
-            raise ValidationError("cannot convert 'x' value to float")
-        y = math.exp(x)  # f(x) = e ^ x
-        logger.debug(f"e ^ {x} = {y}")
-        return {"y": y}
+    def forward(self, data: List[str]) -> List[memoryview]:
+        """Override the forward process."""
+        logger.debug("generate images for %s", data)
+        res = self.pipe(data)
+        logger.debug("NSFW: %s", res[1])
+        images = []
+        for img in res[0]:
+            dummy_file = BytesIO()
+            img.save(dummy_file, format="JPEG")
+            images.append(dummy_file.getbuffer())
+        # need to return the same number of images in the same request order
+        # `len(data) == len(images)`
+        return images
 ```
 
-Finally, we append the worker to the server to construct a `single-stage workflow`, and we specify the number of processes we want it to run in parallel. Then we run the server.
+Finally, we append the worker to the server to construct a *single-stage* workflow, and specify the number of processes we want it to run in parallel. Then run the server.
 
 ```python
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(
-        CalculateExp, num=2
-    )  # we spawn two processes for parallel computing
+    # by configuring the `max_batch_size` with the value >= 1, the input data in your `forward` function will be a batch
+    # otherwise, it's a single item
+    server.append_worker(StableDiffusion, num=1, max_batch_size=16)
     server.run()
-
 ```
 
 ### Run the server
@@ -94,48 +107,43 @@ if __name__ == "__main__":
 After merging the snippets above into a file named `server.py`, we can first have a look at the command line arguments:
 
 ```shell
-> python server.py --help
+> python examples/stable_diffusion/server.py --help
 ```
 
 Then let's start the server with debug logs:
 
 ```shell
-> python server.py --debug
+> python examples/stable_diffusion/server.py --debug
 ```
 
-and in another terminal, test it:
+And in another terminal, test it:
 
 ```console
-> curl -X POST http://127.0.0.1:8000/inference -d '{"x": 2}'
-{
-  "y": 7.38905609893065
-}
-
-> curl -X POST http://127.0.0.1:8000/inference -d '{"input": 2}' # wrong schema
-validation error: cannot find key 'x'
+> python examples/stable_diffusion/client.py --prompt "a cut cat playing with a red ball" --output cat.jpg --port 8000
 ```
 
-or check the metrics:
+You will get an image named "cat.jpg" in the current directory.
+
+You can check the metrics:
 
 ```shell
 > curl http://127.0.0.1:8000/metrics
 ```
 
-That's it! You have just hosted your **_exponential-computing model_** as a server! 😉
+That's it! You have just hosted your **_stable-diffusion model_** as a server! 😉
 
-## Example
+## Examples
 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section. It includes:
 
-- Multi-stage workflow
-- Batch processing worker
-- Shared memory IPC
-- Customized GPU allocation
-- Jax jitted inference
+- [Multi-stage workflow demo](https://github.com/mosecorg/mosec/blob/main/examples/echo.py): a simple CPU demo.
+- [Shared memory IPC](https://github.com/mosecorg/mosec/blob/main/examples/plasma_shm_ipc.py)
+- [Customized GPU allocation](https://github.com/mosecorg/mosec/blob/main/examples/custom_env.py)
+- [Jax jitted inference](https://github.com/mosecorg/mosec/blob/main/examples/jax_single_layer.py)
 - PyTorch deep learning models:
-  - sentiment analysis
-  - image recognition
-  - stable diffusion
+  - [sentiment analysis](https://github.com/mosecorg/mosec/blob/main/examples/distil_bert_server_pytorch.py): a NLP demo.
+  - [image recognition](https://github.com/mosecorg/mosec/blob/main/examples/resnet50_server_msgpack.py): a CV demo.
+  - [stable diffusion](https://github.com/mosecorg/mosec/tree/main/examples/stable_diffusion): with msgpack serilization.
 
 ## Contributing
 
