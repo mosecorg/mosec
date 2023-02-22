@@ -154,7 +154,7 @@ impl TaskManager {
                 sender.send(()).unwrap();
             } else {
                 warn!(%id, "the task notifier is already closed, will delete it \
-                (this is usually because the client side has closed the connection)");
+                    (this is usually because the client side has closed the connection)");
                 let mut table = self.table.write();
                 table.remove(&id);
                 let metrics = Metrics::global();

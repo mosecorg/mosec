@@ -143,8 +143,8 @@ async fn shutdown_signal() {
         tokio::select! {
             _ = interrupt.recv() => {
                 info!("service received interrupt signal, will ignore it here \
-                since it should be controlled by the main process (send SIGTERM \
-                if you really want to kill it manually)");
+                    since it should be controlled by the main process (send SIGTERM \
+                    to `mosec` if you really want to kill it manually)");
             },
             _ = terminate.recv() => {
                 info!("service received terminate signal");
