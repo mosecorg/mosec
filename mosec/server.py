@@ -166,7 +166,7 @@ class Server:
             args.extend([f"--{key}", str(value).lower()])
         for batch_size in self._worker_mbs:
             args.extend(["--batches", str(batch_size)])
-        logger.info("mosec server configurations: %s", args)
+        logger.info("mosec received arguments: %s", args)
         return args
 
     def _start_controller(self):
@@ -181,7 +181,7 @@ class Server:
             self.register_daemon("controller", self._controller_process)
 
     def _terminate(self, signum, framestack):
-        logger.info("[%s] terminating server [%s] ...", signum, framestack)
+        logger.info("received signum[%s], terminating server [%s]", signum, framestack)
         self._server_shutdown = True
 
     @staticmethod
@@ -271,18 +271,16 @@ class Server:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode is not None:  # exited
                     if ctr_exitcode:  # on error
-                        logger.error(
-                            "mosec controller halted on error: %d", ctr_exitcode
-                        )
+                        logger.error("mosec service halted on error: %d", ctr_exitcode)
                     else:
-                        logger.info("mosec controller halted normally")
+                        logger.info("mosec service halted normally")
                     break
                 sleep(0.1)
 
         # shutdown coordinators
         self._coordinator_shutdown.set()
         shutil.rmtree(self._configs["path"], ignore_errors=True)
-        logger.info("mosec server exited normally")
+        logger.info("mosec exited normally")
 
     def register_daemon(self, name: str, proc: subprocess.Popen):
         """Register a daemon to be monitored.

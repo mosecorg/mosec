@@ -142,13 +142,15 @@ async fn shutdown_signal() {
     loop {
         tokio::select! {
             _ = interrupt.recv() => {
-                info!("received interrupt signal and ignored at controller side");
+                info!("service received interrupt signal, will ignore it here \
+                since it should be controlled by the main process (send SIGTERM \
+                if you really want to kill it manually)");
             },
             _ = terminate.recv() => {
-                info!("received terminate signal");
+                info!("service received terminate signal");
                 let task_manager = TaskManager::global();
                 task_manager.shutdown().await;
-                info!("shutdown complete");
+                info!("service shutdown complete");
                 break;
             },
         };
@@ -164,10 +166,10 @@ async fn run(opts: &Opts) {
     let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     let server = hyper::Server::bind(&addr).serve(service);
-    info!(?addr, "http server is running at");
+    info!(?addr, "http service is running");
     let graceful = server.with_graceful_shutdown(shutdown_signal());
     if let Err(err) = graceful.await {
-        tracing::error!(%err, "server error");
+        tracing::error!(%err, "shutdown service error");
     }
 }
 
@@ -197,6 +199,6 @@ fn main() {
             .init();
     }
 
-    info!(?opts, "parse arguments");
+    info!(?opts, "parse service arguments");
     run(&opts);
 }

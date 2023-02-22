@@ -96,14 +96,14 @@ impl TaskManager {
             }
         });
         if fut.await.is_err() {
-            error!("task manager shutdown timeout");
+            error!("service task manager shutdown timeout");
         }
     }
 
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
-            warn!(%id, %err, "task timeout");
+            warn!(%id, %err, "task was not completed in the expected time");
             let mut table = self.table.write();
             let mut notifiers = self.notifiers.lock();
             table.remove(&id);
@@ -139,7 +139,7 @@ impl TaskManager {
         debug!(%id, "add a new task");
 
         if self.channel.try_send(id).is_err() {
-            warn!(%id, "the first channel is full, delete this task");
+            warn!(%id, "reach the capacity limit, will delete this task");
             table.remove(&id);
             notifiers.remove(&id);
             return Err(ServiceError::TooManyRequests);
@@ -153,7 +153,8 @@ impl TaskManager {
             if !sender.is_closed() {
                 sender.send(()).unwrap();
             } else {
-                warn!(%id, "the notifier channel is already closed, will delete it");
+                warn!(%id, "the task notifier is already closed, will delete it \
+                (this is usually because the client side has closed the connection)");
                 let mut table = self.table.write();
                 table.remove(&id);
                 let metrics = Metrics::global();
@@ -161,7 +162,7 @@ impl TaskManager {
             }
         } else {
             // if the task is already timeout, the notifier may be removed by another thread
-            info!(%id, "cannot find the oneshot notifier");
+            info!(%id, "cannot find the task notifier, maybe this task has expired");
         }
     }
 
@@ -193,7 +194,7 @@ impl TaskManager {
                 }
                 None => {
                     // if the task is already timeout, it may be removed by another thread
-                    info!(id=%ids[i], "cannot find task id in the table");
+                    info!(id=%ids[i], "cannot find this task, maybe it has expired");
                 }
             }
         }
