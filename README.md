@@ -118,7 +118,7 @@ python examples/stable_diffusion/server.py --debug
 
 And in another terminal, test it:
 
-```console
+```shell
 python examples/stable_diffusion/client.py --prompt "a cut cat playing with a red ball" --output cat.jpg --port 8000
 ```
 
@@ -144,7 +144,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 - PyTorch deep learning models:
   - [sentiment analysis](https://github.com/mosecorg/mosec/blob/main/examples/distil_bert_server_pytorch.py): a NLP demo.
   - [image recognition](https://github.com/mosecorg/mosec/blob/main/examples/resnet50_server_msgpack.py): a CV demo.
-  - [stable diffusion](https://github.com/mosecorg/mosec/tree/main/examples/stable_diffusion): with msgpack serilization.
+  - [stable diffusion](https://github.com/mosecorg/mosec/tree/main/examples/stable_diffusion): with msgpack serialization.
 
 ## Configuration
 
