@@ -74,7 +74,7 @@ impl Coordinator {
         let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
         if folder.is_dir() {
-            info!(path=?folder, "path already exist, try to remove it");
+            info!(path=?folder, "socket path already exist, try to remove it");
             fs::remove_dir_all(folder).unwrap();
         }
         fs::create_dir(folder).unwrap();
@@ -110,7 +110,7 @@ async fn finish_task(receiver: Receiver<u32>) {
                 task_manager.notify_task_done(id);
             }
             Err(err) => {
-                error!(%err, "receive from the last channel error");
+                error!(%err, "failed to get the task id when trying to mark it as done");
             }
         }
     }

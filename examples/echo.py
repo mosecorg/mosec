@@ -38,7 +38,7 @@ class Inference(Worker):
     """Sample Class."""
 
     def forward(self, data: List[float]) -> List[float]:
-        logger.info("sleeping for %s seconds", sum(data))
+        logger.info("sleeping for %s seconds", max(data))
         time.sleep(max(data))
         return data
 

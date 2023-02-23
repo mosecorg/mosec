@@ -58,7 +58,7 @@ pub(crate) async fn communicate(
         let connection_id_label = connection_id.to_string();
         match listener.accept().await {
             Ok((mut stream, addr)) => {
-                info!(?addr, "accepted connection from");
+                info!(?addr, "socket accepted connection from");
                 tokio::spawn(async move {
                     let mut code: TaskCode = TaskCode::InternalError;
                     let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
@@ -85,9 +85,10 @@ pub(crate) async fn communicate(
                                 .observe(data.len() as f64);
                         }
                         if let Err(err) = send_message(&mut stream, &ids, &data).await {
-                            error!(%err, "send message error");
+                            error!(%err, %connection_id, "socket send message error");
                             info!(
-                                "write to stream error, try to send task_ids to the last channel"
+                                "service failed to write data to stream, will try to \
+                                send task back to see if other thread can handle it"
                             );
                             for id in &ids {
                                 last_sender_clone.send(*id).await.expect("sender is closed");
@@ -99,7 +100,7 @@ pub(crate) async fn communicate(
                         if let Err(err) =
                             read_message(&mut stream, &mut code, &mut ids, &mut data).await
                         {
-                            error!(%err, "receive message error");
+                            error!(%err, %connection_id, "socket receive message error");
                             break;
                         }
                         task_manager.update_multi_tasks(code, &ids, &data);
@@ -133,7 +134,7 @@ pub(crate) async fn communicate(
                 }
             }
             Err(err) => {
-                error!(error=%err, "accept connection error");
+                error!(%err, %connection_id, "socket failed to accept the connection");
                 break;
             }
         }
@@ -183,7 +184,7 @@ async fn read_message(
         ?num,
         ?flag,
         ?byte_size,
-        "received tasks from the stream"
+        "received tasks from the socket"
     );
     Ok(())
 }
@@ -195,7 +196,7 @@ async fn inner_batch(receiver: &Receiver<u32>, ids: &mut Vec<u32>, limit: usize)
                 ids.push(id);
             }
             Err(err) => {
-                error!(%err, "receive from channel error");
+                error!(%err, "failed to collect the tasks in batch");
             }
         }
         if ids.len() == limit {
@@ -233,7 +234,7 @@ async fn send_message(
         buffer.put(data[i].clone());
     }
     stream.write_all(&buffer).await?;
-    debug!(?ids, batch_size=%ids.len(), byte_size=%buffer.len(), "send data to the stream");
+    debug!(?ids, batch_size=%ids.len(), byte_size=%buffer.len(), "send data to the socket");
 
     Ok(())
 }

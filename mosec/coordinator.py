@@ -118,7 +118,7 @@ class Coordinator:
                 return
             retry_count += 1
             logger.debug(
-                "%s trying to find the socket file: %s (%d/%d)",
+                "%s is trying to find the socket file: %s (%d/%d)",
                 self.name,
                 self.protocol.addr,
                 retry_count,
@@ -128,9 +128,10 @@ class Coordinator:
             continue
 
         logger.error(
-            "%s cannot find the socket file: %s", self.name, self.protocol.addr
+            "%s cannot find the socket file: %s, will shutdown",
+            self.name,
+            self.protocol.addr,
         )
-        logger.info("%s exiting...", self.name)
 
     def warmup(self):
         """Warmup to allocate resources (useful for GPU workload)[Optional]."""
@@ -144,7 +145,7 @@ class Coordinator:
                 for i, example in enumerate(self.worker.multi_examples):
                     self.worker.forward(example)
                     logger.debug(
-                        "warming up... (%d / %d)",
+                        "warming up... (%d/%d)",
                         i + 1,
                         num_eg,
                     )
@@ -242,7 +243,7 @@ class Coordinator:
                 continue
             except (struct.error, OSError) as err:
                 if not self.shutdown_notify.is_set():
-                    logger.error("%s socket receive error: %s", self.name, err)
+                    logger.error("%s failed to read from socket: %s", self.name, err)
                 break
 
             # pylint: disable=broad-except
@@ -275,7 +276,7 @@ class Coordinator:
             try:
                 protocol_send(status, ids, payloads)
             except OSError as err:
-                logger.error("%s socket send error: %s", self.name, err)
+                logger.error("%s failed to send to socket: %s", self.name, err)
                 break
 
         self.protocol.close()
