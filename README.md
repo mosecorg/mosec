@@ -36,14 +36,14 @@ Mosec is a high-performance and flexible model serving framework for building ML
 - **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
 - **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
 - **Cloud friendly**: designed to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by Kubernetes or any container orchestration systems
-- **Do one thing well**: focus on the online serving part, users can pay attention to the model performance and business logic
+- **Do one thing well**: focus on the online serving part, users can pay attention to the model optimization and business logic
 
 ## Installation
 
 Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://pypi.org/project/mosec/) with:
 
 ```shell
-> pip install -U mosec
+pip install -U mosec
 ```
 
 ## Usage
@@ -107,19 +107,19 @@ if __name__ == "__main__":
 After merging the snippets above into a file named `server.py`, we can first have a look at the command line arguments:
 
 ```shell
-> python examples/stable_diffusion/server.py --help
+python examples/stable_diffusion/server.py --help
 ```
 
 Then let's start the server with debug logs:
 
 ```shell
-> python examples/stable_diffusion/server.py --debug
+python examples/stable_diffusion/server.py --debug
 ```
 
 And in another terminal, test it:
 
 ```console
-> python examples/stable_diffusion/client.py --prompt "a cut cat playing with a red ball" --output cat.jpg --port 8000
+python examples/stable_diffusion/client.py --prompt "a cut cat playing with a red ball" --output cat.jpg --port 8000
 ```
 
 You will get an image named "cat.jpg" in the current directory.
@@ -127,7 +127,7 @@ You will get an image named "cat.jpg" in the current directory.
 You can check the metrics:
 
 ```shell
-> curl http://127.0.0.1:8000/metrics
+curl http://127.0.0.1:8000/metrics
 ```
 
 That's it! You have just hosted your **_stable-diffusion model_** as a server! 😉
@@ -138,12 +138,32 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 - [Multi-stage workflow demo](https://github.com/mosecorg/mosec/blob/main/examples/echo.py): a simple CPU demo.
 - [Shared memory IPC](https://github.com/mosecorg/mosec/blob/main/examples/plasma_shm_ipc.py)
-- [Customized GPU allocation](https://github.com/mosecorg/mosec/blob/main/examples/custom_env.py)
+- [Customized GPU allocation](https://github.com/mosecorg/mosec/blob/main/examples/custom_env.py): deploy multiple replicas, each using different GPUs
+- [Customized metrics](https://github.com/mosecorg/mosec/blob/main/examples/python_side_metrics.py)
 - [Jax jitted inference](https://github.com/mosecorg/mosec/blob/main/examples/jax_single_layer.py)
 - PyTorch deep learning models:
   - [sentiment analysis](https://github.com/mosecorg/mosec/blob/main/examples/distil_bert_server_pytorch.py): a NLP demo.
   - [image recognition](https://github.com/mosecorg/mosec/blob/main/examples/resnet50_server_msgpack.py): a CV demo.
   - [stable diffusion](https://github.com/mosecorg/mosec/tree/main/examples/stable_diffusion): with msgpack serilization.
+
+## Configuration
+
+- Dynamic batching
+  - `max_batch_size` is configured when you `append_worker` (make sure inference with the max value won't cause the out-of-memory in GPU)
+  - `--wait (default=10ms)` is configured through CLI arguments (this usually should <= one batch inference duration)
+  - If enabled, it will collect a batch either when it reaches the `max_batch_size` or the `wait` time.
+- Check the [arguments doc](https://mosecorg.github.io/mosec/argument/).
+
+## Deployment
+
+- This may require some shared memory, remember to set the `--shm-size` flag if you are using docker.
+- This service doesn't require Gunicorn or NGINX, but you can certainly use the ingress controller. BTW, it should be the PID 1 process in the container since it controls multiple processes.
+- Remember to collect the **metrics**.
+  - `mosec_service_batch_size_bucket` shows the batch size distribution.
+  - `mosec_service_process_duration_second_bucket` shows the duration for each stage (excluding the IPC time).
+  - `mosec_service_remaining_task` shows the number of currently processing tasks
+  - `mosec_service_throughput` shows the service throughput
+- Stop the service with `SIGINT` or `SIGTERM` since it has the graceful shutdown logic.
 
 ## Contributing
 
