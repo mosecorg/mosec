@@ -148,19 +148,19 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 ## Configuration
 
-- Dynamic batch
+- Dynamic batching
   - `max_batch_size` is configured when you `append_worker` (make sure inference with the max value won't cause the out-of-memory in GPU)
   - `--wait (default=10ms)` is configured through CLI arguments (this usually should <= one batch inference duration)
-  - If enabled, it will collect a batch whether when it reaches the `max_batch_size` or the `wait` time.
+  - If enabled, it will collect a batch either when it reaches the `max_batch_size` or the `wait` time.
 - Check the [arguments doc](https://mosecorg.github.io/mosec/argument/).
 
 ## Deployment
 
-- This may requires some shared memory, remember to set the `--shm-size` for docker.
+- This may require some shared memory, remember to set the `--shm-size` flag if you are using docker.
 - This service doesn't require Gunicorn or NGINX, but you can certainly use the ingress controller. BTW, it should be the PID 1 process in the container since it controls multiple processes.
 - Remember to collect the **metrics**.
   - `mosec_service_batch_size_bucket` shows the batch size distribution.
-  - `mosec_service_process_duration_second_bucket` shows the duration for each stage (exclude the IPC time).
+  - `mosec_service_process_duration_second_bucket` shows the duration for each stage (excluding the IPC time).
   - `mosec_service_remaining_task` shows the number of currently processing tasks
   - `mosec_service_throughput` shows the service throughput
 - Stop the service with `SIGINT` or `SIGTERM` since it has the graceful shutdown logic.
