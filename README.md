@@ -48,7 +48,7 @@ pip install -U mosec
 
 ## Usage
 
-We demonstrate how Mosec can easily host a pre-trained stable diffusion model as a service. You need to install [diffusers](https://github.com/huggingface/diffusers) and [transformers](https://github.com/huggingface/transformers) as prerequisites:
+We demonstrate how Mosec can help you easily host a pre-trained stable diffusion model as a service. You need to install [diffusers](https://github.com/huggingface/diffusers) and [transformers](https://github.com/huggingface/transformers) as prerequisites:
 
 ```shell
 pip install --upgrade diffusers[torch]
