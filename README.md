@@ -51,8 +51,7 @@ pip install -U mosec
 We demonstrate how Mosec can easily host a pre-trained stable diffusion model as a service. You need to install [diffusers](https://github.com/huggingface/diffusers) and [transformers](https://github.com/huggingface/transformers) as prerequisites:
 
 ```shell
-pip install --upgrade diffusers[torch]
-pip install --upgrade transformers
+pip install --upgrade diffusers[torch] transformers
 ```
 
 ### Write the server
@@ -72,7 +71,7 @@ from mosec.mixin import MsgpackMixin
 logger = get_logger()
 ```
 
-Then, we **build an API** for clients to query a text prompt and obtain an image based on the [stable-diffusion-v1-5 model](https://huggingface.co/runwayml/stable-diffusion-v1-5). To achieve that, we simply inherit the `MsgpackMixin` and `Worker` class, then initialize the model in the `__init__` method and override the `forward` method. Note that the input `data` of `forward` method is by default a JSON-decoded object, but `MsgpackMixin` will override it to use [msgpack](https://msgpack.org/index.html) for both request and response data. In this example, the `forward` method will wishfully receive a _list_ of string, e.g., `['a cute cat playing with a red ball', 'a man sitting in front of a computer', ...]`, aggregated from different clients for _batch inference_, improving the system throughput. Also note that the returned objects will be encoded by the msgpack protocol as well, due to the use of `MsgpackMixin`.
+Then, we **build an API** for clients to query a text prompt and obtain an image based on the [stable-diffusion-v1-5 model](https://huggingface.co/runwayml/stable-diffusion-v1-5). To achieve that, we simply inherit the `Worker` and `MsgpackMixin` class, then initialize the model in the `__init__` method and override the `forward` method. By default, the input `data` of the `forward` method should be a JSON-decoded object. Using `MsgpackMixin` will override it to use the faster and smaller [msgpack](https://msgpack.org/index.html) for both request and response data. In this example, the `forward` method will wishfully receive a _list_ of string, e.g., `['a cute cat playing with a red ball', 'a man sitting in front of a computer', ...]`, aggregated from different clients for _batch inference_, improving the system throughput. Also note that the returned objects will be encoded by the msgpack protocol as well, due to the use of `MsgpackMixin`.
 
 ```python
 class StableDiffusion(MsgpackMixin, Worker):
@@ -82,7 +81,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         )
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.pipe = self.pipe.to(device)
-        self.example = ["useless example prompt"] * 16  # warmup (bs=16)
+        self.example = ["useless example prompt"] * 4  # warmup (bs=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:
         logger.debug("generate images for %s", data)
@@ -96,14 +95,15 @@ class StableDiffusion(MsgpackMixin, Worker):
         return images
 ```
 
-Finally, we append the worker to the server to construct a *single-stage* workflow (multiple stages can be [pipelined](https://en.wikipedia.org/wiki/Pipeline_(computing)) to further boost the throughput, see [this example](https://mosecorg.github.io/mosec/example/pytorch/#computer-vision)), and specify the number of processes we want it to run in parallel (`num=1`), and the maximum batch size (`max_batch_size=16`, the maximum number of requests dynamic batching will accumulate before timeout).
+Finally, we append the worker to the server to construct a *single-stage* workflow (multiple stages can be [pipelined](https://en.wikipedia.org/wiki/Pipeline_(computing)) to further boost the throughput, see [this example](https://mosecorg.github.io/mosec/example/pytorch/#computer-vision)), and specify the number of processes we want it to run in parallel (`num=1`), and the maximum batch size (`max_batch_size=4`, the maximum number of requests dynamic batching will accumulate before timeout; timeout is defined with the flag `--wait` in milliseconds, meaning the longest time Mosec waits until sending the batch to the Worker).
 
 ```python
 if __name__ == "__main__":
     server = Server()
-    # by configuring the `max_batch_size` with the value >= 1, the input data in your `forward` function will be a batch
-    # otherwise, it's a single item
-    server.append_worker(StableDiffusion, num=1, max_batch_size=16)
+    # 1) `num` specify the number of processes that will be spawned to run in parallel.
+    # 2) By configuring the `max_batch_size` with the value > 1, the input data in your
+    # `forward` function will be a list (batch); otherwise, it's a single item.
+    server.append_worker(StableDiffusion, num=1, max_batch_size=4)
     server.run()
 ```
 
