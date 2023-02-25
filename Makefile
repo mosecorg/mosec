@@ -1,6 +1,6 @@
 .DEFAULT_GOAL:=dev
 
-PY_SOURCE_FILES=mosec tests examples scripts setup.py
+PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
@@ -33,7 +33,8 @@ test_all: dev
 	RUST_BACKTRACE=1 cargo test -vv
 
 doc:
-	mkdocs serve
+	@cd docs && make html && cd ../
+	@python -m http.server -d docs/build/html
 
 clean:
 	@cargo clean

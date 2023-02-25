@@ -1,3 +1,6 @@
-mkdocstrings[python]>=0.16.0
-mkdocs-material>=7.3.0
-mkdocs-gen-files>=0.3.3
+sphinx>=5.3
+sphinxcontrib-programoutput>=0.17
+sphinxcontrib-napoleon>=0.7
+sphinx-copybutton>=0.5
+myst-parser>=0.18
+furo>=2022.12.7

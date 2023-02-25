@@ -1,3 +1,5 @@
+# Shared Memory IPC
+
 This is an example demonstrating how you can enable the plasma shared memory store or customize your own IPC wrapper.
 
 Mosec's multi-stage pipeline requires the output data from the previous stage to be transferred to the next stage across python processes. This is coordinated via Unix domain socket between every Python worker process from all stages and the Rust controller process.
@@ -6,16 +8,20 @@ By default, we serialize the data and directly transfer the bytes over the socke
 
 The additional subprocess can be registered as a daemon thus it will be checked by mosec regularly and trigger graceful shutdown when the daemon exits.
 
-#### **`plasma_shm_ipc.py`**
+## **`plasma_shm_ipc.py`**
 
-```python
---8<-- "examples/plasma_shm_ipc.py"
+```{include} ../../../examples/plasma_shm_ipc.py
+:code: python
 ```
 
-#### Start
+## Start
 
-    python plasma_shm_ipc.py
+```shell
+python plasma_shm_ipc.py
+```
 
-#### Test
+## Test
 
-    curl -X POST http://127.0.0.1:8000/inference -d '{"size": 100}'
+```shell
+http :8000/inference size=100
+```
