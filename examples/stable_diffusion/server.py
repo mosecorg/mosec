@@ -29,7 +29,9 @@ class StableDiffusion(MsgpackMixin, Worker):
         self.pipe = StableDiffusionPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
         )
-        self.pipe = self.pipe.to("cuda")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.pipe = self.pipe.to(device)
+        self.example = ["useless example prompt"] * 4  # warmup (bs=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:
         logger.debug("generate images for %s", data)
@@ -45,5 +47,5 @@ class StableDiffusion(MsgpackMixin, Worker):
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(StableDiffusion, num=1, max_batch_size=16)
+    server.append_worker(StableDiffusion, num=1, max_batch_size=4)
     server.run()
