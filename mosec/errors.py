@@ -16,8 +16,7 @@
 
 Suppose the input dataflow of our model server is as follows:
 
-**bytes** --- *deserialize*<sup>(decoding)</sup> ---> **data**
---- *parse*<sup>(validation)</sup> ---> **valid data**
+**bytes** ``->`` *deserialize* ``->`` **data** ``->`` *parse* ``->`` **valid data**
 
 If the raw bytes cannot be successfully deserialized, the `DecodingError`
 is raised; if the decoded data cannot pass the validation check (usually
@@ -40,7 +39,7 @@ class ClientError(MosecError):
     This error indicates that the server cannot or will not process the request
     due to something that is perceived to be a client error. It will return the
     details to the client side with
-    [HTTP 400](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400).
+    `HTTP 400 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400>`__.
     """
 
     code = HTTPStautsCode.BAD_REQUEST
@@ -53,7 +52,7 @@ class ServerError(MosecError):
     This error indicates that the server encountered an unexpected condition
     that prevented it from fulfilling the request. It will return the details
     to the client side with
-    [HTTP 500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500).
+    `HTTP 500 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500>`__.
 
     Attention: be careful about the returned message since it may contain some
     sensitive information. If you don't want to return the details, just raise
@@ -70,7 +69,7 @@ class EncodingError(ServerError):
     The `EncodingError` should be raised in user-implemented codes when
     the serialization for the response bytes fails. This error will set
     to status code to
-    [HTTP 500](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500)
+    `HTTP 500 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500>`__
     and show the details in the response.
     """
 
@@ -83,7 +82,7 @@ class DecodingError(ClientError):
     The `DecodingError` should be raised in user-implemented codes
     when the de-serialization for the request bytes fails. This error
     will set the status code to
-    [HTTP 400]("https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400)
+    `HTTP 400 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400>`__
     in the response.
     """
 
@@ -97,7 +96,7 @@ class ValidationError(MosecError):
     where the validation for the input data fails. Usually, it should be
     put after the data de-serialization, which converts the raw bytes
     into structured data. This error will set the status code to
-    [HTTP 422](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422)
+    `HTTP 422 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422>`__
     in the response.
     """
 

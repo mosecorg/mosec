@@ -4,7 +4,6 @@
 
 ```{eval-rst}
 .. automodule:: mosec.server
-    :show-inheritance:
     :members:
 ```
 
@@ -12,7 +11,6 @@
 
 ```{eval-rst}
 .. automodule:: mosec.worker
-    :show-inheritance:
     :members:
 ```
 
@@ -20,22 +18,27 @@
 
 ```{eval-rst}
 .. automodule:: mosec.errors
-    :show-inheritance:
     :members:
+    :show-inheritance:
 ```
 
 ## Mixin
 
 ```{eval-rst}
 .. automodule:: mosec.mixin
-    :show-inheritance:
     :members:
+    :show-inheritance:
 ```
 
 ## Plugins
 
 ```{eval-rst}
-.. automodule:: mosec.plugins
-    :show-inheritance:
+.. automodule:: mosec.ipc
     :members:
+```
+
+```{eval-rst}
+.. automodule:: mosec.plugins
+    :members:
+    :show-inheritance:
 ```

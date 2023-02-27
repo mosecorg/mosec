@@ -1,6 +1,8 @@
-sphinx>=5.3
+sphinx
 sphinxcontrib-programoutput>=0.17
 sphinxcontrib-napoleon>=0.7
 sphinx-copybutton>=0.5
+sphinx_autodoc_typehints>=1.22
+sphinxext-opengraph>=0.8
 myst-parser>=0.18
 furo>=2022.12.7

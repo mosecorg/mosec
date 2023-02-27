@@ -24,7 +24,7 @@ from typing import List
 class IPCWrapper(abc.ABC):
     """This public class defines the mosec IPC wrapper plugin interface.
 
-    The wrapper has to implement at least `put` and `get` method.
+    The wrapper has to implement at least ``put`` and ``get`` methods.
     """
 
     @abc.abstractmethod
@@ -32,10 +32,9 @@ class IPCWrapper(abc.ABC):
         """Put bytes to somewhere to get ids, which are sent via protocol.
 
         Args:
-            data (List[bytes]): List of bytes data.
+            data: List of bytes data.
 
-        Returns:
-            List[bytes]: List of bytes ID.
+        Returns: List of bytes ID.
         """
 
     @abc.abstractmethod
@@ -43,8 +42,7 @@ class IPCWrapper(abc.ABC):
         """Get bytes from somewhere by ids, which are received via protocol.
 
         Args:
-            ids (List[bytes]): List of bytes ID.
+            ids: List of bytes ID.
 
-        Returns:
-            List[bytes]: List of bytes data.
+        Returns: List of bytes data.
         """

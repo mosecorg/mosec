@@ -40,10 +40,11 @@ if TYPE_CHECKING:
 
 
 class PlasmaShmWrapper(IPCWrapper):
-    """Shared memory wrapper using `pyarrow` Plasma.
+    """Shared memory wrapper using ``pyarrow`` Plasma.
 
-    This public class is an example implementation of the `IPCWrapper`.
-    It utilizes `pyarrow.plasma` as the in-memory object store for
+    This public class is an example implementation of the
+    :py:mod:`IPCWrapper <mosec.ipc.IPCWrapper>`.
+    It utilizes ``pyarrow.plasma`` as the in-memory object store for
     potentially more efficient data transfer.
     """
 
