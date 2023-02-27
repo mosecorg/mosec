@@ -33,29 +33,22 @@ from .errors import DecodingError, EncodingError
 class Worker(abc.ABC):
     """MOSEC worker interface.
 
-    It provides default IPC (de)serialization methods, stores the worker meta data
-    including its stage and maximum batch size, and leaves the `forward` method to
-    be implemented by the users.
+    It provides default IPC (de)serialization methods, stores the worker
+    meta data including its stage and maximum batch size, and leaves the
+    ``forward`` method to be implemented by the users.
 
-    By default, we use [JSON](https://www.json.org/) encoding. But users
-    are free to customize via simply overriding the `deserialize` method
-    in the **first** stage (we term it as _ingress_ stage) and/or
-    the `serialize` method in the **last** stage (we term it as _egress_ stage).
+    By default, we use `JSON <https://www.json.org/>`__ encoding. But users
+    are free to customize via simply overriding the ``deserialize`` method
+    in the **first** stage (we term it as *ingress* stage) and/or the
+    ``serialize`` method in the **last** stage (we term it as *egress*
+    stage).
 
     For the encoding customization, there are many choices including
-    [MessagePack](https://msgpack.org/index.html),
-    [Protocol Buffer](https://developers.google.com/protocol-buffers)
-    and many other out-of-the-box protocols. Users can even define their own
-    protocol and use it to manipulate the raw bytes!
-    A naive customization can be found in [this
-    example](https://mosecorg.github.io/mosec/example/pytorch/#sentiment-analysis).
-
-    ###### Note
-    > The "_same type_" mentioned below is applicable only when the stage
-    disables batching. For a stage that
-    [enables batching][mosec.server.Server--batching], the `worker`'s
-    `forward` should accept a list and output a list, where each element
-    will follow the "_same type_" constraint.
+    `MessagePack <https://msgpack.org/index.html>`__, `Protocol
+    Buffer <https://developers.google.com/protocol-buffers>`__ and many
+    other out-of-the-box protocols. Users can even define their own protocol
+    and use it to manipulate the raw bytes! A naive customization can be
+    found in this :doc:`PyTorch example </examples/pytorch>`.
     """
 
     # pylint: disable=no-self-use
@@ -72,12 +65,20 @@ class Worker(abc.ABC):
         This method doesn't require the child class to override.
         """
 
-    def serialize_ipc(self, data) -> bytes:
-        """Define IPC serialize method."""
+    def serialize_ipc(self, data: Any) -> bytes:
+        """Define IPC serialization method.
+
+        Args:
+            data: returned data from :py:meth:`forward`
+        """
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def deserialize_ipc(self, data) -> Any:
-        """Define IPC deserialize method."""
+    def deserialize_ipc(self, data: bytes) -> Any:
+        """Define IPC deserialization method.
+
+        Args:
+            data: input data for :py:meth:`forward`
+        """
         return pickle.loads(data)
 
     @property
@@ -100,10 +101,11 @@ class Worker(abc.ABC):
 
     @property
     def worker_id(self) -> int:
-        """Return the id of this worker instance.
+        """Return the ID of this worker instance.
 
-        This property returns the worker id in the range of [1, ... ,`num`]
-        (`num` as defined [here][mosec.server.Server--multiprocess])
+        This property returns the worker ID in the range of [1, ... , ``num``]
+        (``num`` as configured in
+        :py:meth:`append_worker(num) <mosec.server.Server.append_worker>`)
         to differentiate workers in the same stage.
         """
         return self._worker_id
@@ -113,13 +115,14 @@ class Worker(abc.ABC):
         self._worker_id = worker_id
 
     def serialize(self, data: Any) -> bytes:
-        """Serialize method for the last stage (egress).
+        """Serialize the last stage (egress).
 
-        No need to override this method by default, but overridable.
+        Default response serialization method: JSON.
+
+        Check :py:mod:`mosec.mixin` for more information.
 
         Arguments:
-            data: the [_*same type_][mosec.worker.Worker--note] as the
-                output of the `forward` you implement
+            data: the same type as the output of the :py:meth:`forward`
 
         Returns:
             the bytes you want to put into the response body
@@ -134,16 +137,17 @@ class Worker(abc.ABC):
         return data_bytes
 
     def deserialize(self, data: bytes) -> Any:
-        """Deserialize method for the first stage (ingress).
+        """Deserialize the first stage (ingress).
 
-        No need to override this method by default, but overridable.
+        Default request deserialization method: JSON.
+
+        Check :py:mod:`mosec.mixin` for more information.
 
         Arguments:
             data: the raw bytes extracted from the request body
 
         Returns:
-            the [_*same type_][mosec.worker.Worker--note] as the argument of
-            the `forward` you implement
+            the same type as the input of the :py:meth:`forward`
 
         Raises:
             DecodingError: if the data cannot be deserialized with JSON
@@ -158,19 +162,26 @@ class Worker(abc.ABC):
     def forward(self, data: Any) -> Any:
         """Model inference, data processing or computation logic.
 
-        __Must be overridden__ by the subclass.
-        The implementation should make sure:
+        Args:
+            data: input data to be processed
 
-        - (for a single-stage worker)
-            - both the input and output follow the
-            [_*same type_][mosec.worker.Worker--note] rule.
-        - (for a multi-stage worker)
-            - the input of the _ingress_ stage and the output of the _egress_
-            stage follow the [_*same type_][mosec.worker.Worker--note], while
-            others should align with its adjacent stage's in/output.
+        **Must be overridden** by the subclass.
 
-        If any code in the `forward` needs to access other resources (e.g. a model,
-        a memory cache, etc.), the user should initialize these resources to be
-        attributes of the class in the `__init__` method.
+        If any code in this :py:meth:`forward` needs to access other resources (e.g.
+        a model, a memory cache, etc.), the user should initialize these resources
+        as attributes of the class in the :py:class:`__init__ <mosec.worker.Worker>`.
+
+        .. note::
+
+            For a stage that enables dynamic batching, please return the results
+            that have the same length and the same order of the input data.
+
+        .. note::
+
+            - for a single-stage worker, data will go throught
+                ``<deserialize> -> <forward> -> <serialize>``
+
+            - for a multi-stage worker that is neithor `ingress` not `egress`, data
+                will go throught ``<deserialize_ipc> -> <forward> -> <serialize_ipc>``
         """
         raise NotImplementedError

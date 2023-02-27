@@ -1,3 +1,5 @@
+# Customized Metrics
+
 This is an example demonstrating how to add your customized Python side Prometheus metrics.
 
 Mosec already has the Rust side metrics, including:
@@ -13,24 +15,32 @@ This example has a simple WSGI app as the monitoring metrics service. In each wo
 
 For more information about the multiprocess mode for the metrics, check the [Prometheus doc](https://github.com/prometheus/client_python#multiprocess-mode-eg-gunicorn).
 
-#### **`python_side_metrics.py`**
+## **`python_side_metrics.py`**
 
-```python
---8<-- "examples/python_side_metrics.py"
+```{include} ../../../examples/python_side_metrics.py
+:code: python
 ```
 
-#### Start
+## Start
 
-    python python_side_metrics.py
+```shell
+python python_side_metrics.py
+```
 
-#### Test
+## Test
 
-    http POST :8000/inference num=1
+```shell
+http POST :8000/inference num=1
+```
 
-#### Check the Python side metrics
+## Check the Python side metrics
 
-    http :8080
+```shell
+http :8080
+```
 
-#### Check the Rust side metrics
+## Check the Rust side metrics
 
-    http :8000/metrics
+```shell
+http :8000/metrics
+```

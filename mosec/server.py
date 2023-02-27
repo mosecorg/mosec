@@ -16,6 +16,27 @@
 
 This module provides a way to define the service components for machine learning
 model serving.
+
+Dynamic Batching
+================
+
+    The user may enable the dynamic batching feature for any stage when the
+    corresponding worker is appended, by setting the
+    :py:meth:`append_worker(max_batch_size) <Server.append_worker>`.
+
+Multiprocess
+============
+
+    The user may spawn multiple processes for any stage when the
+    corresponding worker is appended, by setting the
+    :py:meth:`append_worker(num) <Server.append_worker>`.
+
+IPC Wrapper
+===========
+
+    The user may wrap the inter-process communication to use shared memory,
+    e.g. pyarrow plasma, by providing the :py:mod:`IPC Wrapper <mosec.ipc.IPCWrapper>`
+    for the server.
 """
 
 import contextlib
@@ -51,18 +72,6 @@ class Server:
 
     It allows users to sequentially append workers they implemented, builds
     the workflow pipeline automatically and starts up the server.
-
-    ###### Batching
-    > The user may enable the batching feature for any stage when the
-    corresponding worker is appended, by setting the `max_batch_size`.
-
-    ###### Multiprocess
-    > The user may spawn multiple processes for any stage when the
-    corresponding worker is appended, by setting the `num`.
-
-    ###### IPC Wrapper
-    > The user may wrap the inter-process communication to use shared memory,
-    e.g. pyarrow plasma, by providing the IPC wrapper for the server.
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -73,8 +82,7 @@ class Server:
         """Initialize a MOSEC Server.
 
         Args:
-            ipc_wrapper (Optional[Union[IPCWrapper, partial]], optional):
-                IPCWrapper class. Defaults to None.
+            ipc_wrapper: wrapper function (before and after) IPC
         """
         self.ipc_wrapper = ipc_wrapper
 
@@ -286,8 +294,8 @@ class Server:
         """Register a daemon to be monitored.
 
         Args:
-            name (str): the name of this daemon
-            proc (mp.Process): the process handle of the daemon
+            name: the name of this daemon
+            proc: the process handle of the daemon
         """
         assert isinstance(name, str), "daemon name should be a string"
         assert isinstance(
@@ -305,11 +313,12 @@ class Server:
     ):
         """Sequentially appends workers to the workflow pipeline.
 
-        Arguments:
-            worker: the class you inherit from `Worker` which implements
-                the `forward` method
+        Args:
+            worker: the class you inherit from :class:`Worker<mosec.worker.Worker>`
+                which implements the :py:meth:`forward<mosec.worker.Worker.forward>`
             num: the number of processes for parallel computing (>=1)
-            max_batch_size: the maximum batch size allowed (>=1)
+            max_batch_size: the maximum batch size allowed (>=1), will enable the
+                dynamic batching if it > 1
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
         """

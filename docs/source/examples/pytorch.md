@@ -1,3 +1,5 @@
+# PyTorch Examples
+
 Here are some out-of-the-box model servers powered by mosec for [PyTorch](https://pytorch.org/) users. We use the version 1.9.0 in the following examples.
 
 ## Natural Language Processing
@@ -12,20 +14,26 @@ We show how to customize the `deserialize` method of the ingress stage (`Preproc
 
 Note that in a stage that enables batching (e.g. `Inference` in this example), its worker's `forward` method deals with a list of data, while its `serialize` and `deserialize` methods only need to manipulate individual datum.
 
-##### Server
+#### Server
 
-    python distil_bert_sentiment.py
+```shell
+python distil_bert_server_pytorch.py
+```
 
 <details>
-<summary>distil_bert_sentiment.py</summary>
-```python
---8<-- "examples/distil_bert_server_pytorch.py"
+<summary>distil_bert_server_pytorch.py</summary>
+
+```{include} ../../../examples/distil_bert_server_pytorch.py
+:code: python
 ```
+
 </details>
 
-##### Client
+#### Client
 
-    curl -X POST http://127.0.0.1:8000/inference -d 'i bought this product for many times, highly recommend'
+```shell
+echo 'i bought this product for many times, highly recommend' | http POST :8000/inference
+```
 
 ## Computer Vision
 
@@ -41,24 +49,32 @@ When instantiating the `Server`, we enable `plasma_shm`, which utilizes the [`py
 
 We also demonstrate how to customized **validation** on the data content through this example. In the `forward` method of the `Preprocess` worker, we firstly check the key of the input, then try to decode the str and load it into array. If any of these steps fails, we raise the `ValidationError`. The status will be finally returned to our clients as [HTTP 422](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422).
 
-##### Server
+#### Server
 
-    python resnet50_server_msgpack.py
+```shell
+python resnet50_server_msgpack.py
+```
 
 <details>
 <summary>resnet50_server_msgpack.py</summary>
-```python
---8<-- "examples/resnet50_server_msgpack.py"
+
+```{include} ../../../examples/resnet50_server_msgpack.py
+:code: python
 ```
+
 </details>
 
-##### Client
+#### Client
 
-    python resnet50_client_msgpack.py
+```shell
+python resnet50_client_msgpack.py
+```
 
 <details>
 <summary>resnet50_client_msgpack.py</summary>
-```python
---8<-- "examples/resnet50_client_msgpack.py"
+
+```{include} ../../../examples/resnet50_client_msgpack.py
+:code: python
 ```
+
 </details>
