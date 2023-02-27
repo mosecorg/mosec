@@ -69,7 +69,7 @@ class Worker(abc.ABC):
         """Define IPC serialization method.
 
         Args:
-            data: returned data :py:meth:`forward`
+            data: returned data from :py:meth:`forward`
         """
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
