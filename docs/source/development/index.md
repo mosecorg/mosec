@@ -5,9 +5,7 @@
 hidden:
 ---
 
-design
 contributing
 ```
 
-- {doc}`design`
 - {doc}`contributing`
