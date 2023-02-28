@@ -80,18 +80,8 @@ Then, we **build an API** for clients to query a text prompt and obtain an image
 3) Override the `forward` method to write your service handler<sup>(c)</sup></a>, with the signature `forward(self, data: Any | List[Any]) -> Any | List[Any]`. Receiving/returning a single item or a tuple depends on whether [dynamic batching](#configuration)<sup>(d)</sup></a> is configured.
 
 
-> **Note**
->
-> (a) In this example we return an image in the binary format, which JSON does not support (unless encoded with base64 that makes it longer). Hence, msgpack suits our need better. If we do not inherit `MsgpackMixin`, JSON will be used by default. In other words, the protocol of the service request/response can either be msgpack or JSON.
->
-> (b) Warm-up usually helps to allocate GPU memory in advance. If the warm-up example is specified, the service will only be ready after the example is forwarded through the handler. However, if no example is given, the first request's latency is expected to be longer. The `example` should be set as a single item or a tuple depending on what `forward` expects to receive. Moreover, in the case where you want to warm up with multiple different examples, you may set `multi_examples` (demo [here](https://mosecorg.github.io/mosec/example/jax/)).
->
-> (c) This example shows a single-stage service, where the `StableDiffusion` worker directly takes in client's prompt request and responds the image. Thus the `forward` can be considered as a complete service handler. However, we can also design a multi-stage service with workers doing different jobs (e.g., downloading images, forward model, post-processing) in a pipeline. In this case, the whole pipeline is considered as the service handler, with the first worker taking in the request and the last worker sending out the response. The data flow between workers is done by inter-process communication.
->
-> (d) Since dynamic batching is enabled in this example, the `forward` method will wishfully receive a _list_ of string, e.g., `['a cute cat playing with a red ball', 'a man sitting in front of a computer', ...]`, aggregated from different clients for _batch inference_, improving the system throughput.
-
 ```python
-class StableDiffusion(MsgpackMixin, Worker):
+class StableDiffusion(Worker, MsgpackMixin):
     def __init__(self):
         self.pipe = StableDiffusionPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
@@ -111,6 +101,16 @@ class StableDiffusion(MsgpackMixin, Worker):
             images.append(dummy_file.getbuffer())
         return images
 ```
+
+> **Note**
+>
+> (a) In this example we return an image in the binary format, which JSON does not support (unless encoded with base64 that makes it longer). Hence, msgpack suits our need better. If we do not inherit `MsgpackMixin`, JSON will be used by default. In other words, the protocol of the service request/response can either be msgpack or JSON.
+>
+> (b) Warm-up usually helps to allocate GPU memory in advance. If the warm-up example is specified, the service will only be ready after the example is forwarded through the handler. However, if no example is given, the first request's latency is expected to be longer. The `example` should be set as a single item or a tuple depending on what `forward` expects to receive. Moreover, in the case where you want to warm up with multiple different examples, you may set `multi_examples` (demo [here](https://mosecorg.github.io/mosec/example/jax/)).
+>
+> (c) This example shows a single-stage service, where the `StableDiffusion` worker directly takes in client's prompt request and responds the image. Thus the `forward` can be considered as a complete service handler. However, we can also design a multi-stage service with workers doing different jobs (e.g., downloading images, forward model, post-processing) in a pipeline. In this case, the whole pipeline is considered as the service handler, with the first worker taking in the request and the last worker sending out the response. The data flow between workers is done by inter-process communication.
+>
+> (d) Since dynamic batching is enabled in this example, the `forward` method will wishfully receive a _list_ of string, e.g., `['a cute cat playing with a red ball', 'a man sitting in front of a computer', ...]`, aggregated from different clients for _batch inference_, improving the system throughput.
 
 Finally, we append the worker to the server to construct a *single-stage* workflow (multiple stages can be [pipelined](https://en.wikipedia.org/wiki/Pipeline_(computing)) to further boost the throughput, see [this example](https://mosecorg.github.io/mosec/example/pytorch/#computer-vision)), and specify the number of processes we want it to run in parallel (`num=1`), and the maximum batch size (`max_batch_size=4`, the maximum number of requests dynamic batching will accumulate before timeout; timeout is defined with the flag `--wait` in milliseconds, meaning the longest time Mosec waits until sending the batch to the Worker).
 
@@ -156,17 +156,17 @@ That's it! You have just hosted your **_stable-diffusion model_** as a service! 
 
 ## Examples
 
-More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/example) section. It includes:
+More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/examples/index.html) section. It includes:
 
-- [Multi-stage workflow demo](https://mosecorg.github.io/mosec/example/echo/): a simple echo demo even without any ML model.
-- [Shared memory IPC](https://mosecorg.github.io/mosec/example/ipc/): inter-process communication with shared memory.
-- [Customized GPU allocation](https://mosecorg.github.io/mosec/example/env/): deploy multiple replicas, each using different GPUs.
-- [Customized metrics](https://mosecorg.github.io/mosec/example/metric/): record your own metrics for monitoring.
-- [Jax jitted inference](https://mosecorg.github.io/mosec/example/jax/): just-in-time compilation speeds up the inference.
+- [Multi-stage workflow demo][(https://mosecorg.github.io/mosec/example/echo/](https://mosecorg.github.io/mosec/examples/echo.html)): a simple echo demo even without any ML model.
+- [Shared memory IPC](https://mosecorg.github.io/mosec/examples/ipc.html): inter-process communication with shared memory.
+- [Customized GPU allocation](https://mosecorg.github.io/mosec/examples/env.html): deploy multiple replicas, each using different GPUs.
+- [Customized metrics](https://mosecorg.github.io/mosec/examples/metric.html): record your own metrics for monitoring.
+- [Jax jitted inference](https://mosecorg.github.io/mosec/examples/jax.html): just-in-time compilation speeds up the inference.
 - PyTorch deep learning models:
-  - [sentiment analysis](https://mosecorg.github.io/mosec/example/pytorch/#natural-language-processing): infer the sentiment of a sentence.
-  - [image recognition](https://github.com/mosecorg/mosec/blob/main/examples/resnet50_server_msgpack.py): categorize a given image.
-  - [stable diffusion](https://github.com/mosecorg/mosec/tree/main/examples/stable_diffusion): generate images based on texts, with msgpack serialization.
+  - [sentiment analysis](https://mosecorg.github.io/mosec/examples/pytorch.html#natural-language-processing): infer the sentiment of a sentence.
+  - [image recognition](https://mosecorg.github.io/mosec/examples/pytorch.html#computer-vision): categorize a given image.
+  - [stable diffusion](https://mosecorg.github.io/mosec/examples/stable_diffusion.html): generate images based on texts, with msgpack serialization.
 
 ## Configuration
 
