@@ -89,6 +89,7 @@ class Server:
         self._worker_cls: List[Type[Worker]] = []
         self._worker_num: List[int] = []
         self._worker_mbs: List[int] = []
+        self._worker_wait: List[int] = []
 
         self._coordinator_env: List[Union[None, List[Dict[str, str]]]] = []
         self._coordinator_ctx: List[str] = []
@@ -117,14 +118,15 @@ class Server:
         worker,
         num,
         max_batch_size,
+        max_wait_time,
         start_method,
         env,
     ):
-        def validate_int_ge_1(number, name):
+        def validate_int_ge(number, name, threshold=1):
             assert isinstance(
                 number, int
             ), f"{name} must be integer but you give {type(number)}"
-            assert number >= 1, f"{name} must be no less than 1"
+            assert number >= threshold, f"{name} must be no less than {threshold}"
 
         def validate_env():
             if env is None:
@@ -146,8 +148,9 @@ class Server:
 
         validate_env()
         assert issubclass(worker, Worker), "worker must be inherited from mosec.Worker"
-        validate_int_ge_1(num, "worker number")
-        validate_int_ge_1(max_batch_size, "maximum batch size")
+        validate_int_ge(num, "worker number")
+        validate_int_ge(max_batch_size, "maximum batch size")
+        validate_int_ge(max_wait_time, "maximum wait time", 0)
         assert (
             start_method in NEW_PROCESS_METHOD
         ), f"start method must be one of {NEW_PROCESS_METHOD}"
@@ -174,6 +177,10 @@ class Server:
             args.extend([f"--{key}", str(value).lower()])
         for batch_size in self._worker_mbs:
             args.extend(["--batches", str(batch_size)])
+        for wait_time in self._worker_wait:
+            args.extend(
+                ["--waits", str(wait_time if wait_time else self._configs["wait"])]
+            )
         logger.info("mosec received arguments: %s", args)
         return args
 
@@ -308,6 +315,7 @@ class Server:
         worker: Type[Worker],
         num: int = 1,
         max_batch_size: int = 1,
+        max_wait_time: int = 0,
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
     ):
@@ -319,13 +327,19 @@ class Server:
             num: the number of processes for parallel computing (>=1)
             max_batch_size: the maximum batch size allowed (>=1), will enable the
                 dynamic batching if it > 1
+            max_wait_time: the maximum wait time (millisecond) for dynamic batching,
+                needs to be used with `max_batch_size` to enable the feature. If not
+                configure, will use 10ms.
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
         """
-        self._validate_arguments(worker, num, max_batch_size, start_method, env)
+        self._validate_arguments(
+            worker, num, max_batch_size, max_wait_time, start_method, env
+        )
         self._worker_cls.append(worker)
         self._worker_num.append(num)
         self._worker_mbs.append(max_batch_size)
+        self._worker_wait.append(max_wait_time)
         self._coordinator_env.append(env)
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)

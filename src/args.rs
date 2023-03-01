@@ -21,7 +21,7 @@ pub(crate) struct Opts {
     #[argh(option, default = "String::from(\"\")")]
     pub(crate) path: String,
 
-    /// batch size for each stage
+    /// max batch size for each stage
     #[argh(option)]
     pub(crate) batches: Vec<u32>,
 
@@ -34,9 +34,13 @@ pub(crate) struct Opts {
     #[argh(option, short = 't', default = "3000")]
     pub(crate) timeout: u64,
 
-    /// wait time for each batch (milliseconds)
+    /// wait time for each batch (milliseconds), use `waits` instead [deprecated]
     #[argh(option, short = 'w', default = "10")]
     pub(crate) wait: u64,
+
+    /// max wait time for each stage
+    #[argh(option)]
+    pub(crate) waits: Vec<u64>,
 
     /// service host
     #[argh(option, short = 'a', default = "String::from(\"0.0.0.0\")")]
