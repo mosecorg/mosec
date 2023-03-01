@@ -26,6 +26,7 @@ import os
 import random
 import socket
 import tempfile
+import warnings
 
 
 def is_port_available(addr: str, port: int) -> bool:
@@ -76,7 +77,7 @@ def parse_arguments() -> argparse.Namespace:
 
     parser.add_argument(
         "--wait",
-        help="Wait time for the batcher to batch (milliseconds)",
+        help="[deprecated] Wait time for the batcher to batch (milliseconds)",
         type=int,
         default=10,
     )
@@ -109,6 +110,14 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     args, _ = parser.parse_known_args()
+
+    if args.wait != 10:
+        warnings.warn(
+            "`--wait` is deprecated and will be removed in v1, please configure"
+            "the `max_wait_time` on `Server.append_worker`",
+            DeprecationWarning,
+        )
+
     if not is_port_available(args.address, args.port):
         raise RuntimeError(
             f"{args.address}:{args.port} is in use. "

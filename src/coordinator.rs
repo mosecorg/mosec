@@ -31,7 +31,7 @@ pub(crate) struct Coordinator {
     capacity: usize,
     path: String,
     batches: Vec<u32>,
-    wait_time: Duration,
+    wait_time: Vec<Duration>,
     receiver: Receiver<u32>,
     sender: Sender<u32>,
 }
@@ -41,7 +41,11 @@ impl Coordinator {
         // init the global task manager
         let (sender, receiver) = bounded(opts.capacity);
         let timeout = Duration::from_millis(opts.timeout);
-        let wait_time = Duration::from_millis(opts.wait);
+        let wait_time = opts
+            .waits
+            .iter()
+            .map(|x| Duration::from_millis(*x))
+            .collect();
         let path = if !opts.path.is_empty() {
             opts.path.to_string()
         } else {
@@ -71,7 +75,6 @@ impl Coordinator {
         let barrier = Arc::new(Barrier::new(self.batches.len() + 1));
         let mut last_receiver = self.receiver.clone();
         let mut last_sender = self.sender.clone();
-        let wait_time = self.wait_time;
         let folder = Path::new(&self.path);
         if folder.is_dir() {
             info!(path=?folder, "socket path already exist, try to remove it");
@@ -79,15 +82,16 @@ impl Coordinator {
         }
         fs::create_dir(folder).unwrap();
 
-        for (i, batch) in self.batches.iter().enumerate() {
+        for i in 0..self.batches.len() {
             let (sender, receiver) = bounded::<u32>(self.capacity);
             let path = folder.join(format!("ipc_{:?}.socket", i + 1));
 
-            let batch_size = *batch;
+            let batch_size = self.batches[i];
+            let wait = self.wait_time[i];
             tokio::spawn(communicate(
                 path,
                 batch_size as usize,
-                wait_time,
+                wait,
                 (i + 1).to_string(),
                 last_receiver.clone(),
                 sender.clone(),
