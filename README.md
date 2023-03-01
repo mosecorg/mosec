@@ -81,7 +81,7 @@ Then, we **build an API** for clients to query a text prompt and obtain an image
 
 
 ```python
-class StableDiffusion(Worker, MsgpackMixin):
+class StableDiffusion(MsgpackMixin, Worker):
     def __init__(self):
         self.pipe = StableDiffusionPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
