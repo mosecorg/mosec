@@ -158,7 +158,7 @@ That's it! You have just hosted your **_stable-diffusion model_** as a service! 
 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/examples/index.html) section. It includes:
 
-- [Multi-stage workflow demo][(https://mosecorg.github.io/mosec/examples/echo.html](https://mosecorg.github.io/mosec/examples/echo.html)): a simple echo demo even without any ML model.
+- [Multi-stage workflow demo](https://mosecorg.github.io/mosec/examples/echo.html): a simple echo demo even without any ML model.
 - [Shared memory IPC](https://mosecorg.github.io/mosec/examples/ipc.html): inter-process communication with shared memory.
 - [Customized GPU allocation](https://mosecorg.github.io/mosec/examples/env.html): deploy multiple replicas, each using different GPUs.
 - [Customized metrics](https://mosecorg.github.io/mosec/examples/metric.html): record your own metrics for monitoring.
