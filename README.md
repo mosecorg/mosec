@@ -187,6 +187,13 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
   - `mosec_service_throughput` shows the service throughput.
 - Stop the service with `SIGINT` or `SIGTERM` since it has the graceful shutdown logic.
 
+## Adopters
+
+Here are some of the companies and individual users that are using Mosec:
+
+- [MOSS](https://txsun1997.github.io/blogs/moss.html): An open sourced conversational language model like ChatGPT.
+- [TensorChord](https://tensorchord.ai/): A platform for building and deploying AI models.
+
 ## Contributing
 
 We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/contributing) your code and pull request!
