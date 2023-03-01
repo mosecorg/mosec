@@ -11,5 +11,5 @@ Before contributing to this repository, please first discuss the change you wish
 
 ## Contacts
 
-- Keming <kemingy94@gmail.com>
-- zclzc <lkevinzc@gmail.com>
+- [Keming](mailto:kemingy94@gmail.com)
+- [zclzc](mailto:lkevinzc@gmail.com)
