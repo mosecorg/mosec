@@ -131,7 +131,7 @@ class DryRunner:
             example = ingress.multi_examples[0][0]
 
         if not example:
-            logger.info("")
+            logger.info("cannot find the example in the 1st stage worker, skip warmup")
             return
 
         sender, receiver = self.sender_pipes[0], self.receiver_pipes[-1]
