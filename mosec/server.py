@@ -39,9 +39,7 @@ IPC Wrapper
     for the server.
 """
 
-import contextlib
 import multiprocessing as mp
-import os
 import shutil
 import signal
 import subprocess
@@ -56,6 +54,8 @@ import pkg_resources
 
 from .args import mosec_args
 from .coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from .dry_run import DryRunner
+from .env import env_var_context
 from .ipc import IPCWrapper
 from .log import get_logger
 from .worker import Worker
@@ -101,7 +101,7 @@ class Server:
 
         self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
 
-        self._configs: dict = {}
+        self._configs: dict = vars(mosec_args)
 
         self._server_shutdown: bool = False
         signal.signal(signal.SIGTERM, self._terminate)
@@ -186,7 +186,6 @@ class Server:
 
     def _start_controller(self):
         """Subprocess to start controller program."""
-        self._configs = vars(mosec_args)
         if not self._server_shutdown:
             path = Path(pkg_resources.resource_filename("mosec", "bin"), "mosec")
             # pylint: disable=consider-using-with
@@ -347,6 +346,14 @@ class Server:
     def run(self):
         """Start the mosec model server."""
         self._validate_server()
+        if self._configs["dry_run"]:
+            DryRunner(
+                self._worker_cls,
+                self._worker_mbs,
+                self._coordinator_env,
+            ).run()
+            return
+
         self._start_controller()
         try:
             self._manage_coordinators()
@@ -354,18 +361,3 @@ class Server:
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
-
-
-@contextlib.contextmanager
-def env_var_context(env: Union[None, List[Dict[str, str]]], index: int):
-    """Manage the environment variables for a worker process."""
-    default: Dict = {}
-    try:
-        if env is not None:
-            for key, value in env[index].items():
-                default[key] = os.getenv(key, "")
-                os.environ[key] = value
-        yield None
-    finally:
-        for key, value in default.items():
-            os.environ[key] = value

@@ -109,6 +109,13 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
     )
 
+    parser.add_argument(
+        "--dry-run",
+        help="Dry run the service with provided warmup examples (if any). "
+        "This will omit the worker number for each stage.",
+        action="store_true",
+    )
+
     args, _ = parser.parse_known_args()
 
     if args.wait != 10:
