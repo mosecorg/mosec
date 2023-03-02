@@ -173,6 +173,7 @@ class Server:
 
     def _controller_args(self):
         args = []
+        self._configs.pop("dry_run")
         for key, value in self._configs.items():
             args.extend([f"--{key}", str(value).lower()])
         for batch_size in self._worker_mbs:
