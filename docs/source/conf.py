@@ -54,6 +54,7 @@ ogp_image = "https://user-images.githubusercontent.com/38581401/134487662-49733d
 html_theme = "furo"
 html_logo = "https://user-images.githubusercontent.com/38581401/134487662-49733d45-2ba0-4c19-aa07-1f43fd35c453.png"
 html_static_path = ["_static"]
+html_favicon = "https://user-images.githubusercontent.com/38581401/134798617-0104dc12-e0d4-4ed5-a79c-9e2435e99a14.png"
 
 # Theme
 html_theme_options = {
