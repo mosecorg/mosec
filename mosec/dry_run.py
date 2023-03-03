@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import json
+import signal
+import sys
 import time
 from multiprocessing.context import SpawnContext, SpawnProcess
 from typing import TYPE_CHECKING, Dict, List
@@ -27,6 +29,7 @@ from .worker import Worker
 
 if TYPE_CHECKING:
     from multiprocessing.connection import PipeConnection  # type: ignore
+    from multiprocessing.synchronize import Event
 
 logger = get_logger()
 
@@ -37,18 +40,31 @@ def dry_run_func(
     receiver: PipeConnection,
     sender: PipeConnection,
     ingress: bool,
+    event: Event,
 ):
     """Dry run simulation function."""
     worker = worker_cls()
-    data = receiver.recv() if ingress else worker.deserialize(receiver.recv_bytes())
-    logger.info("%s received %s", worker, data)
-    if batch > 1:
-        data = worker.forward([data])[0]
-    else:
-        data = worker.forward(data)
-    logger.info("%s inference result: %s", worker, data)
-    data = worker.serialize(data)
-    sender.send_bytes(data)
+    while not event.is_set():
+        if receiver.poll(timeout=0.1):
+            break
+
+    if event.is_set():
+        return
+
+    try:
+        data = receiver.recv() if ingress else worker.deserialize(receiver.recv_bytes())
+        logger.info("%s received %s", worker, data)
+        if batch > 1:
+            data = worker.forward([data])[0]
+        else:
+            data = worker.forward(data)
+        logger.info("%s inference result: %s", worker, data)
+        data = worker.serialize(data)
+        sender.send_bytes(data)
+    # pylint: disable=broad-except
+    except Exception as err:
+        logger.error("get error in %s: %s", worker, err)
+        event.set()
 
 
 class DryRunner:
@@ -72,11 +88,19 @@ class DryRunner:
         logger.info("init dry runner for %s", workers)
         self.process_context = SpawnContext()
         self.workers = workers
-        self.batches = batches
-        self.envs = envs
+        self.process_args = zip(workers, batches, envs)
         self.pool: List[SpawnProcess] = []
         self.sender_pipes: List[PipeConnection] = []
         self.receiver_pipes: List[PipeConnection] = []
+
+        self.event: Event = self.process_context.Event()
+        signal.signal(signal.SIGTERM, self.terminate)
+        signal.signal(signal.SIGINT, self.terminate)
+
+    def terminate(self, signum, framestack):
+        """Terminate the dry run."""
+        logger.info("received terminate signal [%s] %s", signum, framestack)
+        self.event.set()
 
     def new_pipe(self):
         """Create new pipe for dry run workers to communicate."""
@@ -87,9 +111,7 @@ class DryRunner:
     def run(self):
         """Execute thr dry run process."""
         self.new_pipe()
-        for i, (worker, batch, env) in enumerate(
-            zip(self.workers, self.batches, self.envs)
-        ):
+        for i, (worker, batch, env) in enumerate(self.process_args):
             self.new_pipe()
             coordinator = self.process_context.Process(
                 target=dry_run_func,
@@ -99,6 +121,7 @@ class DryRunner:
                     self.receiver_pipes[-2],
                     self.sender_pipes[-1],
                     i == 0,
+                    self.event,
                 ),
                 daemon=True,
             )
@@ -137,6 +160,14 @@ class DryRunner:
         sender, receiver = self.sender_pipes[0], self.receiver_pipes[-1]
         start_time = time.perf_counter()
         sender.send(example)
+
+        while not self.event.is_set():
+            if receiver.poll(0.1):
+                break
+
+        if self.event.is_set():
+            sys.exit(1)
+
         res = receiver.recv_bytes()
         duration = time.perf_counter() - start_time
         logger.info(
