@@ -174,9 +174,9 @@ class DryRunner:
             "dry run result: %s",
             json.dumps(
                 {
-                    "req": example,
-                    "size": len(res),
-                    "duration": duration,
+                    "request": example,
+                    "result_size": len(res),
+                    "warmup_duration": duration,
                 }
             ),
         )
