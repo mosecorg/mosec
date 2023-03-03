@@ -104,6 +104,8 @@ class Server:
         self._configs: dict = vars(mosec_args)
 
         self._server_shutdown: bool = False
+
+    def _handle_signal(self):
         signal.signal(signal.SIGTERM, self._terminate)
         signal.signal(signal.SIGINT, self._terminate)
 
@@ -355,6 +357,7 @@ class Server:
             ).run()
             return
 
+        self._handle_signal()
         self._start_controller()
         try:
             self._manage_coordinators()
