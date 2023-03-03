@@ -24,6 +24,8 @@ logger = get_logger()
 class Preprocess(Worker):
     """Sample Class."""
 
+    example = [{"time": 0}]
+
     def forward(self, data: dict) -> float:
         logger.debug("pre received %s", data)
         # Customized, simple input validation
