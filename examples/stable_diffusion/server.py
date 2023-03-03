@@ -47,5 +47,5 @@ class StableDiffusion(MsgpackMixin, Worker):
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(StableDiffusion, num=1, max_batch_size=4)
+    server.append_worker(StableDiffusion, num=1, max_batch_size=4, max_wait_time=10)
     server.run()

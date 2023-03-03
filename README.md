@@ -120,7 +120,7 @@ if __name__ == "__main__":
     # 1) `num` specify the number of processes that will be spawned to run in parallel.
     # 2) By configuring the `max_batch_size` with the value > 1, the input data in your
     # `forward` function will be a list (batch); otherwise, it's a single item.
-    server.append_worker(StableDiffusion, num=1, max_batch_size=4)
+    server.append_worker(StableDiffusion, num=1, max_batch_size=4, max_wait_time=10)
     server.run()
 ```
 

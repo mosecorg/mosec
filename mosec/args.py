@@ -28,6 +28,8 @@ import socket
 import tempfile
 import warnings
 
+from .env import get_env_namespace
+
 
 def is_port_available(addr: str, port: int) -> bool:
     """Check if the port is available to use."""
@@ -49,6 +51,10 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Mosec Server Configurations",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog="The following arguments can be set through environment variables: "
+        "(path, capacity, timeout, address, port, namespace, debug, dry_run). "
+        "Note that the environement variable should start with `MOSEC_` with upper "
+        "case. For example: `MOSEC_PORT=8080 MOSEC_TIMEOUT=5000 python main.py`.",
     )
 
     parser.add_argument(
@@ -116,7 +122,7 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
     )
 
-    args, _ = parser.parse_known_args()
+    args, _ = parser.parse_known_args(namespace=get_env_namespace())
 
     if args.wait != 10:
         warnings.warn(
