@@ -81,7 +81,7 @@ def test_square_service(mosec_service, http_client):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param(("mixin_numbin_service", 2), "", id="numbin"),
+        pytest.param(("mixin_numbin_service", 3), "", id="numbin"),
     ],
     indirect=["mosec_service", "http_client"],
 )
