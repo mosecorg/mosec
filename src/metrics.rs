@@ -23,6 +23,7 @@ pub(crate) struct Metrics {
     pub(crate) throughput: IntCounterVec,
     pub(crate) duration: HistogramVec,
     pub(crate) batch_size: HistogramVec,
+    pub(crate) batch_duration: HistogramVec,
     pub(crate) remaining_task: IntGauge,
 }
 
@@ -52,6 +53,13 @@ impl Metrics {
                 "batch size for each connection in each stage",
                 &["stage", "connection"],
                 exponential_buckets(1f64, 2f64, 10).unwrap() // 1 ~ 512
+            )
+            .unwrap(),
+            batch_duration: register_histogram_vec!(
+                format!("{namespace}_batch_duration_second"),
+                "dynamic batching duration for each connection in each stage",
+                &["stage", "connection"],
+                exponential_buckets(1e-3f64, 2f64, 13).unwrap() // 1ms ~ 4.096s
             )
             .unwrap(),
             remaining_task: register_int_gauge!(

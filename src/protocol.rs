@@ -69,7 +69,14 @@ pub(crate) async fn communicate(
                     loop {
                         ids.clear();
                         data.clear();
-                        get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
+                        let batch_timer =
+                            get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
+                        if batch_size > 1 {
+                            metrics
+                                .batch_duration
+                                .with_label_values(&metric_label)
+                                .observe(batch_timer.unwrap().elapsed().as_secs_f64())
+                        }
                         // start record the duration metrics here because receiving the first task
                         // depends on when the request comes in.
                         let start_timer = Instant::now();
@@ -210,13 +217,17 @@ async fn get_batch(
     batch_size: usize,
     ids: &mut Vec<u32>,
     wait_time: Duration,
-) {
+) -> Option<Instant> {
     let id = receiver.recv().await.expect("receiver is closed");
     ids.push(id);
-    if batch_size > 1 {
-        let _ = tokio::time::timeout(wait_time, inner_batch(receiver, ids, batch_size)).await;
-        debug!("batch size: {}/{}", ids.len(), batch_size);
+    if batch_size <= 1 {
+        return None;
     }
+    // counting from receving the first task
+    let start_time = Instant::now();
+    let _ = tokio::time::timeout(wait_time, inner_batch(receiver, ids, batch_size)).await;
+    debug!("batch size: {}/{}", ids.len(), batch_size);
+    Some(start_time)
 }
 
 async fn send_message(
