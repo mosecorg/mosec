@@ -17,12 +17,11 @@ import re
 import shlex
 import subprocess
 import time
+from http import HTTPStatus
 from threading import Thread
 
 import httpx
 import pytest
-
-import mosec
 
 TEST_PORT = "5000"
 
@@ -61,22 +60,35 @@ def mosec_service(request):
 )
 def test_square_service(mosec_service, http_client):
     resp = http_client.get("/")
-    assert resp.status_code == 200
+    assert resp.status_code == HTTPStatus.OK
     # only check the prefix since the version from setuptools_scm may not be the
     # correct one used in `Cargo.toml`
     assert resp.headers["server"].startswith("mosec/"), f"{resp.headers['server']}"
 
     resp = http_client.get("/metrics")
-    assert resp.status_code == 200
+    assert resp.status_code == HTTPStatus.OK
 
     resp = http_client.post("/inference", json={"msg": 2})
-    assert resp.status_code == 422
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert resp.text == "request validation error: 'x'"
 
     resp = http_client.post("/inference", content=b"bad-binary-request")
-    assert resp.status_code == 400
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param(("mixin_numbin_service", 2), "", id="numbin"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_mixin_ipc_service(mosec_service, http_client):
+    resp = http_client.post("/inference", json={"num": 8})
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.json() == "equal"
 
 
 @pytest.mark.parametrize(
@@ -109,6 +121,7 @@ def test_square_service_mp(mosec_service, http_client):
 
 def validate_square_service(http_client, x):
     resp = http_client.post("/inference", json={"x": x})
+    assert resp.status_code == HTTPStatus.OK
     assert resp.json()["x"] == x**2
 
 
