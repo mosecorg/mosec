@@ -53,7 +53,7 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog="The following arguments can be set through environment variables: "
         "(path, capacity, timeout, address, port, namespace, debug, dry_run). "
-        "Note that the environement variable should start with `MOSEC_` with upper "
+        "Note that the environment variable should start with `MOSEC_` with upper "
         "case. For example: `MOSEC_PORT=8080 MOSEC_TIMEOUT=5000 python main.py`.",
     )
 

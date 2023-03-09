@@ -223,7 +223,7 @@ async fn get_batch(
     if batch_size <= 1 {
         return None;
     }
-    // counting from receving the first task
+    // counting from receiving the first task
     let start_time = Instant::now();
     let _ = tokio::time::timeout(wait_time, inner_batch(receiver, ids, batch_size)).await;
     debug!("batch size: {}/{}", ids.len(), batch_size);
