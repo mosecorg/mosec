@@ -71,11 +71,11 @@ pub(crate) async fn communicate(
                         data.clear();
                         let batch_timer =
                             get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
-                        if batch_size > 1 {
+                        if let Some(timer) = batch_timer {
                             metrics
                                 .batch_duration
                                 .with_label_values(&metric_label)
-                                .observe(batch_timer.unwrap().elapsed().as_secs_f64())
+                                .observe(timer.elapsed().as_secs_f64())
                         }
                         // start record the duration metrics here because receiving the first task
                         // depends on when the request comes in.
