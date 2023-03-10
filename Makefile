@@ -20,7 +20,7 @@ test: dev
 	pytest tests -vv -s -m "not arrow"
 	RUST_BACKTRACE=1 cargo test -vv
 
-test_plugin: dev
+test_arrow: dev
 	@pip install -q -r requirements/plugin.txt
 	echo "Running tests for the plugin"
 	pytest tests -vv -s -m "arrow"
