@@ -66,7 +66,7 @@ class EchoWorkerJSON(Worker):
         return data
 
 
-class EchoWorkerMSGPACK(MsgpackMixin, EchoWorkerJSON):
+class EchoWorkerMsgPack(MsgpackMixin, EchoWorkerJSON):
     """"""
 
 
@@ -209,7 +209,7 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
                 msgpack.packb({"rid": "147982364", "data": b"im_bytes"}),
                 msgpack.packb({"rid": "147982831", "data": b"another_im_bytes"}),
             ],
-            EchoWorkerMSGPACK,
+            EchoWorkerMsgPack,
             msgpack.unpackb,
         ),
     ],

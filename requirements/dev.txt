@@ -8,6 +8,5 @@ pydocstyle>=6.1.1
 black>=20.8.0
 isort>=5.6
 autoflake>=1.4
-msgpack>=1.0.2
 pre-commit>=2.15.0
 httpx==0.23.0
