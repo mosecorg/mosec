@@ -3,6 +3,7 @@ include src/*.rs
 include CITATION.cff
 include LICENSE
 include README.md
+include mosec/py.typed
 
 prune tests
 prune examples
