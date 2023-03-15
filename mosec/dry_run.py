@@ -133,12 +133,26 @@ class DryRunner:
 
         logger.info("dry run init successful")
         self.warmup()
+
+        logger.info("wait for worker init done")
+        if not self.event.is_set():
+            self.event.set()
+        for i, process in enumerate(self.pool):
+            process.join()
+            if process.exitcode != 0:
+                logger.warning(
+                    "detect abnormal exit code %d in %s",
+                    process.exitcode,
+                    self.workers[i],
+                )
+                sys.exit(process.exitcode)
         logger.info("dry run exit")
 
     def warmup(self):
         """Warmup the service.
 
-        Only one example will be used.
+        If neither `example` nor `multi_examples` is provided, it will only
+        init the worker class.
         """
         ingress = self.workers[0]
         example = None
@@ -161,6 +175,15 @@ class DryRunner:
         while not self.event.is_set():
             if receiver.poll(0.1):
                 break
+
+            # liveness probe
+            for i, process in enumerate(self.pool):
+                if process.exitcode is not None:
+                    logger.warning(
+                        "worker %s exit with code %d", self.workers[i], process.exitcode
+                    )
+                    self.event.set()
+                    break
 
         if self.event.is_set():
             sys.exit(1)
