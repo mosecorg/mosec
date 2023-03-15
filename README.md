@@ -195,6 +195,19 @@ Here are some of the companies and individual users that are using Mosec:
 - [MOSS](https://txsun1997.github.io/blogs/moss.html): An open sourced conversational language model like ChatGPT.
 - [TensorChord](https://tensorchord.ai/): A platform for building and deploying AI models.
 
+## Citation
+
+If you find this software useful for your research, please consider citing
+
+```
+@software{yang2021mosec,
+  title = {{MOSEC: Model Serving made Efficient in the Cloud}},
+  author = {Yang, Keming and Liu, Zichen and Cheng, Philip},
+  url = {https://github.com/mosecorg/mosec},
+  year = {2021}
+}
+```
+
 ## Contributing
 
 We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/development/contributing.html) your code and pull request!
