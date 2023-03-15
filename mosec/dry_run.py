@@ -143,15 +143,12 @@ class DryRunner:
         ingress = self.workers[0]
         example = None
         if ingress.example:
-            assert isinstance(
-                ingress.example, list
-            ), "`example` should be a list of data"
-            example = ingress.example[0]
+            example = ingress.example
         elif ingress.multi_examples:
-            assert isinstance(ingress.multi_examples, list) and isinstance(
-                ingress.multi_examples[0], list
-            ), "`multi_examples` should be a list of list data"
-            example = ingress.multi_examples[0][0]
+            assert isinstance(ingress.multi_examples, list), (
+                "`multi_examples` " "should be a list of data"
+            )
+            example = ingress.multi_examples[0]
 
         if not example:
             logger.info("cannot find the example in the 1st stage worker, skip warmup")
