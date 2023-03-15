@@ -7,6 +7,8 @@ authors:
 - family-names: "Liu"
   given-names: "Zichen"
   orcid: "https://orcid.org/0000-0001-9451-8625"
+- family-names: "Cheng"
+  given-names: "Philip"
 title: "MOSEC: Model Serving made Efficient in the Cloud"
 url: "https://github.com/mosecorg/mosec"
 type: software
