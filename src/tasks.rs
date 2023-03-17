@@ -104,8 +104,10 @@ impl TaskManager {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
             warn!(%id, %err, "task was not completed in the expected time");
-            let mut table = self.table.write();
+            // get the notifier lock before the table lock to avoid deadlock with the
+            // code in `notify_task_done`
             let mut notifiers = self.notifiers.lock();
+            let mut table = self.table.write();
             table.remove(&id);
             notifiers.remove(&id);
             return Err(ServiceError::Timeout);
@@ -132,8 +134,10 @@ impl TaskManager {
             id = *current_id;
             *current_id = id.wrapping_add(1);
         }
-        let mut table = self.table.write();
+        // get the notifier lock before the table lock to avoid deadlock with the
+        // code in `notify_task_done`
         let mut notifiers = self.notifiers.lock();
+        let mut table = self.table.write();
         table.insert(id, Task::new(data));
         notifiers.insert(id, tx);
         debug!(%id, "add a new task");

@@ -167,7 +167,7 @@ class Server:
             elif isinstance(proc, subprocess.Popen):
                 code = proc.poll()
 
-            if code:
+            if code is not None:
                 self._terminate(
                     code,
                     f"mosec daemon [{name}] exited on error code: {code}",
@@ -281,18 +281,22 @@ class Server:
         self._coordinator_shutdown_notify.set()
 
         # terminate controller first and wait for a graceful period
-        if self._controller_process:
+        if self._controller_process is not None:
             self._controller_process.terminate()
             graceful_period = monotonic() + self._configs["timeout"] / 1000
             while monotonic() < graceful_period:
                 ctr_exitcode = self._controller_process.poll()
                 if ctr_exitcode is not None:  # exited
                     if ctr_exitcode:  # on error
-                        logger.error("mosec service halted on error: %d", ctr_exitcode)
+                        logger.error("mosec service halted on error [%d]", ctr_exitcode)
                     else:
-                        logger.info("mosec service halted normally")
+                        logger.info("mosec service halted normally [%d]", ctr_exitcode)
                     break
                 sleep(0.1)
+
+            if monotonic() > graceful_period:
+                logger.error("failed to terminate mosec service, will try to kill it")
+                self._controller_process.kill()
 
         # shutdown coordinators
         self._coordinator_shutdown.set()
