@@ -293,8 +293,10 @@ class Server:
                         logger.info("mosec service halted normally [%d]", ctr_exitcode)
                     break
                 sleep(0.1)
-            logger.error("failed to terminate mosec service, will try to kill it")
-            self._controller_process.kill()
+
+            if monotonic() > graceful_period:
+                logger.error("failed to terminate mosec service, will try to kill it")
+                self._controller_process.kill()
 
         # shutdown coordinators
         self._coordinator_shutdown.set()
