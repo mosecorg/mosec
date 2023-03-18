@@ -14,19 +14,19 @@
 
 """MOSEC is a machine learning model serving framework."""
 
-from .errors import (
+from mosec.errors import (
     ClientError,
     DecodingError,
     EncodingError,
     ServerError,
     ValidationError,
 )
-from .log import get_logger
-from .server import Server
-from .worker import Worker
+from mosec.log import get_logger
+from mosec.server import Server
+from mosec.worker import Worker
 
 try:
-    from ._version import __version__  # type: ignore
+    from mosec._version import __version__  # type: ignore
 except ImportError:
     from setuptools_scm import get_version  # type: ignore
 

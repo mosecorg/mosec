@@ -24,7 +24,7 @@ sent via the original way.
 import warnings
 from typing import TYPE_CHECKING, List
 
-from ..ipc import IPCWrapper
+from mosec.ipc import IPCWrapper
 
 # We do not enforce the installation of third party libraries for
 # plugins, because users may not enable them.

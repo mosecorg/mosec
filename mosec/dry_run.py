@@ -23,9 +23,9 @@ import time
 from multiprocessing.context import SpawnContext, SpawnProcess
 from typing import TYPE_CHECKING, Dict, List
 
-from .env import env_var_context
-from .log import get_logger
-from .worker import Worker
+from mosec.env import env_var_context
+from mosec.log import get_logger
+from mosec.worker import Worker
 
 if TYPE_CHECKING:
     from multiprocessing.connection import PipeConnection  # type: ignore

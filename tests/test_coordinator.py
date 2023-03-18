@@ -32,8 +32,7 @@ from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coo
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
-
-from .utils import imitate_controller_send
+from tests.utils import imitate_controller_send
 
 socket_prefix = join(tempfile.gettempdir(), "test-mosec")
 stage = STAGE_INGRESS + STAGE_EGRESS

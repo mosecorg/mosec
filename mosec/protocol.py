@@ -22,7 +22,7 @@ from enum import IntFlag
 from io import BytesIO
 from typing import Sequence, Tuple
 
-from .log import get_logger
+from mosec.log import get_logger
 
 logger = get_logger()
 
