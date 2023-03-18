@@ -23,11 +23,11 @@ import traceback
 from multiprocessing.synchronize import Event
 from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
-from .errors import MosecError
-from .ipc import IPCWrapper
-from .log import get_logger
-from .protocol import HTTPStautsCode, Protocol
-from .worker import Worker
+from mosec.errors import MosecError
+from mosec.ipc import IPCWrapper
+from mosec.log import get_logger
+from mosec.protocol import HTTPStautsCode, Protocol
+from mosec.worker import Worker
 
 logger = get_logger()
 

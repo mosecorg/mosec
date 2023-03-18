@@ -24,7 +24,7 @@ Features:
 import warnings
 from typing import Any
 
-from ..errors import DecodingError, EncodingError
+from mosec.errors import DecodingError, EncodingError
 
 try:
     import msgpack  # type: ignore

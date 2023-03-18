@@ -17,7 +17,7 @@ import struct
 from socket import socket
 from typing import List, Union
 
-from .mock_socket import socket as mock_socket
+from tests.mock_socket import socket as mock_socket
 
 
 def imitate_controller_send(sock: Union[mock_socket, socket], l_data: List[bytes]):

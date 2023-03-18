@@ -25,7 +25,7 @@ Attention: numbin only supports NumPy ndarray types.
 import warnings
 from typing import Any
 
-from ..errors import DecodingError, EncodingError
+from mosec.errors import DecodingError, EncodingError
 
 try:
     import numbin as nb  # type: ignore

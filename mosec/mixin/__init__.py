@@ -14,7 +14,7 @@
 
 """Provide useful mixin to extend MOSEC."""
 
-from .msgpack_worker import MsgpackMixin
-from .numbin_worker import NumBinIPCMixin
+from mosec.mixin.msgpack_worker import MsgpackMixin
+from mosec.mixin.numbin_worker import NumBinIPCMixin
 
 __all__ = ["MsgpackMixin", "NumBinIPCMixin"]
