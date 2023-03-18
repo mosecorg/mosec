@@ -104,12 +104,14 @@ impl TaskManager {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
             warn!(%id, %err, "task was not completed in the expected time");
-            // get the notifier lock before the table lock to avoid deadlock with the
-            // code in `notify_task_done`
-            let mut notifiers = self.notifiers.lock().unwrap();
-            let mut table = self.table.write().unwrap();
-            table.remove(&id);
-            notifiers.remove(&id);
+            {
+                let mut notifiers = self.notifiers.lock().unwrap();
+                notifiers.remove(&id);
+            }
+            {
+                let mut table = self.table.write().unwrap();
+                table.remove(&id);
+            }
             return Err(ServiceError::Timeout);
         }
         let mut table = self.table.write().unwrap();
@@ -134,33 +136,47 @@ impl TaskManager {
             id = *current_id;
             *current_id = id.wrapping_add(1);
         }
-        // get the notifier lock before the table lock to avoid deadlock with the
-        // code in `notify_task_done`
-        let mut notifiers = self.notifiers.lock().unwrap();
-        let mut table = self.table.write().unwrap();
-        table.insert(id, Task::new(data));
-        notifiers.insert(id, tx);
+        {
+            let mut notifiers = self.notifiers.lock().unwrap();
+            notifiers.insert(id, tx);
+        }
+        {
+            let mut table = self.table.write().unwrap();
+            table.insert(id, Task::new(data));
+        }
         debug!(%id, "add a new task");
 
         if self.channel.try_send(id).is_err() {
             warn!(%id, "reach the capacity limit, will delete this task");
-            table.remove(&id);
-            notifiers.remove(&id);
+            {
+                let mut notifiers = self.notifiers.lock().unwrap();
+                notifiers.remove(&id);
+            }
+            {
+                let mut table = self.table.write().unwrap();
+                table.remove(&id);
+            }
             return Err(ServiceError::TooManyRequests);
         }
         Ok((id, rx))
     }
 
     pub(crate) fn notify_task_done(&self, id: u32) {
-        let mut notifiers = self.notifiers.lock().unwrap();
-        if let Some(sender) = notifiers.remove(&id) {
+        let res;
+        {
+            let mut notifiers = self.notifiers.lock().unwrap();
+            res = notifiers.remove(&id);
+        }
+        if let Some(sender) = res {
             if !sender.is_closed() {
                 sender.send(()).unwrap();
             } else {
                 warn!(%id, "the task notifier is already closed, will delete it \
                     (this is usually because the client side has closed the connection)");
-                let mut table = self.table.write().unwrap();
-                table.remove(&id);
+                {
+                    let mut table = self.table.write().unwrap();
+                    table.remove(&id);
+                }
                 let metrics = Metrics::global();
                 metrics.remaining_task.dec();
             }
@@ -184,6 +200,7 @@ impl TaskManager {
 
     pub(crate) fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
         let mut table = self.table.write().unwrap();
+        let mut abnormal_tasks = Vec::new();
         for i in 0..ids.len() {
             let task = table.get_mut(&ids[i]);
             match task {
@@ -192,7 +209,7 @@ impl TaskManager {
                     match code {
                         TaskCode::Normal => {}
                         _ => {
-                            self.notify_task_done(ids[i]);
+                            abnormal_tasks.push(ids[i]);
                         }
                     }
                 }
@@ -201,6 +218,12 @@ impl TaskManager {
                     info!(id=%ids[i], "cannot find this task, maybe it has expired");
                 }
             }
+        }
+        // make sure the table lock is released since the next func call may need to acquire
+        // the notifiers lock, we'd better only hold one lock at a time
+        drop(table);
+        for task_id in abnormal_tasks {
+            self.notify_task_done(task_id);
         }
     }
 }
