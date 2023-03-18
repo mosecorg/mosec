@@ -7,7 +7,6 @@ on:
       - 'mosec/**'
       - 'docs/**'
       - '.github/workflows/page.yml'
-      - 'mkdocs.yml'
       - 'examples/**'
       - '**.md'
   # Allows you to run this workflow manually from the Actions tab
