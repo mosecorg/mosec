@@ -12,17 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A chaos test that contains:
+
+- normal request
+- early disconnection
+- client bad request data
+- service internal error
+"""
+
 import concurrent.futures
-import random
+import os
 import shlex
 import subprocess
 import time
 from http import HTTPStatus
+from random import random
 
 import httpx
 
 URL = "http://localhost:8000/inference"
-REQ_NUM = 10000
+REQ_NUM = int(os.getenv("CHAOS_REQUEST", 10000))
+# set the thread number in case the CI server cannot get the real CPU number.
+THREAD = 8
 
 
 def random_req(params, timeout):
@@ -31,9 +42,13 @@ def random_req(params, timeout):
 
 
 def main():
-    with concurrent.futures.ThreadPoolExecutor() as e:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD) as e:
         futures = [
-            e.submit(random_req, {"time": 0.1}, random.random() / 5.0)
+            e.submit(
+                random_req,
+                {"time": 0.1} if random() > 0.3 else {"hey": 0},
+                random() / 3.0,
+            )
             for _ in range(REQ_NUM)
         ]
         count = 0
@@ -41,9 +56,9 @@ def main():
             try:
                 data = future.result()
             except Exception as err:
-                print(err)
+                print("[x]", err)
             else:
-                print(data)
+                print("[~]", data)
                 count += 1
 
     print(f">> {count}/{REQ_NUM} requests recevied before disconnection")
@@ -56,8 +71,12 @@ def main():
 
 
 if __name__ == "__main__":
-    service = subprocess.Popen(shlex.split(f"python -u examples/echo.py --debug"))
+    service = subprocess.Popen(
+        shlex.split(f"python tests/bad_service.py --debug --timeout 500")
+    )
     time.sleep(3)
-    main()
-    service.terminate()
+    try:
+        main()
+    finally:
+        service.terminate()
     time.sleep(2)
