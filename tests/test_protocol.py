@@ -21,9 +21,8 @@ from typing import List
 import pytest
 
 from mosec.protocol import Protocol
-
-from .mock_socket import socket
-from .utils import imitate_controller_send
+from tests.mock_socket import socket
+from tests.utils import imitate_controller_send
 
 
 def echo(p: Protocol, datum: List[bytes]):

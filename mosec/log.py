@@ -22,7 +22,7 @@ import os
 from datetime import datetime
 from typing import Any, MutableMapping
 
-from .args import mosec_args
+from mosec.args import mosec_args
 
 MOSEC_LOG_NAME = __name__
 

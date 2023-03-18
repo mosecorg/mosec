@@ -14,6 +14,6 @@
 
 """Provide useful tools to extend MOSEC."""
 
-from .plasma_shm import PlasmaShmWrapper
+from mosec.plugins.plasma_shm import PlasmaShmWrapper
 
 __all__ = ["PlasmaShmWrapper"]

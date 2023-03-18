@@ -27,7 +27,7 @@ import json
 import pickle
 from typing import Any, Sequence
 
-from .errors import DecodingError, EncodingError
+from mosec.errors import DecodingError, EncodingError
 
 
 class Worker(abc.ABC):

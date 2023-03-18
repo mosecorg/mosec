@@ -28,7 +28,7 @@ import socket
 import tempfile
 import warnings
 
-from .env import get_env_namespace
+from mosec.env import get_env_namespace
 
 
 def is_port_available(addr: str, port: int) -> bool:

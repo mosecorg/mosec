@@ -23,7 +23,7 @@ is raised; if the decoded data cannot pass the validation check (usually
 implemented by users), the `ValidationError` should be raised.
 """
 
-from .protocol import HTTPStautsCode
+from mosec.protocol import HTTPStautsCode
 
 
 class MosecError(Exception):
