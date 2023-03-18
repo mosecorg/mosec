@@ -14,11 +14,11 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
-use parking_lot::{Mutex, RwLock};
 use tokio::sync::oneshot;
 use tokio::time;
 use tracing::{debug, error, info, warn};
@@ -90,7 +90,7 @@ impl TaskManager {
             let mut interval = time::interval(Duration::from_millis(100));
             loop {
                 interval.tick().await;
-                if self.table.read().len() == 0 {
+                if self.table.read().unwrap().len() == 0 {
                     break;
                 }
             }
@@ -106,13 +106,13 @@ impl TaskManager {
             warn!(%id, %err, "task was not completed in the expected time");
             // get the notifier lock before the table lock to avoid deadlock with the
             // code in `notify_task_done`
-            let mut notifiers = self.notifiers.lock();
-            let mut table = self.table.write();
+            let mut notifiers = self.notifiers.lock().unwrap();
+            let mut table = self.table.write().unwrap();
             table.remove(&id);
             notifiers.remove(&id);
             return Err(ServiceError::Timeout);
         }
-        let mut table = self.table.write();
+        let mut table = self.table.write().unwrap();
         match table.remove(&id) {
             Some(task) => Ok(task),
             None => {
@@ -130,14 +130,14 @@ impl TaskManager {
         let (tx, rx) = oneshot::channel();
         let id: u32;
         {
-            let mut current_id = self.current_id.lock();
+            let mut current_id = self.current_id.lock().unwrap();
             id = *current_id;
             *current_id = id.wrapping_add(1);
         }
         // get the notifier lock before the table lock to avoid deadlock with the
         // code in `notify_task_done`
-        let mut notifiers = self.notifiers.lock();
-        let mut table = self.table.write();
+        let mut notifiers = self.notifiers.lock().unwrap();
+        let mut table = self.table.write().unwrap();
         table.insert(id, Task::new(data));
         notifiers.insert(id, tx);
         debug!(%id, "add a new task");
@@ -152,14 +152,14 @@ impl TaskManager {
     }
 
     pub(crate) fn notify_task_done(&self, id: u32) {
-        let mut notifiers = self.notifiers.lock();
+        let mut notifiers = self.notifiers.lock().unwrap();
         if let Some(sender) = notifiers.remove(&id) {
             if !sender.is_closed() {
                 sender.send(()).unwrap();
             } else {
                 warn!(%id, "the task notifier is already closed, will delete it \
                     (this is usually because the client side has closed the connection)");
-                let mut table = self.table.write();
+                let mut table = self.table.write().unwrap();
                 table.remove(&id);
                 let metrics = Metrics::global();
                 metrics.remaining_task.dec();
@@ -171,7 +171,7 @@ impl TaskManager {
     }
 
     pub(crate) fn get_multi_tasks_data(&self, ids: &mut Vec<u32>, data: &mut Vec<Bytes>) {
-        let table = self.table.read();
+        let table = self.table.read().unwrap();
         // delete the task_id if the task_id doesn't exist in the table
         ids.retain(|&id| match table.get(&id) {
             Some(task) => {
@@ -183,7 +183,7 @@ impl TaskManager {
     }
 
     pub(crate) fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
-        let mut table = self.table.write();
+        let mut table = self.table.write().unwrap();
         for i in 0..ids.len() {
             let task = table.get_mut(&ids[i]);
             match task {
@@ -232,7 +232,7 @@ mod tests {
             .unwrap();
         assert_eq!(id, 0);
         {
-            let table = task_manager.table.read();
+            let table = task_manager.table.read().unwrap();
             let task = table.get(&id).unwrap();
             assert_eq!(task.data, Bytes::from_static(b"hello"));
         }
@@ -245,7 +245,7 @@ mod tests {
             .unwrap();
         assert_eq!(id, 1);
         {
-            let table = task_manager.table.read();
+            let table = task_manager.table.read().unwrap();
             let task = table.get(&id).unwrap();
             assert_eq!(task.data, Bytes::from_static(b"world"));
         }
@@ -287,7 +287,7 @@ mod tests {
         let task_manager = TaskManager::new(Duration::from_millis(10), tx);
         {
             // block with one task in the channel
-            let mut table = task_manager.table.write();
+            let mut table = task_manager.table.write().unwrap();
             table.insert(0u32, Task::new(Bytes::from_static(b"hello")));
         }
         assert!(!task_manager.is_shutdown());
@@ -305,7 +305,7 @@ mod tests {
 
         // add some tasks to the table
         {
-            let mut table = task_manager.table.write();
+            let mut table = task_manager.table.write().unwrap();
             table.insert(0, Task::new(Bytes::from_static(b"hello")));
             table.insert(1, Task::new(Bytes::from_static(b"world")));
         }

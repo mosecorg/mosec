@@ -18,8 +18,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
 derive_more = { version = "0.99", features = ["display", "error"] }
+# MPMS that only one consumer sees each message & async
 async-channel = { version = "1" }
-parking_lot = "0.12"
-once_cell = { version = "1", features = ["parking_lot"] }
+once_cell = "1.17"
 prometheus = "0.13"
 argh = "0.1"
