@@ -60,7 +60,7 @@ from mosec.ipc import IPCWrapper
 from mosec.log import get_logger
 from mosec.worker import Worker
 
-logger = get_logger()
+logger = get_logger(True)
 
 
 GUARD_CHECK_INTERVAL = 1

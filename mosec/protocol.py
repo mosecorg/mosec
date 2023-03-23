@@ -24,7 +24,7 @@ from typing import Sequence, Tuple
 
 from mosec.log import get_logger
 
-logger = get_logger()
+logger = get_logger(True)
 
 IPC_LARGE_DATA_SIZE = 1024 * 1024  # set as 1 MB
 

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from multiprocessing.connection import PipeConnection  # type: ignore
     from multiprocessing.synchronize import Event
 
-logger = get_logger()
+logger = get_logger(True)
 
 
 def dry_run_func(

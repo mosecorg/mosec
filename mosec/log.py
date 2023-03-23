@@ -22,9 +22,10 @@ import os
 from datetime import datetime
 from typing import Any, MutableMapping
 
-from mosec.args import mosec_args
+from .args import mosec_args
 
 MOSEC_LOG_NAME = __name__
+USER_LOG_NAME = "MOSEC_USER_LOG"
 
 
 class MosecFormat(logging.Formatter):
@@ -52,11 +53,13 @@ class DebugFormat(MosecFormat):
     Reset = "\x1b[0m"
 
     default_format = (
-        "%(asctime)s %(levelname)s %(filename)s:%(lineno)s"
+        "%(asctime)s %(levelname)s %(prefix)s::%(filename)s:%(lineno)s"
         " [%(process)d]: %(message)s"
     )
 
-    def __init__(self, fmt: str | None = None, datefmt: str | None = None) -> None:
+    def __init__(
+        self, fmt: str | None = None, datefmt: str | None = None, prefix: str = ""
+    ) -> None:
         """Init with `%` style format.
 
         Args:
@@ -72,6 +75,7 @@ class DebugFormat(MosecFormat):
             logging.CRITICAL: self.Purple,
         }
         super().__init__(fmt or self.default_format, datefmt, "%")
+        self.prefix = prefix
 
     def format_level(self, name: str, level: int) -> str:
         """Format a level name with the corresponding color."""
@@ -84,12 +88,18 @@ class DebugFormat(MosecFormat):
         fmt = self.default_format.replace(
             "%(levelname)s",
             self.format_level(record.levelname, record.levelno),
-        )
+        ).replace("%(prefix)s", self.prefix)
         return fmt % record.__dict__
 
 
 class JSONFormat(MosecFormat):
     """JSON log formatter."""
+
+    def __init__(
+        self, fmt: str | None = None, datefmt: str | None = None, prefix: str = ""
+    ) -> None:
+        super().__init__(fmt, datefmt, "%")
+        self.prefix = prefix
 
     def format(self, record: logging.LogRecord) -> str:
         """Format to a JSON string."""
@@ -101,7 +111,7 @@ class JSONFormat(MosecFormat):
             "fields": {
                 "message": record.getMessage(),
             },
-            "target": f"{record.filename}:{record.funcName}",
+            "target": f"{self.prefix}::{record.filename}:{record.funcName}",
         }
         if record.exc_info:
             if not record.exc_text:
@@ -112,9 +122,9 @@ class JSONFormat(MosecFormat):
         return json.dumps(res)
 
 
-def use_log(level: int, formatter: logging.Formatter):
+def use_log(level: int, formatter: logging.Formatter, logger_name: str):
     """Configure the global log."""
-    logger = logging.getLogger(MOSEC_LOG_NAME)
+    logger = logging.getLogger(logger_name)
     logger.setLevel(level)
     if not logger.handlers:
         stream = logging.StreamHandler()
@@ -123,21 +133,23 @@ def use_log(level: int, formatter: logging.Formatter):
     return logger
 
 
-def use_pretty_log(level: int = logging.DEBUG):
+def use_pretty_log(level: int = logging.DEBUG, prefix: str = "", logger_name: str = ""):
     """Enable colorful log."""
-    return use_log(level, DebugFormat())
+    return use_log(level, DebugFormat(prefix=prefix), logger_name)
 
 
-def use_json_log(level: int = logging.INFO):
+def use_json_log(level: int = logging.INFO, prefix: str = "", logger_name: str = ""):
     """Enable JSON format log."""
-    return use_log(level, JSONFormat())
+    return use_log(level, JSONFormat(prefix=prefix), logger_name)
 
 
-def get_logger():
+def get_logger(internal: bool = False):
     """Get the logger used by mosec for multiprocessing."""
+    prefix = "mosec" if internal else "user"
+    logger_name = MOSEC_LOG_NAME if internal else USER_LOG_NAME
     if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
-        return use_pretty_log()
-    return use_json_log()
+        return use_pretty_log(prefix=prefix, logger_name=logger_name)
+    return use_json_log(prefix=prefix, logger_name=logger_name)
 
 
 def set_logger(debug=False):

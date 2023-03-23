@@ -29,7 +29,7 @@ from mosec.log import get_logger
 from mosec.protocol import HTTPStautsCode, Protocol
 from mosec.worker import Worker
 
-logger = get_logger()
+logger = get_logger(True)
 
 
 CONN_MAX_RETRY = 10
