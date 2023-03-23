@@ -154,7 +154,7 @@ def use_json_log(level: int = logging.INFO, prefix: str = "", logger_name: str =
 
 
 def get_logger():
-    """Get the logger used by mosec for multiprocessing."""
+    """Get the logger used by mosec user for multiprocessing."""
     prefix = USER_LOG_PREFIX
     logger_name = USER_LOG_NAME
     if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
@@ -163,6 +163,7 @@ def get_logger():
 
 
 def get_internal_logger():
+    """Get the logger used by mosec internally for multiprocessing."""
     prefix = MOSEC_LOG_PREFIX
     logger_name = MOSEC_LOG_NAME
     if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
