@@ -22,9 +22,9 @@ from enum import IntFlag
 from io import BytesIO
 from typing import Sequence, Tuple
 
-from mosec.log import get_logger
+from mosec.log import get_internal_logger
 
-logger = get_logger()
+logger = get_internal_logger()
 
 IPC_LARGE_DATA_SIZE = 1024 * 1024  # set as 1 MB
 

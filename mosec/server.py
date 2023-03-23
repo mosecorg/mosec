@@ -57,10 +57,10 @@ from mosec.coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
 from mosec.ipc import IPCWrapper
-from mosec.log import get_logger
+from mosec.log import get_internal_logger
 from mosec.worker import Worker
 
-logger = get_logger()
+logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 1
