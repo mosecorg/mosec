@@ -65,6 +65,7 @@ class DebugFormat(MosecFormat):
         Args:
             fmt (str): logging message format (% style)
             datefmt (str): datatime format
+            prefix (str): prefix of target
         """
         # partially align with rust tracing_subscriber
         self.colors = {
@@ -98,6 +99,13 @@ class JSONFormat(MosecFormat):
     def __init__(
         self, fmt: str | None = None, datefmt: str | None = None, prefix: str = ""
     ) -> None:
+        """Init with `%` style format.
+
+        Args:
+            fmt (str): logging message format (% style)
+            datefmt (str): datatime format
+            prefix (str): prefix of target
+        """
         super().__init__(fmt, datefmt, "%")
         self.prefix = prefix
 
