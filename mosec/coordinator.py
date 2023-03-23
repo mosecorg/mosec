@@ -25,11 +25,11 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
 from mosec.errors import MosecError
 from mosec.ipc import IPCWrapper
-from mosec.log import get_logger
+from mosec.log import get_internal_logger
 from mosec.protocol import HTTPStautsCode, Protocol
 from mosec.worker import Worker
 
-logger = get_logger(True)
+logger = get_internal_logger()
 
 
 CONN_MAX_RETRY = 10

@@ -22,10 +22,12 @@ import os
 from datetime import datetime
 from typing import Any, MutableMapping
 
-from .args import mosec_args
+from mosec.args import mosec_args
 
 MOSEC_LOG_NAME = __name__
-USER_LOG_NAME = "MOSEC_USER_LOG"
+MOSEC_LOG_PREFIX = "mosec"
+USER_LOG_NAME = "moser.user_log"
+USER_LOG_PREFIX = "user"
 
 
 class MosecFormat(logging.Formatter):
@@ -87,9 +89,9 @@ class DebugFormat(MosecFormat):
     def formatMessage(self, record: logging.LogRecord) -> str:
         """Format the logging with colorful level names."""
         fmt = self.default_format.replace(
-            "%(levelname)s",
-            self.format_level(record.levelname, record.levelno),
-        ).replace("%(prefix)s", self.prefix)
+            "%(levelname)s %(prefix)s",
+            f"{self.format_level(record.levelname, record.levelno)} {self.prefix}",
+        )
         return fmt % record.__dict__
 
 
@@ -151,10 +153,18 @@ def use_json_log(level: int = logging.INFO, prefix: str = "", logger_name: str =
     return use_log(level, JSONFormat(prefix=prefix), logger_name)
 
 
-def get_logger(internal: bool = False):
+def get_logger():
     """Get the logger used by mosec for multiprocessing."""
-    prefix = "mosec" if internal else "user"
-    logger_name = MOSEC_LOG_NAME if internal else USER_LOG_NAME
+    prefix = USER_LOG_PREFIX
+    logger_name = USER_LOG_NAME
+    if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
+        return use_pretty_log(prefix=prefix, logger_name=logger_name)
+    return use_json_log(prefix=prefix, logger_name=logger_name)
+
+
+def get_internal_logger():
+    prefix = MOSEC_LOG_PREFIX
+    logger_name = MOSEC_LOG_NAME
     if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
         return use_pretty_log(prefix=prefix, logger_name=logger_name)
     return use_json_log(prefix=prefix, logger_name=logger_name)
