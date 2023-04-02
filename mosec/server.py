@@ -90,7 +90,7 @@ class Server:
         self._worker_num: List[int] = []
         self._worker_mbs: List[int] = []
         self._worker_wait: List[int] = []
-        self._worker_timeout: List[float] = []
+        self._worker_timeout: List[int] = []
 
         self._coordinator_env: List[Union[None, List[Dict[str, str]]]] = []
         self._coordinator_ctx: List[str] = []

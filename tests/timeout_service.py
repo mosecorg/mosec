@@ -56,16 +56,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    # 添加参数
     parser.add_argument("--worker_cls", type=str, help="worker class name")
     parser.add_argument("--server_timeout", type=int, help="server timeout")
     parser.add_argument("--status_code", type=int, help="status code")
     parser.add_argument("--port", type=int, help="port")
 
-    # 解析命令行参数
     args = parser.parse_args()
 
-    # 获取参数值
     worker_cls = args.worker_cls
     server_timeout = args.server_timeout
     status_code = args.status_code
