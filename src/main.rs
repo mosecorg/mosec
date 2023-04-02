@@ -21,9 +21,12 @@ mod tasks;
 
 use std::net::SocketAddr;
 
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use bytes::Bytes;
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{body::to_bytes, header::HeaderValue, Body, Method, Request, Response, StatusCode};
+use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, StatusCode};
 use prometheus::{Encoder, TextEncoder};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
@@ -38,7 +41,6 @@ use crate::tasks::{TaskCode, TaskManager};
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
-const RESPONSE_NOT_FOUND: &[u8] = b"not found";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 
@@ -124,18 +126,6 @@ fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
         .unwrap()
 }
 
-async fn service_func(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
-    match (req.method(), req.uri().path()) {
-        (&Method::GET, "/") => Ok(index(req).await),
-        (&Method::GET, "/metrics") => Ok(metrics(req).await),
-        (&Method::POST, "/inference") => Ok(inference(req).await),
-        _ => Ok(build_response(
-            StatusCode::NOT_FOUND,
-            Bytes::from(RESPONSE_NOT_FOUND),
-        )),
-    }
-}
-
 async fn shutdown_signal() {
     let mut interrupt = signal(SignalKind::interrupt()).unwrap();
     let mut terminate = signal(SignalKind::terminate()).unwrap();
@@ -163,14 +153,18 @@ async fn run(opts: &Opts) {
     let barrier = coordinator.run();
     barrier.wait().await;
 
-    let service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(service_func)) });
+    let app = Router::new()
+        .route("/", get(index))
+        .route("/metrics", get(metrics))
+        .route("/inference", post(inference));
+
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
-    let server = hyper::Server::bind(&addr).serve(service);
     info!(?addr, "http service is running");
-    let graceful = server.with_graceful_shutdown(shutdown_signal());
-    if let Err(err) = graceful.await {
-        tracing::error!(%err, "shutdown service error");
-    }
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
 }
 
 fn main() {

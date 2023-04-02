@@ -61,7 +61,7 @@ def main():
                 print("[~]", data)
                 count += 1
 
-    print(f">> {count}/{REQ_NUM} requests recevied before disconnection")
+    print(f">> {count}/{REQ_NUM} requests received before disconnection")
 
     # re-try to check if the service is still alive
     resp = httpx.post(URL, json={"time": 0})
