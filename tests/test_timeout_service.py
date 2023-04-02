@@ -43,21 +43,6 @@ def wait_for_port_open(host: str, port: int, timeout: int):
     return False
 
 
-def wait_for_port_free(host: str, port: int, timeout: int):
-    start_time = time.monotonic()
-    while time.monotonic() - start_time < timeout:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.connect((host, port))
-            sock.shutdown(socket.SHUT_RDWR)
-        except ConnectionRefusedError:
-            return True
-        finally:
-            sock.close()
-        time.sleep(0.1)
-    return False
-
-
 @pytest.mark.parametrize(
     "worker_timeout,server_timeout,status_code,port",
     [
