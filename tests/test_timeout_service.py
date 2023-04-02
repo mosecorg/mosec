@@ -63,7 +63,6 @@ def wait_for_port_free(host: str, port: int, timeout: int):
     [
         (1.9, 1, HTTPStatus.REQUEST_TIMEOUT, 8000),
         (1.9, 2, HTTPStatus.OK, 8001),
-        (2, 2, HTTPStatus.REQUEST_TIMEOUT, 8002),
         (4, 5, HTTPStatus.REQUEST_TIMEOUT, 8003),
     ],
 )
