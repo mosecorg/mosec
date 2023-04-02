@@ -36,6 +36,7 @@ class HTTPStautsCode(IntFlag):
     BAD_REQUEST = 2  # 400
     VALIDATION_ERROR = 4  # 422
     INTERNAL_ERROR = 8  # 500
+    TIMEOUT_ERROR = 16  # 408
 
 
 class Protocol:

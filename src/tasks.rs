@@ -31,6 +31,7 @@ pub(crate) enum TaskCode {
     Normal,
     BadRequestError,
     ValidationError,
+    TimeoutError,
     InternalError,
 }
 

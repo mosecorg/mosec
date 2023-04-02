@@ -102,3 +102,22 @@ class ValidationError(MosecError):
 
     code = HTTPStautsCode.VALIDATION_ERROR
     msg = "request validation error"
+
+
+class MosecTimeoutError(BaseException):
+    """Exception raised when a MOSEC worker operation times out.
+
+    If a bug in the forward code causes the worker to hang indefinitely, a timeout
+    can be used to ensure that the worker eventually returns control to the main
+    thread program. When a timeout occurs, the `MosecTimeout` exception is raised.
+    This exception can be caught and handled appropriately to perform any necessary
+    cleanup tasks or return a response indicating that the operation timed out.
+
+    Note that `MosecTimeout` is a subclass of `BaseException`, not `Exception`.
+    This is because timeouts should not be caught and handled in the same way as
+    other exceptions. Instead, they should be handled in a separate `except` block
+    which isn't designed to break the working loop.
+    """
+
+    code = HTTPStautsCode.TIMEOUT_ERROR
+    msg = "mosec timeout error"
