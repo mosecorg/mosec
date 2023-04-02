@@ -90,6 +90,7 @@ class Server:
         self._worker_num: List[int] = []
         self._worker_mbs: List[int] = []
         self._worker_wait: List[int] = []
+        self._worker_timeout: List[int] = []
 
         self._coordinator_env: List[Union[None, List[Dict[str, str]]]] = []
         self._coordinator_ctx: List[str] = []
@@ -123,6 +124,7 @@ class Server:
         max_wait_time,
         start_method,
         env,
+        timeout,
     ):
         def validate_int_ge(number, name, threshold=1):
             assert isinstance(
@@ -153,6 +155,7 @@ class Server:
         validate_int_ge(num, "worker number")
         validate_int_ge(max_batch_size, "maximum batch size")
         validate_int_ge(max_wait_time, "maximum wait time", 0)
+        validate_int_ge(timeout, "forward timeout", 0)
         assert (
             start_method in NEW_PROCESS_METHOD
         ), f"start method must be one of {NEW_PROCESS_METHOD}"
@@ -213,11 +216,12 @@ class Server:
     def _manage_coordinators(self):
         first = True
         while not self._server_shutdown:
-            for stage_id, (w_cls, w_num, w_mbs, c_ctx, c_env) in enumerate(
+            for stage_id, (w_cls, w_num, w_mbs, w_timeout, c_ctx, c_env) in enumerate(
                 zip(
                     self._worker_cls,
                     self._worker_num,
                     self._worker_mbs,
+                    self._worker_timeout,
                     self._coordinator_ctx,
                     self._coordinator_env,
                 )
@@ -263,6 +267,7 @@ class Server:
                             stage_id + 1,
                             worker_id + 1,
                             self.ipc_wrapper,
+                            w_timeout,
                         ),
                         daemon=True,
                     )
@@ -316,6 +321,7 @@ class Server:
         ), f"{type(proc)} is not a process or subprocess"
         self._daemon[name] = proc
 
+    # pylint: disable=too-many-arguments
     def append_worker(
         self,
         worker: Type[Worker],
@@ -324,6 +330,7 @@ class Server:
         max_wait_time: int = 0,
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
+        timeout: int = 0,
     ):
         """Sequentially appends workers to the workflow pipeline.
 
@@ -338,14 +345,18 @@ class Server:
                 configure, will use the CLI argument `--wait` (default=10ms)
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
+            timeout: the timeout (second) for each worker forward processing (>=1)
         """
         self._validate_arguments(
-            worker, num, max_batch_size, max_wait_time, start_method, env
+            worker, num, max_batch_size, max_wait_time, start_method, env, timeout
         )
         self._worker_cls.append(worker)
         self._worker_num.append(num)
         self._worker_mbs.append(max_batch_size)
         self._worker_wait.append(max_wait_time)
+        self._worker_timeout.append(
+            timeout if timeout >= 1 else self._configs["timeout"] // 1000
+        )
         self._coordinator_env.append(env)
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)

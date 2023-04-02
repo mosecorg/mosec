@@ -76,6 +76,7 @@ def base_test_config():
         "stage_id": 1,
         "worker_id": 1,
         "c_ctx": "spawn",
+        "timeout": 3,
     }
 
 
@@ -91,6 +92,7 @@ def test_coordinator_worker_property():
         stage_id=2,
         worker_id=3,
         ipc_wrapper=None,
+        timeout=3,
     )
     assert c.worker.stage == STAGE_EGRESS
     assert c.worker.worker_id == 3
@@ -110,6 +112,7 @@ def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
             config["stage_id"],
             config["worker_id"],
             None,
+            config["timeout"],
         ),
         daemon=True,
     )

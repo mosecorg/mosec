@@ -96,6 +96,7 @@ async fn inference(req: Request<Body>) -> Response<Body> {
                 }
                 TaskCode::BadRequestError => StatusCode::BAD_REQUEST,
                 TaskCode::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
+                TaskCode::TimeoutError => StatusCode::REQUEST_TIMEOUT,
                 TaskCode::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
             }
         }

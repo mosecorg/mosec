@@ -34,6 +34,7 @@ const LENGTH_U8_SIZE: usize = 4;
 const BIT_STATUS_OK: u16 = 0b1;
 const BIT_STATUS_BAD_REQ: u16 = 0b10;
 const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
+const BIT_STATUS_TIMEOUT_ERR: u16 = 0b10000;
 // Others are treated as Internal Error
 
 #[allow(clippy::too_many_arguments)]
@@ -168,6 +169,8 @@ async fn read_message(
         TaskCode::BadRequestError
     } else if flag & BIT_STATUS_VALIDATION_ERR > 0 {
         TaskCode::ValidationError
+    } else if flag & BIT_STATUS_TIMEOUT_ERR > 0 {
+        TaskCode::TimeoutError
     } else {
         TaskCode::InternalError
     };

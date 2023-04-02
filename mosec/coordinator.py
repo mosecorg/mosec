@@ -20,10 +20,11 @@ import socket
 import struct
 import time
 import traceback
+from contextlib import contextmanager
 from multiprocessing.synchronize import Event
 from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
-from mosec.errors import MosecError
+from mosec.errors import MosecError, MosecTimeoutError
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.protocol import HTTPStautsCode, Protocol
@@ -39,6 +40,25 @@ STAGE_INGRESS = "ingress"
 STAGE_EGRESS = "egress"
 
 PROTOCOL_TIMEOUT = 2.0
+
+
+@contextmanager
+def set_mosec_timeout(duration: int):
+    """Context manager to set a timeout for a code block.
+
+    Args:
+        duration (float): the duration in seconds before timing out
+    """
+
+    def hanlder(signum, frame):
+        raise MosecTimeoutError(f"`forward` timeout after {duration}s")
+
+    signal.signal(signal.SIGALRM, hanlder)
+    signal.alarm(duration)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
 
 
 class Coordinator:
@@ -60,6 +80,7 @@ class Coordinator:
         stage_id: int,
         worker_id: int,
         ipc_wrapper: Optional[Callable[..., IPCWrapper]],
+        timeout: int,
     ):
         """Initialize the mosec coordinator.
 
@@ -74,6 +95,7 @@ class Coordinator:
             worker_id (int): identification number for worker processes at the same
                 stage.
             ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
+            timeout (int): timeout for the `forward` function.
 
         Raises:
             TypeError: ipc_wrapper should inherit from `IPCWrapper`
@@ -82,7 +104,7 @@ class Coordinator:
         self.worker.worker_id = worker_id
         self.worker.max_batch_size = max_batch_size
         self.worker.stage = stage
-
+        self.timeout = timeout
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
 
         self.protocol = Protocol(
@@ -250,11 +272,12 @@ class Coordinator:
             length = len(payloads)
             try:
                 data = [decoder(item) for item in payloads]
-                data = (
-                    self.worker.forward(data)
-                    if self.worker.max_batch_size > 1
-                    else (self.worker.forward(data[0]),)
-                )
+                with set_mosec_timeout(self.timeout):
+                    data = (
+                        self.worker.forward(data)
+                        if self.worker.max_batch_size > 1
+                        else (self.worker.forward(data[0]),)
+                    )
                 if len(data) != length:
                     raise ValueError(
                         "returned data size doesn't match the input data size:"
@@ -262,7 +285,7 @@ class Coordinator:
                     )
                 status = HTTPStautsCode.OK
                 payloads = [encoder(item) for item in data]
-            except MosecError as err:
+            except (MosecError, MosecTimeoutError) as err:
                 err_msg = str(err).replace("\n", " - ")
                 err_msg = err_msg if err_msg else err.msg
                 logger.info("%s %s: %s", self.name, err.msg, err_msg)
