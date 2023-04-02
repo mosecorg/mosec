@@ -12,42 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import multiprocessing
-import random
-import shlex
-import socket
-import subprocess
+import os
 import time
-from typing import Any, Type
+from typing import Any
 
-import httpx
-import pytest
+from mosec import Server, Worker, get_logger
 
-from mosec import Server, Worker
+logger = get_logger()
 
 
-class SleepyInference1(Worker):
+class SleepyInference(Worker):
     """Sample Class."""
 
     def forward(self, data: Any) -> Any:
-        time.sleep(1.9)
-        return data
-
-
-class SleepyInference2(Worker):
-    """Sample Class."""
-
-    def forward(self, data: Any) -> Any:
-        time.sleep(2)
-        return data
-
-
-class SleepyInference4(Worker):
-    """Sample Class."""
-
-    def forward(self, data: Any) -> Any:
-        time.sleep(4)
+        worker_timeout = float(os.environ["worker_timeout"])
+        logger.info(f"worker_timeout {worker_timeout}")
+        time.sleep(worker_timeout)
         return data
 
 
@@ -56,23 +36,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--worker_cls", type=str, help="worker class name")
+    parser.add_argument("--worker_timeout", type=float, help="worker timeout")
     parser.add_argument("--server_timeout", type=int, help="server timeout")
-    parser.add_argument("--status_code", type=int, help="status code")
     parser.add_argument("--port", type=int, help="port")
 
     args = parser.parse_args()
 
-    worker_cls = args.worker_cls
+    worker_timeout = args.worker_timeout
     server_timeout = args.server_timeout
-    status_code = args.status_code
-
-    if worker_cls == "SleepyInference1":
-        worker_cls = SleepyInference1
-    elif worker_cls == "SleepyInference2":
-        worker_cls = SleepyInference2
-    elif worker_cls == "SleepyInference4":
-        worker_cls = SleepyInference4
     server = Server()
-    server.append_worker(worker_cls, timeout=server_timeout)
+    server.append_worker(
+        SleepyInference,
+        timeout=server_timeout,
+        env=[{"worker_timeout": str(worker_timeout)}],
+    )
     server.run()

@@ -59,26 +59,26 @@ def wait_for_port_free(host: str, port: int, timeout: int):
 
 
 @pytest.mark.parametrize(
-    "worker_cls,server_timeout,status_code,port",
+    "worker_timeout,server_timeout,status_code,port",
     [
-        ("SleepyInference1", 1, HTTPStatus.REQUEST_TIMEOUT, 8000),
-        ("SleepyInference1", 2, HTTPStatus.OK, 8001),
-        ("SleepyInference2", 2, HTTPStatus.REQUEST_TIMEOUT, 8002),
-        ("SleepyInference4", 5, HTTPStatus.REQUEST_TIMEOUT, 8003),
+        (1.9, 1, HTTPStatus.REQUEST_TIMEOUT, 8000),
+        (1.9, 2, HTTPStatus.OK, 8001),
+        (2, 2, HTTPStatus.REQUEST_TIMEOUT, 8002),
+        (4, 5, HTTPStatus.REQUEST_TIMEOUT, 8003),
     ],
 )
 def test_forward_timeout(
-    worker_cls: Type[Worker], server_timeout: int, status_code: int, port: int
+    worker_timeout: float, server_timeout: int, status_code: int, port: int
 ):
     p = subprocess.Popen(
         shlex.split(
-            f"python -u tests/timeout_service.py --worker_cls {worker_cls}"
-            + f" --server_timeout {server_timeout} --status_code {status_code} --port {port}"
+            f"python -u tests/timeout_service.py --worker_timeout {worker_timeout}"
+            + f" --server_timeout {server_timeout}  --port {port}"
         )
     )
     assert (
-        wait_for_port_open("127.0.0.1", port, 30) is True
-    ), "service failed to start in 30s"
+        wait_for_port_open("127.0.0.1", port, 5) is True
+    ), "service failed to start in 5s"
     input_data = [random.randint(-99, 99)]
     response = httpx.post(
         f"http://localhost:{port}/inference",
