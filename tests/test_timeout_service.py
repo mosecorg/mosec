@@ -72,7 +72,7 @@ def test_forward_timeout(
     p = subprocess.Popen(
         shlex.split(
             f"python -u tests/timeout_service.py --worker_timeout {worker_timeout}"
-            + f" --server_timeout {server_timeout}  --port {port}"
+            f" --server_timeout {server_timeout}  --port {port}"
         )
     )
     assert (
