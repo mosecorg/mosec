@@ -23,7 +23,9 @@ from threading import Thread
 import httpx
 import pytest
 
-TEST_PORT = "5000"
+from tests.utils import wait_for_port_open
+
+TEST_PORT = 5000
 
 
 @pytest.fixture
@@ -34,12 +36,11 @@ def http_client():
 
 @pytest.fixture(scope="session")
 def mosec_service(request):
-    name, wait = request.param
+    name = request.param
     service = subprocess.Popen(
         shlex.split(f"python -u tests/{name}.py --port {TEST_PORT}"),
     )
-    time.sleep(wait)  # wait for service to start
-    assert service.poll() is None, "service failed to start"
+    assert wait_for_port_open(port=TEST_PORT), "service failed to start"
     yield service
     service.terminate()
     time.sleep(2)  # wait for service to stop
@@ -48,9 +49,9 @@ def mosec_service(request):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param(("square_service", 2), "", id="basic"),
+        pytest.param("square_service", "", id="basic"),
         pytest.param(
-            ("square_service_shm", 5),
+            "square_service_shm",
             "",
             marks=pytest.mark.arrow,
             id="shm_arrow",
@@ -81,22 +82,22 @@ def test_square_service(mosec_service, http_client):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param(("mixin_numbin_service", 3), "", id="numbin"),
+        pytest.param("mixin_numbin_service", "", id="numbin"),
     ],
     indirect=["mosec_service", "http_client"],
 )
 def test_mixin_ipc_service(mosec_service, http_client):
     resp = http_client.post("/inference", json={"num": 8})
-    assert resp.status_code == HTTPStatus.OK
+    assert resp.status_code == HTTPStatus.OK, resp
     assert resp.json() == "equal"
 
 
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
-        pytest.param(("square_service", 2), "", id="basic"),
+        pytest.param("square_service", "", id="basic"),
         pytest.param(
-            ("square_service_shm", 5),
+            "square_service_shm",
             "",
             marks=pytest.mark.arrow,
             id="shm_arrow",

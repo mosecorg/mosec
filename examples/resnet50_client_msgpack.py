@@ -22,7 +22,7 @@ dog_bytes = httpx.get(
 
 
 prediction = httpx.post(
-    "http://localhost:8000/inference",
+    "http://127.0.0.1:8000/inference",
     data=msgpack.packb({"image": dog_bytes}),
 )
 if prediction.status_code == 200:

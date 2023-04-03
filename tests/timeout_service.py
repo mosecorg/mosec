@@ -25,9 +25,9 @@ class SleepyInference(Worker):
     """Sample Class."""
 
     def forward(self, data: Any) -> Any:
-        worker_timeout = float(os.environ["worker_timeout"])
-        logger.info(f"worker_timeout {worker_timeout}")
-        time.sleep(worker_timeout)
+        sleep_duration = float(os.environ["sleep_duration"])
+        logger.info(f"sleep_duration {sleep_duration}")
+        time.sleep(sleep_duration)
         return data
 
 
@@ -36,18 +36,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--worker_timeout", type=float, help="worker timeout")
-    parser.add_argument("--server_timeout", type=int, help="server timeout")
+    parser.add_argument("--sleep_duration", type=float, help="worker sleep duration")
+    parser.add_argument("--worker_timeout", type=int, help="worker timeout")
     parser.add_argument("--port", type=int, help="port")
 
     args = parser.parse_args()
 
+    sleep_duration = args.sleep_duration
     worker_timeout = args.worker_timeout
-    server_timeout = args.server_timeout
     server = Server()
     server.append_worker(
         SleepyInference,
-        timeout=server_timeout,
-        env=[{"worker_timeout": str(worker_timeout)}],
+        timeout=worker_timeout,
+        env=[{"sleep_duration": str(sleep_duration)}],
     )
     server.run()

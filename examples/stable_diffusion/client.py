@@ -36,7 +36,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 resp = httpx.post(
-    f"http://localhost:{args.port}/inference",
+    f"http://127.0.0.1:{args.port}/inference",
     data=msgpack.packb(args.prompt),
     timeout=httpx.Timeout(20),
 )

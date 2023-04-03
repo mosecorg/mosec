@@ -21,7 +21,7 @@ input_data = [random.randint(-99, 99), random.randint(-99, 99), random.randint(-
 print("Client : sending data : ", input_data)
 
 prediction = httpx.post(
-    "http://localhost:8000/inference",
+    "http://127.0.0.1:8000/inference",
     json={"array": input_data},
 )
 if prediction.status_code == 200:

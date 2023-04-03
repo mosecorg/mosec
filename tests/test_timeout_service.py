@@ -15,58 +15,60 @@
 
 import random
 import shlex
-import socket
 import subprocess
 import time
 from http import HTTPStatus
-from typing import Any, Type
 
 import httpx
 import pytest
 
-from mosec import Worker
+from tests.utils import wait_for_port_open
+
+TIMEOUT_SERVICE_PORT = 5001
 
 
-def wait_for_port_open(host: str, port: int, timeout: int):
-    start_time = time.monotonic()
-    while time.monotonic() - start_time < timeout:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.connect((host, port))
-            sock.shutdown(socket.SHUT_RDWR)
-            return True
-        except (ConnectionRefusedError, OSError):
-            pass
-        finally:
-            sock.close()
-        time.sleep(0.1)
-    return False
+@pytest.fixture
+def timeout_service(request):
+    sleep_duration, worker_timeout = request.param
+    service = subprocess.Popen(
+        shlex.split(
+            f"python -u tests/timeout_service.py --sleep_duration {sleep_duration} "
+            f"--worker_timeout {worker_timeout} --port {TIMEOUT_SERVICE_PORT}"
+        )
+    )
+    assert wait_for_port_open(
+        port=TIMEOUT_SERVICE_PORT, timeout=5
+    ), "service failed to start"
+    yield service
+    service.terminate()
+    time.sleep(2)  # wait for service to stop
 
 
 @pytest.mark.parametrize(
-    "worker_timeout,server_timeout,status_code,port",
+    "timeout_service,status_code",
     [
-        (1.9, 1, HTTPStatus.REQUEST_TIMEOUT, 8000),
-        (1.9, 2, HTTPStatus.OK, 8001),
-        (4, 5, HTTPStatus.REQUEST_TIMEOUT, 8003),
+        pytest.param(
+            (1.5, 1),
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-worker-timeout",
+        ),
+        pytest.param(
+            (1.0, 2),
+            HTTPStatus.OK,
+            id="normal-request-within-worker-timeout",
+        ),
+        pytest.param(
+            (3.5, 4),
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-service-timeout",
+        ),
     ],
+    indirect=["timeout_service"],
 )
-def test_forward_timeout(
-    worker_timeout: float, server_timeout: int, status_code: int, port: int
-):
-    p = subprocess.Popen(
-        shlex.split(
-            f"python -u tests/timeout_service.py --worker_timeout {worker_timeout}"
-            f" --server_timeout {server_timeout}  --port {port}"
-        )
-    )
-    assert (
-        wait_for_port_open("127.0.0.1", port, 5) is True
-    ), "service failed to start in 5s"
+def test_forward_timeout(timeout_service, status_code: int):
     input_data = [random.randint(-99, 99)]
     response = httpx.post(
-        f"http://localhost:{port}/inference",
+        f"http://127.0.0.1:{TIMEOUT_SERVICE_PORT}/inference",
         json={"array": input_data},
     )
-    assert response.status_code == status_code
-    p.terminate()
+    assert response.status_code == status_code, response
