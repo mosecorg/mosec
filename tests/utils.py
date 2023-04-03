@@ -13,14 +13,17 @@
 # limitations under the License.
 
 import random
+import socket
 import struct
-from socket import socket
+import time
 from typing import List, Union
 
 from tests.mock_socket import socket as mock_socket
 
 
-def imitate_controller_send(sock: Union[mock_socket, socket], l_data: List[bytes]):
+def imitate_controller_send(
+    sock: Union[mock_socket, socket.socket], l_data: List[bytes]
+):
     # explicit byte format here for sanity check
     # placeholder flag, should be discarded by receiver
     header = struct.pack("!H", 0) + struct.pack("!H", len(l_data))
@@ -36,3 +39,19 @@ def imitate_controller_send(sock: Union[mock_socket, socket], l_data: List[bytes
 
     sock.sendall(header + body)  # type: ignore
     return sent_ids, sent_payloads
+
+
+def wait_for_port_open(host: str = "127.0.0.1", port: int = 8000, timeout: int = 10):
+    start_time = time.monotonic()
+    while time.monotonic() - start_time < timeout:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.connect((host, port))
+            sock.shutdown(socket.SHUT_RDWR)
+            return True
+        except (ConnectionRefusedError, OSError):
+            pass
+        finally:
+            sock.close()
+        time.sleep(0.1)
+    return False

@@ -30,7 +30,7 @@ from random import random
 
 import httpx
 
-URL = "http://localhost:8000/inference"
+URL = "http://127.0.0.1:8000/inference"
 REQ_NUM = int(os.getenv("CHAOS_REQUEST", 10000))
 # set the thread number in case the CI server cannot get the real CPU number.
 THREAD = 8

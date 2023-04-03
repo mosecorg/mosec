@@ -50,10 +50,12 @@ def set_mosec_timeout(duration: int):
         duration (float): the duration in seconds before timing out
     """
 
-    def hanlder(signum, frame):
-        raise MosecTimeoutError(f"`forward` timeout after {duration}s")
+    def handler(signum, frame):
+        raise MosecTimeoutError(
+            f"[{signum}]`forward` timeout after {duration}s: {frame}"
+        )
 
-    signal.signal(signal.SIGALRM, hanlder)
+    signal.signal(signal.SIGALRM, handler)
     signal.alarm(duration)
     try:
         yield
