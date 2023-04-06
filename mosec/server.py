@@ -58,6 +58,7 @@ from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
+from mosec.middleware import Middleware
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -91,6 +92,7 @@ class Server:
         self._worker_mbs: List[int] = []
         self._worker_wait: List[int] = []
         self._worker_timeout: List[int] = []
+        self._worker_middlewares: List[List[Union[Type[Middleware], partial]]] = []
 
         self._coordinator_env: List[Union[None, List[Dict[str, str]]]] = []
         self._coordinator_ctx: List[str] = []
@@ -216,12 +218,21 @@ class Server:
     def _manage_coordinators(self):
         first = True
         while not self._server_shutdown:
-            for stage_id, (w_cls, w_num, w_mbs, w_timeout, c_ctx, c_env) in enumerate(
+            for stage_id, (
+                w_cls,
+                w_num,
+                w_mbs,
+                w_timeout,
+                w_middlewares,
+                c_ctx,
+                c_env,
+            ) in enumerate(
                 zip(
                     self._worker_cls,
                     self._worker_num,
                     self._worker_mbs,
                     self._worker_timeout,
+                    self._worker_middlewares,
                     self._coordinator_ctx,
                     self._coordinator_env,
                 )
@@ -268,6 +279,7 @@ class Server:
                             worker_id + 1,
                             self.ipc_wrapper,
                             w_timeout,
+                            w_middlewares,
                         ),
                         daemon=True,
                     )
@@ -331,6 +343,7 @@ class Server:
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
         timeout: int = 0,
+        middlewares: Union[None, List[Union[Type[Middleware], partial]]] = None,
     ):
         """Sequentially appends workers to the workflow pipeline.
 
@@ -346,6 +359,8 @@ class Server:
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
             timeout: the timeout (second) for each worker forward processing (>=1)
+            middlewares: the list of class you inherit from :class:
+                `Middleware<mosec.middleware.Middleware>`
         """
         self._validate_arguments(
             worker, num, max_batch_size, max_wait_time, start_method, env, timeout
@@ -357,6 +372,7 @@ class Server:
         self._worker_timeout.append(
             timeout if timeout >= 1 else self._configs["timeout"] // 1000
         )
+        self._worker_middlewares.append(middlewares or [])
         self._coordinator_env.append(env)
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)

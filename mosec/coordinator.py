@@ -21,12 +21,14 @@ import struct
 import time
 import traceback
 from contextlib import contextmanager
+from functools import partial
 from multiprocessing.synchronize import Event
-from typing import Any, Callable, Optional, Sequence, Tuple, Type
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Type, Union
 
 from mosec.errors import MosecError, MosecTimeoutError
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
+from mosec.middleware import Middleware, MiddlewareChain
 from mosec.protocol import HTTPStautsCode, Protocol
 from mosec.worker import Worker
 
@@ -70,7 +72,7 @@ class Coordinator:
     to receive tasks via `Protocol` and process them via `Worker`.
     """
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-instance-attributes
     def __init__(
         self,
         worker: Type[Worker],
@@ -83,6 +85,7 @@ class Coordinator:
         worker_id: int,
         ipc_wrapper: Optional[Callable[..., IPCWrapper]],
         timeout: int,
+        middlewares: List[Union[Type[Middleware], partial]],
     ):
         """Initialize the mosec coordinator.
 
@@ -98,6 +101,8 @@ class Coordinator:
                 stage.
             ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
             timeout (int): timeout for the `forward` function.
+            middlewares (List of Middleware class): list of `mosec.Middleware`
+                implemented by users.
 
         Raises:
             TypeError: ipc_wrapper should inherit from `IPCWrapper`
@@ -108,6 +113,7 @@ class Coordinator:
         self.worker.stage = stage
         self.timeout = timeout
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
+        self.middleware_chain = MiddlewareChain(middlewares, worker_id)
 
         self.protocol = Protocol(
             name=self.name,
@@ -273,20 +279,22 @@ class Coordinator:
             # pylint: disable=broad-except
             length = len(payloads)
             try:
-                data = [decoder(item) for item in payloads]
                 with set_mosec_timeout(self.timeout):
+                    data = [decoder(item) for item in payloads]
+                    data = self.middleware_chain.preprocess(data)
                     data = (
                         self.worker.forward(data)
                         if self.worker.max_batch_size > 1
                         else (self.worker.forward(data[0]),)
                     )
-                if len(data) != length:
-                    raise ValueError(
-                        "returned data size doesn't match the input data size:"
-                        f"input({length})!=output({len(data)})"
-                    )
-                status = HTTPStautsCode.OK
-                payloads = [encoder(item) for item in data]
+                    data = self.middleware_chain.postprocess(data)
+                    if len(data) != length:
+                        raise ValueError(
+                            "returned data size doesn't match the input data size:"
+                            f"input({length})!=output({len(data)})"
+                        )
+                    status = HTTPStautsCode.OK
+                    payloads = [encoder(item) for item in data]
             except (MosecError, MosecTimeoutError) as err:
                 err_msg = str(err).replace("\n", " - ")
                 err_msg = err_msg if err_msg else err.msg

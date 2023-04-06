@@ -137,3 +137,16 @@ def assert_empty_queue(http_client):
     metrics = http_client.get("/metrics").content.decode()
     remain = re.findall(r"mosec_service_remaining_task \d+", metrics)[0]
     assert int(remain.split(" ")[-1]) == 0
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("middleware_service", "", id="middleware"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_middleware_service(mosec_service, http_client):
+    resp = http_client.post("/inference", json={"num": 8})
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.json() - 9 < 1e-9

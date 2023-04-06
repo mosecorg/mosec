@@ -77,6 +77,7 @@ def base_test_config():
         "worker_id": 1,
         "c_ctx": "spawn",
         "timeout": 3,
+        "middlewares": [],
     }
 
 
@@ -93,6 +94,7 @@ def test_coordinator_worker_property():
         worker_id=3,
         ipc_wrapper=None,
         timeout=3,
+        middlewares=[],
     )
     assert c.worker.stage == STAGE_EGRESS
     assert c.worker.worker_id == 3
@@ -113,6 +115,7 @@ def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
             config["worker_id"],
             None,
             config["timeout"],
+            [],
         ),
         daemon=True,
     )
