@@ -28,7 +28,8 @@ from os.path import join
 import msgpack  # type: ignore
 import pytest
 
-from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.coordinator import PROTOCOL_TIMEOUT, Coordinator
+from mosec.middleware import STAGE_EGRESS, STAGE_INGRESS
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker

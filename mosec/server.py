@@ -53,12 +53,12 @@ from typing import Dict, List, Optional, Type, Union
 import pkg_resources
 
 from mosec.args import mosec_args
-from mosec.coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.coordinator import Coordinator
 from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.middleware import Middleware
+from mosec.middleware import STAGE_EGRESS, STAGE_INGRESS, Middleware
 from mosec.worker import Worker
 
 logger = get_internal_logger()

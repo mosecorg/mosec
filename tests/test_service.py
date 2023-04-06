@@ -149,4 +149,4 @@ def assert_empty_queue(http_client):
 def test_middleware_service(mosec_service, http_client):
     resp = http_client.post("/inference", json={"num": 8})
     assert resp.status_code == HTTPStatus.OK, resp
-    assert resp.json() - 9 < 1e-9
+    assert resp.json() - (1 + 2 * 8) < 1e-9

@@ -28,7 +28,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Type, Union
 from mosec.errors import MosecError, MosecTimeoutError
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.middleware import Middleware, MiddlewareChain
+from mosec.middleware import STAGE_EGRESS, STAGE_INGRESS, Middleware, MiddlewareChain
 from mosec.protocol import HTTPStautsCode, Protocol
 from mosec.worker import Worker
 
@@ -37,9 +37,6 @@ logger = get_internal_logger()
 
 CONN_MAX_RETRY = 10
 CONN_CHECK_INTERVAL = 1
-
-STAGE_INGRESS = "ingress"
-STAGE_EGRESS = "egress"
 
 PROTOCOL_TIMEOUT = 2.0
 
@@ -113,7 +110,7 @@ class Coordinator:
         self.worker.stage = stage
         self.timeout = timeout
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
-        self.middleware_chain = MiddlewareChain(middlewares, worker_id)
+        self.middleware_chain = MiddlewareChain(middlewares, worker_id, stage)
 
         self.protocol = Protocol(
             name=self.name,
