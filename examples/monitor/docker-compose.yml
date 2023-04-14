@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+
+  mosec:
+    image: python:3.9-slim-buster
+    container_name: mosec
+    ports:
+      - "8000:8000"
+      - "5000:5000"
+    volumes:
+      - ../python_side_metrics.py:/root/python_side_metrics.py
+    entrypoint: ["/bin/bash", "-c","pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -U mosec prometheus_client && python /root/python_side_metrics.py"]
+    restart: always
+
+
+  prometheus:
+    image: prom/prometheus:v2.30.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    restart: always
+    depends_on:
+      - mosec
+
+  grafana:
+    image: grafana/grafana:8.2.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./mosec_datasource.yml:/etc/grafana/provisioning/datasources/mosec_datasource.yml
+      - ./mosec_dashboard.yml:/etc/grafana/provisioning/dashboards/mosec_dashboard.yml
+      - ./mosec_dashboard.json:/etc/grafana/provisioning/dashboards/mosec_dashboard.json
+    restart: always
+    depends_on:
+      - prometheus

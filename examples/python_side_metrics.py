@@ -39,7 +39,12 @@ if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
 
 metric_registry = CollectorRegistry()
 multiprocess.MultiProcessCollector(metric_registry)
-counter = Counter("inference_result", "statistic of result", ("status", "worker_id"))
+counter = Counter(
+    "inference_result",
+    "statistic of result",
+    ("status", "worker_id"),
+    registry=metric_registry,
+)
 
 
 class Inference(Worker):
@@ -69,7 +74,7 @@ class Inference(Worker):
 
 if __name__ == "__main__":
     # Run the metrics server in another thread.
-    start_http_server(5000)
+    start_http_server(5000, registry=metric_registry)
 
     # Run the inference server
     server = Server()
