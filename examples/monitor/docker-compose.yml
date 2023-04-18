@@ -3,7 +3,7 @@ version: '3'
 services:
 
   mosec:
-    image: mosec
+    build: .
     container_name: mosec
     ports:
       - "8000:8000"

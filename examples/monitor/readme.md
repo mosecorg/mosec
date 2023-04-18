@@ -15,11 +15,6 @@ Navigate to the directory containing the docker-compose.yaml file:
 cd mosec/examples/monitor
 ```
 
-Build metrics example image of mosec configured in `dockerfile` :
-```bash
-docker build -t mosec .
-```
-
 Start the monitoring system by running the following command:
 ```bash
 docker-compose up -d
