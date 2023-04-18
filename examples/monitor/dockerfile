@@ -1,0 +1,9 @@
+FROM python:3.9-slim-buster
+
+COPY python_side_metrics.py /root/python_side_metrics.py
+
+RUN pip install -U mosec prometheus_client
+
+ENTRYPOINT ["python", "/root/python_side_metrics.py"]
+
+EXPOSE 8000 5000
