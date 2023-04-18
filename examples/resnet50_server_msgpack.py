@@ -41,7 +41,7 @@ class Preprocess(MsgpackMixin, Worker):
             transforms.CenterCrop(224),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         )
-        self.transform = torch.jit.script(trans)
+        self.transform = torch.jit.script(trans)  # type: ignore
 
     def forward(self, data: dict):
         # Customized validation for input key and field content; raise
@@ -54,7 +54,7 @@ class Preprocess(MsgpackMixin, Worker):
             raise ValidationError(f"cannot decode as image data: {err}") from err
 
         tensor = transforms.ToTensor()(image)
-        data = self.transform(tensor)
+        data = self.transform(tensor)  # type: ignore
         return data
 
 

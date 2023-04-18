@@ -15,6 +15,11 @@ Navigate to the directory containing the docker-compose.yaml file:
 cd mosec/examples/monitor
 ```
 
+Build metrics example image of mosec configured in `dockerfile` :
+```bash
+docker build -t mosec .
+```
+
 Start the monitoring system by running the following command:
 ```bash
 docker-compose up -d
@@ -22,11 +27,17 @@ docker-compose up -d
 This command will start three containers: Mosec, Prometheus, and Grafana.
 
 
+# Test
+Run test and feed metrics to Prometheus.
+```shell
+http POST :8000/inference num=1
+```
+
 # Accessing Prometheus
-Prometheus is a monitoring and alerting system that collects metrics from Mosec. You can access the Prometheus UI by visiting http://localhost:9090 in your web browser.
+Prometheus is a monitoring and alerting system that collects metrics from Mosec. You can access the Prometheus UI by visiting http://127.0.0.1:9090 in your web browser.
 
 # Accessing Grafana
-Grafana is a visualization tool for monitoring and analyzing metrics. You can access the Grafana UI by visiting http://localhost:3000 in your web browser. The default username and password are both admin.
+Grafana is a visualization tool for monitoring and analyzing metrics. You can access the Grafana UI by visiting http://127.0.0.1:3000 in your web browser. The default username and password are both admin.
 
 # Stopping the monitoring system
 To stop the monitoring system, run the following command:

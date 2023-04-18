@@ -3,16 +3,11 @@ version: '3'
 services:
 
   mosec:
-    image: python:3.9-slim-buster
+    image: mosec
     container_name: mosec
     ports:
       - "8000:8000"
       - "5000:5000"
-    volumes:
-      - ../python_side_metrics.py:/root/python_side_metrics.py
-    entrypoint: ["/bin/bash", "-c","pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -U mosec prometheus_client && python /root/python_side_metrics.py"]
-    restart: always
-
 
   prometheus:
     image: prom/prometheus:v2.30.0
