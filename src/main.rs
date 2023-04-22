@@ -17,17 +17,13 @@ mod coordinator;
 mod errors;
 mod metrics;
 mod protocol;
+mod routes;
 mod tasks;
 
 use std::net::SocketAddr;
 
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use bytes::Bytes;
-use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, StatusCode};
-use prometheus::{Encoder, TextEncoder};
+use axum::routing::{get, post};
+use axum::Router;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
@@ -35,97 +31,8 @@ use tracing_subscriber::{filter, prelude::*, Layer};
 
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
-use crate::errors::ServiceError;
-use crate::metrics::Metrics;
-use crate::tasks::{TaskCode, TaskManager};
-
-const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
-const RESPONSE_EMPTY: &[u8] = b"no data provided";
-const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
-
-async fn index(_: Request<Body>) -> Response<Body> {
-    let task_manager = TaskManager::global();
-    if task_manager.is_shutdown() {
-        build_response(
-            StatusCode::SERVICE_UNAVAILABLE,
-            Bytes::from_static(RESPONSE_SHUTDOWN),
-        )
-    } else {
-        build_response(StatusCode::OK, Bytes::from_static(RESPONSE_DEFAULT))
-    }
-}
-
-async fn metrics(_: Request<Body>) -> Response<Body> {
-    let encoder = TextEncoder::new();
-    let metrics = prometheus::gather();
-    let mut buffer = vec![];
-    encoder.encode(&metrics, &mut buffer).unwrap();
-    build_response(StatusCode::OK, Bytes::from(buffer))
-}
-
-async fn inference(req: Request<Body>) -> Response<Body> {
-    let task_manager = TaskManager::global();
-    let data = to_bytes(req.into_body()).await.unwrap();
-    let metrics = Metrics::global();
-
-    if task_manager.is_shutdown() {
-        return build_response(
-            StatusCode::SERVICE_UNAVAILABLE,
-            Bytes::from_static(RESPONSE_SHUTDOWN),
-        );
-    }
-
-    if data.is_empty() {
-        return build_response(StatusCode::OK, Bytes::from_static(RESPONSE_EMPTY));
-    }
-
-    let (status, content);
-    metrics.remaining_task.inc();
-    match task_manager.submit_task(data).await {
-        Ok(task) => {
-            content = task.data;
-            status = match task.code {
-                TaskCode::Normal => {
-                    // Record latency only for successful tasks
-                    metrics
-                        .duration
-                        .with_label_values(&["total", "total"])
-                        .observe(task.create_at.elapsed().as_secs_f64());
-                    StatusCode::OK
-                }
-                TaskCode::BadRequestError => StatusCode::BAD_REQUEST,
-                TaskCode::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
-                TaskCode::TimeoutError => StatusCode::REQUEST_TIMEOUT,
-                TaskCode::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-            }
-        }
-        Err(err) => {
-            // Handle errors for which tasks cannot be retrieved
-            content = Bytes::from(err.to_string());
-            status = match err {
-                ServiceError::TooManyRequests => StatusCode::TOO_MANY_REQUESTS,
-                ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
-                ServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
-            };
-        }
-    }
-    metrics.remaining_task.dec();
-    metrics
-        .throughput
-        .with_label_values(&[status.as_str()])
-        .inc();
-
-    build_response(status, content)
-}
-
-fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
-    Response::builder()
-        .status(status)
-        .header("server", HeaderValue::from_static(SERVER_INFO))
-        .body(Body::from(content))
-        .unwrap()
-}
+use crate::routes::{index, inference, metrics, sse_inference};
+use crate::tasks::TaskManager;
 
 async fn shutdown_signal() {
     let mut interrupt = signal(SignalKind::interrupt()).unwrap();
@@ -157,7 +64,8 @@ async fn run(opts: &Opts) {
     let app = Router::new()
         .route("/", get(index))
         .route("/metrics", get(metrics))
-        .route("/inference", post(inference));
+        .route("/inference", post(inference))
+        .route("/sse_inference", post(sse_inference));
 
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     info!(?addr, "http service is running");

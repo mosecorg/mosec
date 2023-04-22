@@ -24,4 +24,7 @@ pub(crate) enum ServiceError {
 
     #[display(fmt = "mosec unknown error")]
     UnknownError,
+
+    #[display(fmt = "sse inference error")]
+    SseError,
 }

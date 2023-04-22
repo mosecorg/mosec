@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
@@ -118,6 +118,34 @@ impl TaskManager {
         let mut table = self.table.write().unwrap();
         match table.remove(&id) {
             Some(task) => Ok(task),
+            None => {
+                error!(%id, "cannot find the task when trying to remove it");
+                Err(ServiceError::UnknownError)
+            }
+        }
+    }
+
+    pub(crate) async fn submit_sse_task(
+        &self,
+        data: Bytes,
+    ) -> Result<(Task, mpsc::Receiver<()>), ServiceError> {
+        let (id, rx) = self.add_new_task(data)?;
+        let (sender, receiver) = mpsc::channel(16);
+        if let Err(err) = time::timeout(self.timeout, rx).await {
+            warn!(%id, %err, "task was not completed in the expected time");
+            {
+                let mut notifiers = self.notifiers.lock().unwrap();
+                notifiers.remove(&id);
+            }
+            {
+                let mut table = self.table.write().unwrap();
+                table.remove(&id);
+            }
+            return Err(ServiceError::Timeout);
+        }
+        let mut table = self.table.write().unwrap();
+        match table.remove(&id) {
+            Some(task) => Ok((task, receiver)),
             None => {
                 error!(%id, "cannot find the task when trying to remove it");
                 Err(ServiceError::UnknownError)
