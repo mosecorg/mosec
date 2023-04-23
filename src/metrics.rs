@@ -13,18 +13,31 @@
 // limitations under the License.
 
 use once_cell::sync::OnceCell;
-use prometheus::{
-    exponential_buckets, register_histogram_vec, register_int_counter_vec, register_int_gauge,
-    HistogramVec, IntCounterVec, IntGauge,
-};
+use prometheus_client::encoding::EncodeLabelSet;
+use prometheus_client::metrics::counter::Counter;
+use prometheus_client::metrics::family::Family;
+use prometheus_client::metrics::gauge::Gauge;
+use prometheus_client::metrics::histogram::{exponential_buckets, Histogram};
+use prometheus_client::registry::Registry;
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct CodeLabel {
+    pub code: u16,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct StageConnectionLabel {
+    pub stage: String,
+    pub connection: String,
+}
 
 #[derive(Debug)]
 pub(crate) struct Metrics {
-    pub(crate) throughput: IntCounterVec,
-    pub(crate) duration: HistogramVec,
-    pub(crate) batch_size: HistogramVec,
-    pub(crate) batch_duration: HistogramVec,
-    pub(crate) remaining_task: IntGauge,
+    pub(crate) throughput: Family<CodeLabel, Counter>,
+    pub(crate) duration: Family<StageConnectionLabel, Histogram>,
+    pub(crate) batch_size: Family<StageConnectionLabel, Histogram>,
+    pub(crate) batch_duration: Family<StageConnectionLabel, Histogram>,
+    pub(crate) remaining_task: Gauge,
 }
 
 impl Metrics {
@@ -32,43 +45,61 @@ impl Metrics {
         METRICS.get().expect("Metrics is not initialized")
     }
 
-    pub(crate) fn init_with_namespace(namespace: &str, timeout: u64) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            throughput: register_int_counter_vec!(
-                format!("{namespace}_throughput"),
-                "service inference endpoint throughput",
-                &["code"]
-            )
-            .unwrap(),
-            duration: register_histogram_vec!(
-                format!("{namespace}_process_duration_second"),
-                "process duration for each connection in each stage",
-                &["stage", "connection"],
-                exponential_buckets(1e-3f64, 2f64, (timeout as f64).log2().ceil() as usize + 1)
-                    .unwrap() // 1ms ~ 4.096s (default)
-            )
-            .unwrap(),
-            batch_size: register_histogram_vec!(
-                format!("{namespace}_batch_size"),
-                "batch size for each connection in each stage",
-                &["stage", "connection"],
-                exponential_buckets(1f64, 2f64, 10).unwrap() // 1 ~ 512
-            )
-            .unwrap(),
-            batch_duration: register_histogram_vec!(
-                format!("{namespace}_batch_duration_second"),
-                "dynamic batching duration for each connection in each stage",
-                &["stage", "connection"],
-                exponential_buckets(1e-3f64, 2f64, 13).unwrap() // 1ms ~ 4.096s
-            )
-            .unwrap(),
-            remaining_task: register_int_gauge!(
-                format!("{namespace}_remaining_task"),
-                "remaining tasks for the whole service"
-            )
-            .unwrap(),
+            throughput: Family::<CodeLabel, Counter>::default(),
+            duration: Family::<StageConnectionLabel, Histogram>::new_with_constructor(|| {
+                let timeout = TIMEOUT.get().expect("timeout is not initialized");
+                Histogram::new(exponential_buckets(
+                    1e-3f64,
+                    2f64,
+                    (*timeout as f64).log2().ceil() as u16 + 1,
+                ))
+            }), // 1ms ~ 4.096s (default)
+            batch_size: Family::<StageConnectionLabel, Histogram>::new_with_constructor(|| {
+                Histogram::new(exponential_buckets(1f64, 2f64, 10)) // 1 ~ 512
+            }),
+            batch_duration: Family::<StageConnectionLabel, Histogram>::new_with_constructor(|| {
+                Histogram::new(exponential_buckets(1e-3f64, 2f64, 13)) // 1ms ~ 4.096s
+            }),
+            remaining_task: Gauge::default(),
         }
+    }
+
+    pub(crate) fn init_with_namespace(namespace: &str, timeout: u64) -> Self {
+        TIMEOUT.set(timeout).unwrap();
+        let mut registry = <Registry>::default();
+        let metrics = Metrics::new();
+        registry.register(
+            format!("{namespace}_throughput"),
+            "service inference endpoint throughput",
+            metrics.throughput.clone(),
+        );
+        registry.register(
+            format!("{namespace}_process_duration_second"),
+            "process duration for each connection in each stage",
+            metrics.duration.clone(),
+        );
+        registry.register(
+            format!("{namespace}_batch_size"),
+            "batch size for each connection in each stage",
+            metrics.batch_size.clone(),
+        );
+        registry.register(
+            format!("{namespace}_batch_duration_second"),
+            "dynamic batching duration for each connection in each stage",
+            metrics.batch_duration.clone(),
+        );
+        registry.register(
+            format!("{namespace}_remaining_task"),
+            "remaining tasks for the whole service",
+            metrics.remaining_task.clone(),
+        );
+        REGISTRY.set(registry).unwrap();
+        metrics
     }
 }
 
 pub(crate) static METRICS: OnceCell<Metrics> = OnceCell::new();
+pub(crate) static REGISTRY: OnceCell<Registry> = OnceCell::new();
+pub(crate) static TIMEOUT: OnceCell<u64> = OnceCell::new();
