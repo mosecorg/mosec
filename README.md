@@ -192,8 +192,9 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 Here are some of the companies and individual users that are using Mosec:
 
-- [MOSS](https://txsun1997.github.io/blogs/moss.html): An open sourced conversational language model like ChatGPT.
-- [TensorChord](https://tensorchord.ai/): A platform for building and deploying AI models.
+- [Modelz](https://modelz.ai): Serverless platform for ML inference.
+- [MOSS](https://github.com/OpenLMLab/MOSS/): An open sourced conversational language model like ChatGPT.
+- [TensorChord](https://github.com/tensorchord): Cloud native AI infrastructure company.
 
 ## Citation
 
