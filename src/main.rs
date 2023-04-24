@@ -27,7 +27,7 @@ use axum::{
 };
 use bytes::Bytes;
 use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, StatusCode};
-use metrics::{CodeLabel, StageConnectionLabel, REGISTRY};
+use metrics::{CodeLabel, DURATION_LABEL, REGISTRY};
 use prometheus_client::encoding::text::encode;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
@@ -90,10 +90,11 @@ async fn inference(req: Request<Body>) -> Response<Body> {
                     // Record latency only for successful tasks
                     metrics
                         .duration
-                        .get_or_create(&StageConnectionLabel {
-                            stage: "total".to_owned(),
-                            connection: "total".to_owned(),
-                        })
+                        .get_or_create(
+                            DURATION_LABEL
+                                .get()
+                                .expect("DURATION_LABEL is not initialized"),
+                        )
                         .observe(task.create_at.elapsed().as_secs_f64());
                     StatusCode::OK
                 }

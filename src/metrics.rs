@@ -15,7 +15,7 @@
 use once_cell::sync::OnceCell;
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::counter::Counter;
-use prometheus_client::metrics::family::Family;
+use prometheus_client::metrics::family::{Family, MetricConstructor};
 use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::metrics::histogram::{exponential_buckets, Histogram};
 use prometheus_client::registry::Registry;
@@ -34,10 +34,22 @@ pub struct StageConnectionLabel {
 #[derive(Debug)]
 pub(crate) struct Metrics {
     pub(crate) throughput: Family<CodeLabel, Counter>,
-    pub(crate) duration: Family<StageConnectionLabel, Histogram>,
+    pub(crate) duration: Family<StageConnectionLabel, Histogram, CustomHistogramBuilder>,
     pub(crate) batch_size: Family<StageConnectionLabel, Histogram>,
     pub(crate) batch_duration: Family<StageConnectionLabel, Histogram>,
     pub(crate) remaining_task: Gauge,
+}
+
+#[derive(Clone)]
+pub(crate) struct CustomHistogramBuilder {
+    length: u16,
+}
+
+impl MetricConstructor<Histogram> for CustomHistogramBuilder {
+    fn new_metric(&self) -> Histogram {
+        // When a new histogram is created, this function will be called.
+        Histogram::new(exponential_buckets(1f64, 2f64, self.length))
+    }
 }
 
 impl Metrics {
@@ -45,17 +57,16 @@ impl Metrics {
         METRICS.get().expect("Metrics is not initialized")
     }
 
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(timeout: u64) -> Self {
+        let builder = CustomHistogramBuilder {
+            length: (timeout as f64).log2().ceil() as u16 + 1,
+        };
         Self {
             throughput: Family::<CodeLabel, Counter>::default(),
-            duration: Family::<StageConnectionLabel, Histogram>::new_with_constructor(|| {
-                let timeout = TIMEOUT.get().expect("timeout is not initialized");
-                Histogram::new(exponential_buckets(
-                    1e-3f64,
-                    2f64,
-                    (*timeout as f64).log2().ceil() as u16 + 1,
-                ))
-            }), // 1ms ~ 4.096s (default)
+            duration:
+                Family::<StageConnectionLabel, Histogram, CustomHistogramBuilder>::new_with_constructor(
+                    builder,
+                ), // 1ms ~ 4.096s (default)
             batch_size: Family::<StageConnectionLabel, Histogram>::new_with_constructor(|| {
                 Histogram::new(exponential_buckets(1f64, 2f64, 10)) // 1 ~ 512
             }),
@@ -67,9 +78,14 @@ impl Metrics {
     }
 
     pub(crate) fn init_with_namespace(namespace: &str, timeout: u64) -> Self {
-        TIMEOUT.set(timeout).unwrap();
+        DURATION_LABEL
+            .set(StageConnectionLabel {
+                stage: "total".to_string(),
+                connection: "total".to_string(),
+            })
+            .unwrap();
         let mut registry = <Registry>::default();
-        let metrics = Metrics::new();
+        let metrics = Metrics::new(timeout);
         registry.register(
             format!("{namespace}_throughput"),
             "service inference endpoint throughput",
@@ -102,4 +118,4 @@ impl Metrics {
 
 pub(crate) static METRICS: OnceCell<Metrics> = OnceCell::new();
 pub(crate) static REGISTRY: OnceCell<Registry> = OnceCell::new();
-pub(crate) static TIMEOUT: OnceCell<u64> = OnceCell::new();
+pub(crate) static DURATION_LABEL: OnceCell<StageConnectionLabel> = OnceCell::new();
