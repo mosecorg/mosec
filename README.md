@@ -29,6 +29,10 @@
 
 ## Introduction
 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/38581401/234162688-efd74e46-4063-4624-ac32-b197e4d8e56b.png" height="230" alt="MOSEC" />
+</p>
+
 Mosec is a high-performance and flexible model serving framework for building ML model-enabled backend and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
 
 - **Highly performant**: web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
