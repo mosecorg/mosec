@@ -48,7 +48,7 @@ pub(crate) struct CustomHistogramBuilder {
 impl MetricConstructor<Histogram> for CustomHistogramBuilder {
     fn new_metric(&self) -> Histogram {
         // When a new histogram is created, this function will be called.
-        Histogram::new(exponential_buckets(1f64, 2f64, self.length))
+        Histogram::new(exponential_buckets(1e-3f64, 2f64, self.length))
     }
 }
 
