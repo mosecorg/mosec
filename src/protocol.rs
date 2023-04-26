@@ -23,7 +23,7 @@ use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::Barrier;
 use tracing::{debug, error, info, warn};
 
-use crate::metrics::Metrics;
+use crate::metrics::{Metrics, StageConnectionLabel};
 use crate::tasks::{TaskCode, TaskManager};
 
 const FLAG_U8_SIZE: usize = 2;
@@ -66,7 +66,10 @@ pub(crate) async fn communicate(
                     let mut data: Vec<Bytes> = Vec::with_capacity(batch_size);
                     let task_manager = TaskManager::global();
                     let metrics = Metrics::global();
-                    let metric_label = [stage_id_label.as_str(), connection_id_label.as_str()];
+                    let metric_label = StageConnectionLabel {
+                        stage: stage_id_label,
+                        connection: connection_id_label,
+                    };
                     loop {
                         ids.clear();
                         data.clear();
@@ -75,7 +78,7 @@ pub(crate) async fn communicate(
                         if let Some(timer) = batch_timer {
                             metrics
                                 .batch_duration
-                                .with_label_values(&metric_label)
+                                .get_or_create(&metric_label)
                                 .observe(timer.elapsed().as_secs_f64())
                         }
                         // start record the duration metrics here because receiving the first task
@@ -89,7 +92,7 @@ pub(crate) async fn communicate(
                             // only record the batch size when it's set to a number > 1
                             metrics
                                 .batch_size
-                                .with_label_values(&metric_label)
+                                .get_or_create(&metric_label)
                                 .observe(data.len() as f64);
                         }
                         if let Err(err) = send_message(&mut stream, &ids, &data).await {
@@ -123,7 +126,7 @@ pub(crate) async fn communicate(
                                 // only the normal tasks will be recorded
                                 metrics
                                     .duration
-                                    .with_label_values(&metric_label)
+                                    .get_or_create(&metric_label)
                                     .observe(start_timer.elapsed().as_secs_f64());
                             }
                             _ => {

@@ -27,7 +27,8 @@ use axum::{
 };
 use bytes::Bytes;
 use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, StatusCode};
-use prometheus::{Encoder, TextEncoder};
+use metrics::{CodeLabel, DURATION_LABEL, REGISTRY};
+use prometheus_client::encoding::text::encode;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
@@ -57,11 +58,10 @@ async fn index(_: Request<Body>) -> Response<Body> {
 }
 
 async fn metrics(_: Request<Body>) -> Response<Body> {
-    let encoder = TextEncoder::new();
-    let metrics = prometheus::gather();
-    let mut buffer = vec![];
-    encoder.encode(&metrics, &mut buffer).unwrap();
-    build_response(StatusCode::OK, Bytes::from(buffer))
+    let mut encoded = String::new();
+    let registry = REGISTRY.get().unwrap();
+    encode(&mut encoded, registry).unwrap();
+    build_response(StatusCode::OK, Bytes::from(encoded))
 }
 
 async fn inference(req: Request<Body>) -> Response<Body> {
@@ -90,7 +90,11 @@ async fn inference(req: Request<Body>) -> Response<Body> {
                     // Record latency only for successful tasks
                     metrics
                         .duration
-                        .with_label_values(&["total", "total"])
+                        .get_or_create(
+                            DURATION_LABEL
+                                .get()
+                                .expect("DURATION_LABEL is not initialized"),
+                        )
                         .observe(task.create_at.elapsed().as_secs_f64());
                     StatusCode::OK
                 }
@@ -113,7 +117,9 @@ async fn inference(req: Request<Body>) -> Response<Body> {
     metrics.remaining_task.dec();
     metrics
         .throughput
-        .with_label_values(&[status.as_str()])
+        .get_or_create(&CodeLabel {
+            code: status.as_u16(),
+        })
         .inc();
 
     build_response(status, content)
