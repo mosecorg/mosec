@@ -78,4 +78,7 @@ version:
 add_license:
 	@addlicense -c "MOSEC Authors" **/*.py **/*.rs **/**/*.py
 
+dep_license:
+	@cargo license --direct-deps-only --authors --avoid-build-deps --avoid-dev-deps --do-not-bundle --all-features --json > license.json
+
 .PHONY: test doc
