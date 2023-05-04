@@ -54,7 +54,7 @@ class MsgpackMixin:
             data_bytes = msgpack.packb(data)
         except Exception as err:
             raise EncodingError from err
-        return data_bytes
+        return data_bytes  # type: ignore
 
     def deserialize(self, data: bytes) -> Any:
         """Deserialize method for the first stage (ingress).
