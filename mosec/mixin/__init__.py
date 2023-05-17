@@ -16,6 +16,6 @@
 
 from mosec.mixin.msgpack_worker import MsgpackMixin
 from mosec.mixin.numbin_worker import NumBinIPCMixin
-from mosec.mixin.plasma_worker import PlasmaShmMixin
+from mosec.mixin.plasma_worker import PlasmaShmIPCMixin
 
-__all__ = ["MsgpackMixin", "NumBinIPCMixin", "PlasmaShmMixin"]
+__all__ = ["MsgpackMixin", "NumBinIPCMixin", "PlasmaShmIPCMixin"]

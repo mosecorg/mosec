@@ -18,10 +18,10 @@ from pyarrow import plasma  # type: ignore
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
-from mosec.mixin import PlasmaShmMixin
+from mosec.mixin import PlasmaShmIPCMixin
 
 
-class SquareService(PlasmaShmMixin, Worker):
+class SquareService(PlasmaShmIPCMixin, Worker):
     def forward(self, data: List[dict]) -> List[dict]:
         try:
             result = [{"x": int(req["x"]) ** 2} for req in data]
@@ -30,7 +30,7 @@ class SquareService(PlasmaShmMixin, Worker):
         return result
 
 
-class DummyPostprocess(PlasmaShmMixin, Worker):
+class DummyPostprocess(PlasmaShmIPCMixin, Worker):
     """This dummy stage is added to test the shm IPC"""
 
     def forward(self, data: dict) -> dict:
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         shm_process,
     ):
         # configure the plasma shm path
-        PlasmaShmMixin.set_plasma_path(shm_path)
+        PlasmaShmIPCMixin.set_plasma_path(shm_path)
 
         server = Server()
         server.register_daemon("plasma_server", shm_process)

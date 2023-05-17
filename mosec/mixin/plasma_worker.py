@@ -1,3 +1,17 @@
+# Copyright 2023 MOSEC Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """MOSEC plasma worker mixin.
 
 Provide another data transfer way between workers.
@@ -31,7 +45,7 @@ if TYPE_CHECKING:
 _PLASMA_PATH_ENV = "MOSEC_INTERNAL_PLASMA_PATH"
 
 
-class PlasmaShmMixin(Worker):
+class PlasmaShmIPCMixin(Worker):
     """Plasma shared memory worker mixin interface."""
 
     # pylint: disable=no-self-use
@@ -43,24 +57,27 @@ class PlasmaShmMixin(Worker):
         """Set the plasma service path."""
         environ[_PLASMA_PATH_ENV] = path
 
-    def get_client(self):
+    def _get_client(self):
         """Get the plasma client. This will create a new one if not exist."""
         if not self._plasma_client:
             path = environ.get(_PLASMA_PATH_ENV)
             if not path:
-                raise RuntimeError("")
+                raise RuntimeError(
+                    "please set the plasma path with "
+                    "`PlasmaShmIPCMixin.set_plasma_path()`"
+                )
             self._plasma_client = plasma.connect(path)
         return self._plasma_client
 
     def serialize_ipc(self, data: Any) -> bytes:
         """Save the data to the plasma server and return the id."""
-        client = self.get_client()
+        client = self._get_client()
         object_id = client.put(data)
         return super().serialize_ipc(object_id.binary())
 
     def deserialize_ipc(self, data: bytes) -> Any:
         """Get the data from the plasma server and delete it."""
-        client = self.get_client()
+        client = self._get_client()
         object_id = plasma.ObjectID(super().deserialize_ipc(data))
         obj = client.get(object_id)
         client.delete((object_id,))
