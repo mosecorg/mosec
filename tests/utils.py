@@ -16,14 +16,14 @@ import random
 import socket
 import struct
 import time
-from typing import List, Union
+from typing import List, Tuple, Union
 
 from tests.mock_socket import socket as mock_socket
 
 
 def imitate_controller_send(
     sock: Union[mock_socket, socket.socket], l_data: List[bytes]
-):
+) -> Tuple[List[bytes], List[bytes]]:
     # explicit byte format here for sanity check
     # placeholder flag, should be discarded by receiver
     header = struct.pack("!H", 0) + struct.pack("!H", len(l_data))

@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
 from typing import List
 
 from pyarrow import plasma  # type: ignore
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
-from mosec.plugins import PlasmaShmWrapper
+from mosec.mixin import PlasmaShmIPCMixin
 
 
-class SquareService(Worker):
+class SquareService(PlasmaShmIPCMixin, Worker):
     def forward(self, data: List[dict]) -> List[dict]:
         try:
             result = [{"x": int(req["x"]) ** 2} for req in data]
@@ -31,7 +30,7 @@ class SquareService(Worker):
         return result
 
 
-class DummyPostprocess(Worker):
+class DummyPostprocess(PlasmaShmIPCMixin, Worker):
     """This dummy stage is added to test the shm IPC"""
 
     def forward(self, data: dict) -> dict:
@@ -45,12 +44,10 @@ if __name__ == "__main__":
         shm_path,
         shm_process,
     ):
-        server = Server(
-            ipc_wrapper=partial(  # defer the wrapper init to worker processes
-                PlasmaShmWrapper,
-                shm_path=shm_path,
-            )
-        )
+        # configure the plasma shm path
+        PlasmaShmIPCMixin.set_plasma_path(shm_path)
+
+        server = Server()
         server.register_daemon("plasma_server", shm_process)
         server.append_worker(SquareService, max_batch_size=8)
         server.append_worker(DummyPostprocess, num=2)
