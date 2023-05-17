@@ -12,24 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example: Using Plasma store with mosec plugin PlasmaShmWrapper.
+"""Example: Using Plasma store with mosec mixin PlasmaShmIPCMixin.
 
 We start a subprocess for the plasma server, and pass the path
-to the plasma client which serves as the shm wrapper.
+to the plasma client which serves as the shm mixin.
 We also register the plasma server process as a daemon, so
 that when it exits the service is able to gracefully shutdown
 and restarted by the orchestrator.
 """
 
-from functools import partial
-
 from pyarrow import plasma  # type: ignore
 
 from mosec import Server, ValidationError, Worker
-from mosec.plugins import PlasmaShmWrapper
+from mosec.mixin import PlasmaShmIPCMixin
 
 
-class DataProducer(Worker):
+class DataProducer(PlasmaShmIPCMixin, Worker):
     """Sample Data Producer."""
 
     def forward(self, data: dict) -> bytes:
@@ -40,7 +38,7 @@ class DataProducer(Worker):
         return data_bytes
 
 
-class DataConsumer(Worker):
+class DataConsumer(PlasmaShmIPCMixin, Worker):
     """Sample Data Consumer."""
 
     def forward(self, data: bytes) -> dict:
@@ -53,12 +51,11 @@ if __name__ == "__main__":
         shm_path,
         shm_process,
     ):
-        server = Server(
-            ipc_wrapper=partial(  # defer the wrapper init to worker processes
-                PlasmaShmWrapper,
-                shm_path=shm_path,
-            )
-        )
+        # configure the plasma service path
+        PlasmaShmIPCMixin.set_plasma_path(shm_path)
+
+        server = Server()
+        # register this process to be monitored
         server.register_daemon("plasma_server", shm_process)
         server.append_worker(DataProducer, num=2)
         server.append_worker(DataConsumer, num=2)
