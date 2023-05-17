@@ -4,7 +4,7 @@ PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
-	pip install -e .[dev,doc,plugin]
+	pip install -e .[dev,doc,mixin]
 	pre-commit install
 	rustup toolchain install nightly
 	rustup component add rustfmt --toolchain nightly
@@ -21,13 +21,13 @@ test: dev
 	RUST_BACKTRACE=1 cargo test -vv
 
 test_arrow: dev
-	@pip install -q -r requirements/plugin.txt
-	echo "Running tests for the plugin"
+	@pip install -q -r requirements/mixin.txt
+	echo "Running tests for the mixin"
 	pytest tests -vv -s -m "arrow"
-	pip uninstall -y -r requirements/plugin.txt
+	pip uninstall -y -r requirements/mixin.txt
 
 test_all: dev
-	@pip install -q -r requirements/plugin.txt
+	@pip install -q -r requirements/mixin.txt
 	echo "Running tests for the all features"
 	pytest tests -vv -s
 	RUST_BACKTRACE=1 cargo test -vv

@@ -18,8 +18,8 @@ with open(os.path.join(here, "requirements/dev.txt"), encoding="utf-8") as f:
 with open(os.path.join(here, "requirements/doc.txt"), encoding="utf-8") as f:
     doc_requirements = f.read().splitlines()
 
-with open(os.path.join(here, "requirements/plugin.txt"), encoding="utf-8") as f:
-    plugin_requirements = f.read().splitlines()
+with open(os.path.join(here, "requirements/mixin.txt"), encoding="utf-8") as f:
+    mixin_requirements = f.read().splitlines()
 
 
 class RustExtension(Extension):
@@ -80,11 +80,11 @@ setup(
     use_scm_version=True,
     packages=find_packages(exclude=["examples*", "tests*"]),
     include_package_data=True,
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     setup_requires=["setuptools_scm>=7.0"],
     extras_require={
         "dev": dev_requirements,
-        "plugin": plugin_requirements,
+        "mixin": mixin_requirements,
         "doc": doc_requirements,
     },
     zip_safe=False,

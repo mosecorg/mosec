@@ -42,7 +42,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[dev,doc,plugin]
+        pip install -e .[dev,doc,mixin]
     - name: Generate docs
       run: |
         cd docs && make html
