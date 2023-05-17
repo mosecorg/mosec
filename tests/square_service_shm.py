@@ -44,9 +44,8 @@ if __name__ == "__main__":
         shm_path,
         shm_process,
     ):
-        # config the plasma shm path
-        SquareService.plasma_path = shm_path
-        DummyPostprocess.plasma_path = shm_path
+        # configure the plasma shm path
+        PlasmaShmMixin.set_plasma_path(shm_path)
 
         server = Server()
         server.register_daemon("plasma_server", shm_process)

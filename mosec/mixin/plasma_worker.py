@@ -12,7 +12,10 @@ sent via the original way.
 """
 
 import warnings
+from os import environ
 from typing import TYPE_CHECKING, Any
+
+from mosec.worker import Worker
 
 try:
     from pyarrow import plasma  # type: ignore
@@ -25,32 +28,40 @@ if TYPE_CHECKING:
     from pyarrow import plasma
 
 
-class PlasmaShmMixin:
+_PLASMA_PATH_ENV = "MOSEC_INTERNAL_PLASMA_PATH"
+
+
+class PlasmaShmMixin(Worker):
     """Plasma shared memory worker mixin interface."""
 
     # pylint: disable=no-self-use
 
-    plasma_path: str = ""
     _plasma_client = None
+
+    @classmethod
+    def set_plasma_path(cls, path: str):
+        """Set the plasma service path."""
+        environ[_PLASMA_PATH_ENV] = path
 
     def get_client(self):
         """Get the plasma client. This will create a new one if not exist."""
-        if not self.plasma_path:
-            raise RuntimeError("plasma path is required")
         if not self._plasma_client:
-            self._plasma_client = plasma.connect(self.plasma_path)
+            path = environ.get(_PLASMA_PATH_ENV)
+            if not path:
+                raise RuntimeError("")
+            self._plasma_client = plasma.connect(path)
         return self._plasma_client
 
     def serialize_ipc(self, data: Any) -> bytes:
         """Save the data to the plasma server and return the id."""
         client = self.get_client()
         object_id = client.put(data)
-        return object_id.binary()
+        return super().serialize_ipc(object_id.binary())
 
-    def deserialize_ipc(self, oid: bytes) -> Any:
+    def deserialize_ipc(self, data: bytes) -> Any:
         """Get the data from the plasma server and delete it."""
         client = self.get_client()
-        object_id = plasma.ObjectID(oid)
-        data = client.get(object_id)
-        client.delete(object_id)
-        return data
+        object_id = plasma.ObjectID(super().deserialize_ipc(data))
+        obj = client.get(object_id)
+        client.delete((object_id,))
+        return obj
