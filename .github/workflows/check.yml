@@ -45,9 +45,10 @@ jobs:
       - name: install node for pyright
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
       - name: install pyright
-        run: npm install -g pyright
+        # due to https://github.com/microsoft/pyright/issues/5126
+        run: npm install -g pyright@1.1.308
       - name: Lint
         run: make lint
 
