@@ -16,6 +16,7 @@ from typing import List
 
 from msgspec import Struct
 
+from mosec import Worker
 from mosec.mixin.typed_worker import parse_forward_input_type
 
 
@@ -23,7 +24,7 @@ class Request(Struct):
     name: str
 
 
-class Demo(Struct):
+class Demo(Worker):
     def forward(self, _data: Request):
         pass
 
