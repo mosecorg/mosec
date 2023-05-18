@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Request validation example."""
-
 from typing import Any, List
 
 from msgspec import Struct
@@ -23,31 +21,16 @@ from mosec.mixin import TypedMsgPackMixin
 
 
 class Request(Struct):
-    """User request struct."""
-
-    # pylint: disable=too-few-public-methods
-
-    bin: bytes
-    name: str = "test"
-
-
-class Preprocess(TypedMsgPackMixin, Worker):
-    """Dummy preprocess to exit early if the validation failed."""
-
-    def forward(self, data: Request) -> Any:
-        """Input will be parse as the `Request`."""
-        return data.bin
+    media: str
+    binary: bytes
 
 
 class Inference(TypedMsgPackMixin, Worker):
-    """Dummy batch inference."""
-
-    def forward(self, data: List[bytes]) -> Any:
-        return max(len(buf) for buf in data)
+    def forward(self, data: List[Request]) -> Any:
+        return [len(req.binary) for req in data]
 
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(Preprocess, num=2)
-    server.append_worker(Inference, max_batch_size=16)
+    server.append_worker(Inference, max_batch_size=4)
     server.run()

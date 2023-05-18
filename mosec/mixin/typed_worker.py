@@ -15,12 +15,38 @@
 """MOSEC type validation mixin."""
 
 import inspect
-from typing import Any
+from typing import Any, List
 
 import msgspec
 
 from mosec.errors import ValidationError
 from mosec.worker import Worker
+
+
+def parse_forward_input_type(func):
+    """Parse the input type of the forward function.
+
+    - single request: return the type
+    - batch request: return the list item type
+    """
+    sig = inspect.signature(func)
+    params = list(sig.parameters.values())
+    if len(params) < 1:
+        raise TypeError("`forward` method doesn't have enough(1) parameters")
+
+    typ = params[0].annotation
+    origin = getattr(typ, "__origin__", None)
+    if origin is None:
+        return typ
+    # GenericAlias, `func` could be batch inference
+    if origin is list or origin is List:
+        if not hasattr(typ, "__args__") or len(typ.__args__) != 1:
+            raise TypeError(
+                "`forward` with dynamic batch should use "
+                "`List[Struct]` as the input annotation"
+            )
+        return typ.__args__[0]
+    raise TypeError(f"unsupported type {typ}")
 
 
 class TypedMsgPackMixin(Worker):
@@ -33,11 +59,7 @@ class TypedMsgPackMixin(Worker):
     def _get_input_type(self):
         """Get the input type from annotations."""
         if self._input_type is None:
-            sig = inspect.signature(self.forward)
-            params = list(sig.parameters.values())
-            if len(params) < 1:
-                raise RuntimeError("`forward` method doesn't have enough(1) parameters")
-            self._input_type = params[0].annotation
+            self._input_type = parse_forward_input_type(self.forward)
         return self._input_type
 
     def deserialize(self, data: Any) -> bytes:
