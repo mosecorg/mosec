@@ -22,7 +22,9 @@ sent via the original way.
     use case: large image tensors
     benefits: more stable P99 latency
 
-.. warning:: The plasma is deprecated in `pyarrow`. Please use Redis instead.
+```{warning}
+The plasma is deprecated in `pyarrow`. Please use Redis instead.
+```
 """
 
 import warnings
