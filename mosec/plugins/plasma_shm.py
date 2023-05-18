@@ -19,6 +19,11 @@ sent via the original way.
 
     use case: large image tensors
     benefits: more stable P99 latency
+
+```{warning}
+This implementation is deprecated. Please use
+:py:mod:`PlasmaShmIPCMixin <mosec.mixin.PlasmaShmIPCMixin>`
+```
 """
 
 import warnings
