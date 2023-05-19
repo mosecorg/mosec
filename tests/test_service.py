@@ -91,6 +91,7 @@ def test_mixin_ipc_service(mosec_service, http_client):
     resp = http_client.post("/inference", json={"num": 8})
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.json() == "equal"
+    assert resp.headers["content-type"] == "application/json"
 
 
 @pytest.mark.parametrize(
@@ -111,6 +112,7 @@ def test_mixin_typed_service(mosec_service, http_client):
         ),
     )
     assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.headers["content-type"] == "application/msgpack"
     assert msgpack.unpackb(resp.content) == 11
 
     resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))

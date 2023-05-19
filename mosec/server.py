@@ -187,6 +187,8 @@ class Server:
             args.extend(
                 ["--waits", str(wait_time if wait_time else self._configs["wait"])]
             )
+        mime_type = self._worker_cls[-1].resp_mime_type
+        args.extend(["--mime", mime_type])
         logger.info("mosec received arguments: %s", args)
         return args
 

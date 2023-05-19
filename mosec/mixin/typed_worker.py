@@ -54,6 +54,7 @@ class TypedMsgPackMixin(Worker):
 
     # pylint: disable=no-self-use
 
+    resp_mime_type = "application/msgpack"
     _input_type = None
 
     def _get_input_type(self):

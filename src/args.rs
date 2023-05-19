@@ -57,4 +57,8 @@ pub(crate) struct Opts {
     /// enable debug log
     #[argh(option, short = 'd', default = "false")]
     pub(crate) debug: bool,
+
+    /// response mime type
+    #[argh(option, default = "String::from(\"application/json\")")]
+    pub(crate) mime: String,
 }

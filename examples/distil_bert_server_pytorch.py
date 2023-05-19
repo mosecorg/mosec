@@ -53,6 +53,8 @@ class Preprocess(Worker):
 class Inference(Worker):
     """Pytorch Inference class"""
 
+    resp_mime_type = "text/plain"
+
     def __init__(self):
         super().__init__()
         self.device = (
