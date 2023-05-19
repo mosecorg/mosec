@@ -22,11 +22,16 @@ mod tasks;
 use std::net::SocketAddr;
 
 use axum::{
+    extract::State,
     routing::{get, post},
     Router,
 };
 use bytes::Bytes;
-use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, StatusCode};
+use hyper::{
+    body::to_bytes,
+    header::{HeaderValue, CONTENT_TYPE},
+    Body, Request, Response, StatusCode,
+};
 use metrics::{CodeLabel, DURATION_LABEL, REGISTRY};
 use prometheus_client::encoding::text::encode;
 use tokio::signal::unix::{signal, SignalKind};
@@ -44,6 +49,11 @@ const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_V
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
+
+#[derive(Clone)]
+struct AppState {
+    mime: String,
+}
 
 async fn index(_: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
@@ -64,7 +74,7 @@ async fn metrics(_: Request<Body>) -> Response<Body> {
     build_response(StatusCode::OK, Bytes::from(encoded))
 }
 
-async fn inference(req: Request<Body>) -> Response<Body> {
+async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
     let metrics = Metrics::global();
@@ -122,7 +132,12 @@ async fn inference(req: Request<Body>) -> Response<Body> {
         })
         .inc();
 
-    build_response(status, content)
+    let mut resp = build_response(status, content);
+    if status == StatusCode::OK {
+        resp.headers_mut()
+            .insert(CONTENT_TYPE, HeaderValue::from_str(&state.mime).unwrap());
+    }
+    resp
 }
 
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
@@ -156,6 +171,9 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn run(opts: &Opts) {
+    let state = AppState {
+        mime: opts.mime.clone(),
+    };
     let coordinator = Coordinator::init_from_opts(opts);
     let barrier = coordinator.run();
     barrier.wait().await;
@@ -163,7 +181,8 @@ async fn run(opts: &Opts) {
     let app = Router::new()
         .route("/", get(index))
         .route("/metrics", get(metrics))
-        .route("/inference", post(inference));
+        .route("/inference", post(inference))
+        .with_state(state);
 
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     info!(?addr, "http service is running");

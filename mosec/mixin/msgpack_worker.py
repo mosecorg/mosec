@@ -37,6 +37,8 @@ class MsgpackMixin:
 
     # pylint: disable=no-self-use
 
+    resp_mime_type = "application/msgpack"
+
     def serialize(self, data: Any) -> bytes:
         """Serialize with msgpack for the last stage (egress).
 

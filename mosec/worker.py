@@ -55,6 +55,7 @@ class Worker(abc.ABC):
 
     example: Any = None
     multi_examples: Sequence[Any] = []
+    resp_mime_type = "application/json"
     _worker_id: int = 0
     _stage: str = ""
     _max_batch_size: int = 1
