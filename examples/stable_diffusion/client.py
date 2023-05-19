@@ -37,7 +37,7 @@ parser.add_argument(
 args = parser.parse_args()
 resp = httpx.post(
     f"http://127.0.0.1:{args.port}/inference",
-    data=msgpack.packb(args.prompt),
+    content=msgpack.packb(args.prompt),
     timeout=httpx.Timeout(20),
 )
 if resp.status_code == 200:
