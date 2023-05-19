@@ -197,7 +197,8 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 Here are some of the companies and individual users that are using Mosec:
 
 - [Modelz](https://modelz.ai): Serverless platform for ML inference.
-- [MOSS](https://github.com/OpenLMLab/MOSS/): An open sourced conversational language model like ChatGPT.
+- [MOSS](https://github.com/OpenLMLab/MOSS/blob/main/README_en.md): An open sourced conversational language model like ChatGPT.
+- [TencentCloud](https://www.tencentcloud.com/document/product/1141/45261): Tencent Cloud Machine Learning Platform, using Mosec as the [core inference server framework](https://cloud.tencent.com/document/product/851/74148).
 - [TensorChord](https://github.com/tensorchord): Cloud native AI infrastructure company.
 
 ## Citation
