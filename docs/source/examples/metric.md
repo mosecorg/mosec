@@ -17,7 +17,7 @@ For more information about the multiprocess mode for the metrics, check the [Pro
 
 ## **`python_side_metrics.py`**
 
-```{include} ../../../examples/python_side_metrics.py
+```{include} ../../../examples/monitor/python_side_metrics.py
 :code: python
 ```
 
@@ -43,4 +43,7 @@ http :8080
 
 ```shell
 http :8000/metrics
+```
+
+```{include} ../../../examples/monitor/README.md
 ```
