@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev,plugin]
+          pip install -e .[dev,mixin]
           make dev
       - name: Test
         run: |

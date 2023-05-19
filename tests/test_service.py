@@ -21,6 +21,7 @@ from http import HTTPStatus
 from threading import Thread
 
 import httpx
+import msgpack  # type: ignore
 import pytest
 
 from tests.utils import wait_for_port_open
@@ -90,6 +91,30 @@ def test_mixin_ipc_service(mosec_service, http_client):
     resp = http_client.post("/inference", json={"num": 8})
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.json() == "equal"
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("mixin_typed_service", "", id="typed"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_mixin_typed_service(mosec_service, http_client):
+    resp = http_client.post(
+        "/inference",
+        content=msgpack.packb(
+            {
+                "media": "text",
+                "binary": b"hello mosec",
+            }
+        ),
+    )
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert msgpack.unpackb(resp.content) == 11
+
+    resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, resp
 
 
 @pytest.mark.parametrize(
