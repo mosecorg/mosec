@@ -2,7 +2,7 @@ setuptools_scm>=7
 pytest>=6
 pytest-mock>=3.5
 mypy>=0.910
-pyright>=1.1.290,<=1.1.308
+pyright>=1.1.290,<=1.1.309
 pylint>=2.13.8
 pydocstyle>=6.1.1
 black>=20.8.0
