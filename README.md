@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/38581401/134487662-49733d45-2ba0-4c19-aa07-1f43fd35c453.png" height="230" alt="MOSEC" />
+  <img src="https://user-images.githubusercontent.com/38581401/240117836-f06199ba-c80d-413a-9cb4-5adc76316bda.png" height="230" alt="MOSEC" />
 </p>
 
 <p align="center">
@@ -121,7 +121,7 @@ Finally, we append the worker to the server to construct a *single-stage* workfl
 ```python
 if __name__ == "__main__":
     server = Server()
-    # 1) `num` specify the number of processes that will be spawned to run in parallel.
+    # 1) `num` specifies the number of processes that will be spawned to run in parallel.
     # 2) By configuring the `max_batch_size` with the value > 1, the input data in your
     # `forward` function will be a list (batch); otherwise, it's a single item.
     server.append_worker(StableDiffusion, num=1, max_batch_size=4, max_wait_time=10)
