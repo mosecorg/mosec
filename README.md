@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/38581401/240107101-6949eb5b-72a5-4084-a043-671ba1e02594.png" height="230" alt="MOSEC" />
+  <img src="https://user-images.githubusercontent.com/38581401/240117836-f06199ba-c80d-413a-9cb4-5adc76316bda.png" height="230" alt="MOSEC" />
 </p>
 
 <p align="center">
