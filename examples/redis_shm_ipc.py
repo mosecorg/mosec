@@ -22,6 +22,7 @@ and restarted by the orchestrator.
 """
 
 import subprocess
+
 from mosec import Server, ValidationError, Worker
 from mosec.mixin import RedisShmIPCMixin
 

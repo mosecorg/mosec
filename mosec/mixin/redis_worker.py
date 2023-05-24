@@ -26,10 +26,10 @@ sent via the original way.
 
 from os import environ
 from typing import Any
+
 import redis
 
 from mosec.worker import Worker
-
 
 _REDIS_URL_ENV = "MOSEC_INTERNAL_REDIS_URL"
 _DEFAULT_KEY = "REDIS_SHM_IPC_KEY"
@@ -68,23 +68,22 @@ class RedisShmIPCMixin(Worker):
         return self._redis_key
 
     def _prepare_next_id(self) -> None:
-        """make sure the next id exists. This will create a new one if not exist."""
-        if self._next_id is not None:
-            return
-        client = self._get_client()
-        key = self._get_redis_key()
-        self._next_id = bytes(str(client.incr(key)), encoding="utf-8")
+        """Make sure the next id exists. This will create a new one if not exist."""
+        if self._next_id is None:
+            client = self._get_client()
+            key = self._get_redis_key()
+            self._next_id = bytes(str(client.incr(key)), encoding="utf-8")
 
     def serialize_ipc(self, data: Any) -> bytes:
         """Save the data to the redis server and return the id."""
         self._prepare_next_id()
         client = self._get_client()
         key = self._get_redis_key()
-        with client.pipeline() as p:
+        with client.pipeline() as pipe:
             current_id = self._next_id
-            p.set(current_id, data)  # type: ignore
-            p.incr(key)
-            _id = p.execute()[-1]
+            pipe.set(current_id, data)  # type: ignore
+            pipe.incr(key)
+            _id = pipe.execute()[-1]
             self._next_id = bytes(str(_id), encoding="utf-8")
         return current_id  # type: ignore
 
@@ -92,8 +91,8 @@ class RedisShmIPCMixin(Worker):
         """Get the data from the redis server and delete it."""
         client = self._get_client()
         object_id = bytes(data)
-        with client.pipeline() as p:
-            p.get(object_id)
-            p.delete(object_id)
-            obj = p.execute()[0]
+        with client.pipeline() as pipe:
+            pipe.get(object_id)
+            pipe.delete(object_id)
+            obj = pipe.execute()[0]
         return obj
