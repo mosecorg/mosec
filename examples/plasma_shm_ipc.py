@@ -21,6 +21,7 @@ that when it exits the service is able to gracefully shutdown
 and restarted by the orchestrator.
 """
 
+import numpy as np
 from pyarrow import plasma  # type: ignore
 
 from mosec import Server, ValidationError, Worker
@@ -30,19 +31,19 @@ from mosec.mixin import PlasmaShmIPCMixin
 class DataProducer(PlasmaShmIPCMixin, Worker):
     """Sample Data Producer."""
 
-    def forward(self, data: dict) -> bytes:
+    def forward(self, data: dict) -> np.ndarray:
         try:
-            data_bytes = b"a" * int(data["size"])
+            nums = np.random.rand(int(data["size"]))
         except KeyError as err:
             raise ValidationError(err) from err
-        return data_bytes
+        return nums
 
 
 class DataConsumer(PlasmaShmIPCMixin, Worker):
     """Sample Data Consumer."""
 
-    def forward(self, data: bytes) -> dict:
-        return {"ipc test data length": len(data)}
+    def forward(self, data: np.ndarray) -> dict:
+        return {"ipc test data": data.tolist()}
 
 
 if __name__ == "__main__":

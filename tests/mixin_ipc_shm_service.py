@@ -14,6 +14,7 @@
 
 from typing import List
 
+import numpy as np
 from pyarrow import plasma  # type: ignore
 
 from mosec import Server, Worker
@@ -21,10 +22,10 @@ from mosec.errors import ValidationError
 from mosec.mixin import PlasmaShmIPCMixin
 
 
-class SquareService(PlasmaShmIPCMixin, Worker):
+class RandomService(PlasmaShmIPCMixin, Worker):
     def forward(self, data: List[dict]) -> List[dict]:
         try:
-            result = [{"x": int(req["x"]) ** 2} for req in data]
+            result = [{"x": np.random.rand(int(req["size"]))} for req in data]
         except KeyError as err:
             raise ValidationError(err)
         return result
@@ -34,7 +35,8 @@ class DummyPostprocess(PlasmaShmIPCMixin, Worker):
     """This dummy stage is added to test the shm IPC"""
 
     def forward(self, data: dict) -> dict:
-        assert isinstance(data.get("x"), int), f"wrong data type: {data}"
+        assert isinstance(data.get("x"), np.ndarray), f"wrong data type: {data}"
+        data["x"] = data["x"].tolist()
         return data
 
 
@@ -49,6 +51,6 @@ if __name__ == "__main__":
 
         server = Server()
         server.register_daemon("plasma_server", shm_process)
-        server.append_worker(SquareService, max_batch_size=8)
+        server.append_worker(RandomService, max_batch_size=8)
         server.append_worker(DummyPostprocess, num=2)
         server.run()

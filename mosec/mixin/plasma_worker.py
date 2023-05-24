@@ -74,13 +74,13 @@ class PlasmaShmIPCMixin(Worker):
     def serialize_ipc(self, data: Any) -> bytes:
         """Save the data to the plasma server and return the id."""
         client = self._get_client()
-        object_id = client.put(data)
+        object_id = client.put(super().serialize_ipc(data))
         return object_id.binary()
 
     def deserialize_ipc(self, data: bytes) -> Any:
         """Get the data from the plasma server and delete it."""
         client = self._get_client()
         object_id = plasma.ObjectID(bytes(data))
-        obj = client.get(object_id)
+        obj = super().deserialize_ipc(client.get(object_id))
         client.delete((object_id,))
         return obj
