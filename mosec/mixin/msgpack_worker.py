@@ -29,7 +29,7 @@ from mosec.errors import DecodingError, EncodingError
 try:
     import msgpack  # type: ignore
 except ImportError:
-    warnings.warn("msgpack is required for MsgpackWorker", ImportWarning)
+    warnings.warn("msgpack is required for MsgpackMixin", ImportWarning)
 
 
 class MsgpackMixin:
