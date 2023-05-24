@@ -23,6 +23,8 @@ and be restarted by the orchestrator.
 
 import subprocess
 
+import numpy as np
+
 from mosec import Server, ValidationError, Worker
 from mosec.mixin import RedisShmIPCMixin
 
@@ -30,19 +32,19 @@ from mosec.mixin import RedisShmIPCMixin
 class DataProducer(RedisShmIPCMixin, Worker):
     """Sample Data Producer."""
 
-    def forward(self, data: dict) -> bytes:
+    def forward(self, data: dict) -> np.ndarray:
         try:
-            data_bytes = b"a" * int(data["size"])
+            nums = np.random.rand(int(data["size"]))
         except KeyError as err:
             raise ValidationError(err) from err
-        return data_bytes
+        return nums
 
 
 class DataConsumer(RedisShmIPCMixin, Worker):
     """Sample Data Consumer."""
 
-    def forward(self, data: bytes) -> dict:
-        return {"ipc test data length": len(data)}
+    def forward(self, data: np.ndarray) -> dict:
+        return {"ipc test data": data.tolist()}
 
 
 if __name__ == "__main__":
@@ -52,7 +54,7 @@ if __name__ == "__main__":
 
         server = Server()
         # register this process to be monitored
-        server.register_daemon("redis_server", p)
+        server.register_daemon("redis-server", p)
         server.append_worker(DataProducer, num=2)
         server.append_worker(DataConsumer, num=2)
         server.run()

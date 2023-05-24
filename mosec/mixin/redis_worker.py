@@ -80,7 +80,7 @@ class RedisShmIPCMixin(Worker):
         client = self._get_client()
         with client.pipeline() as pipe:
             current_id = self._next_id
-            pipe.set(current_id, data)  # type: ignore
+            pipe.set(current_id, super().serialize_ipc(data))  # type: ignore
             pipe.incr(self._redis_key)
             _id = pipe.execute()[-1]
             self._next_id = bytes(str(_id), encoding="utf-8")
@@ -94,4 +94,4 @@ class RedisShmIPCMixin(Worker):
             pipe.get(object_id)
             pipe.delete(object_id)
             obj = pipe.execute()[0]
-        return obj
+        return super().deserialize_ipc(obj)
