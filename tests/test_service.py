@@ -51,12 +51,6 @@ def mosec_service(request):
     "mosec_service, http_client",
     [
         pytest.param("square_service", "", id="basic"),
-        pytest.param(
-            "square_service_shm",
-            "",
-            marks=pytest.mark.arrow,
-            id="shm_arrow",
-        ),
     ],
     indirect=["mosec_service", "http_client"],
 )
@@ -78,6 +72,22 @@ def test_square_service(mosec_service, http_client):
     assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param(
+            "mixin_ipc_shm_service", "", id="shm_plasma", marks=pytest.mark.arrow
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_mixin_ipc_shm_service(mosec_service, http_client):
+    resp = http_client.post("/inference", json={"size": 8})
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert len(resp.json().get("x")) == 8
+    assert resp.headers["content-type"] == "application/json"
 
 
 @pytest.mark.parametrize(
@@ -123,12 +133,6 @@ def test_mixin_typed_service(mosec_service, http_client):
     "mosec_service, http_client",
     [
         pytest.param("square_service", "", id="basic"),
-        pytest.param(
-            "square_service_shm",
-            "",
-            marks=pytest.mark.arrow,
-            id="shm_arrow",
-        ),
     ],
     indirect=["mosec_service", "http_client"],
 )
