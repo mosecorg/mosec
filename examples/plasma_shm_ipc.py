@@ -33,10 +33,10 @@ class DataProducer(PlasmaShmIPCMixin, Worker):
 
     def forward(self, data: dict) -> np.ndarray:
         try:
-            data_bytes = np.random.rand(int(data["size"]))
+            nums = np.random.rand(int(data["size"]))
         except KeyError as err:
             raise ValidationError(err) from err
-        return data_bytes
+        return nums
 
 
 class DataConsumer(PlasmaShmIPCMixin, Worker):
