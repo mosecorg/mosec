@@ -1,4 +1,4 @@
-# Copyright 2022 MOSEC Authors
+# Copyright 2023 MOSEC Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
 
 """Example: Using Plasma store with mosec mixin PlasmaShmIPCMixin.
 
-We start a subprocess for the redis server, and pass the url
+We start a subprocess for the Redis server, and pass the url
 to the redis client which serves as the shm mixin.
 We also register the redis server process as a daemon, so
-that when it exits the service is able to gracefully shutdown
-and restarted by the orchestrator.
+that when it exits the service is able to gracefully shut down
+and be restarted by the orchestrator.
 """
 
 import subprocess
