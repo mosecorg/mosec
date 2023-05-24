@@ -15,12 +15,16 @@
 """MOSEC type validation mixin."""
 
 import inspect
+import warnings
 from typing import Any, List
-
-import msgspec
 
 from mosec.errors import ValidationError
 from mosec.worker import Worker
+
+try:
+    import msgspec  # type: ignore
+except ImportError:
+    warnings.warn("msgpack is required for TypedMsgPackMixin", ImportWarning)
 
 
 def parse_forward_input_type(func):
