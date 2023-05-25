@@ -82,5 +82,5 @@ jobs:
       - name: Test pyarrow in Linux
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
-          apt install redis-server
+          sudo apt update && sudo apt install redis
           make test_arrow
