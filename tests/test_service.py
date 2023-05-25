@@ -37,9 +37,11 @@ def http_client():
 
 @pytest.fixture(scope="session")
 def mosec_service(request):
-    name = request.param
+    params = request.param.split(" ")
+    name = params[0]
+    args = " ".join(params[1:])
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{name}.py --port {TEST_PORT}"),
+        shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
     yield service
@@ -78,7 +80,10 @@ def test_square_service(mosec_service, http_client):
     "mosec_service, http_client",
     [
         pytest.param(
-            "mixin_ipc_shm_service", "", id="shm_plasma", marks=pytest.mark.arrow
+            "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.arrow
+        ),
+        pytest.param(
+            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.arrow
         ),
     ],
     indirect=["mosec_service", "http_client"],
