@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example: Using Plasma store with mosec mixin PlasmaShmIPCMixin.
+"""Example: Using Redis store with mosec mixin RedisShmIPCMixin.
 
 We start a subprocess for the Redis server, and pass the url
 to the redis client which serves as the shm mixin.
@@ -49,7 +49,7 @@ class DataConsumer(RedisShmIPCMixin, Worker):
 
 if __name__ == "__main__":
     with subprocess.Popen(["redis-server"]) as p:  # start the redis server
-        # configure the plasma service path
+        # configure the redis url
         RedisShmIPCMixin.set_redis_url("redis://localhost:6379/0")
 
         server = Server()

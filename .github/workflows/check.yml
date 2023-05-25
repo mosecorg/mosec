@@ -62,15 +62,6 @@ jobs:
         python-version: [3.8, 3.9, "3.10", "3.11"]
         os: [ubuntu-latest , macos-latest]
 
-    services:
-      redis:
-        image: redis
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -90,4 +81,6 @@ jobs:
           make semantic_lint test
       - name: Test pyarrow in Linux
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
-        run: make test_arrow
+        run: |
+          apt install redis-server
+          make test_arrow

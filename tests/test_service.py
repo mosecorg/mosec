@@ -40,7 +40,6 @@ def mosec_service(request):
     params = request.param.split(" ")
     name = params[0]
     args = " ".join(params[1:])
-    print(f"python -u tests/{name}.py {args} --port {TEST_PORT}")
     service = subprocess.Popen(
         shlex.split(f"python -u tests/{name}.py --port {TEST_PORT} {args}"),
     )
@@ -84,7 +83,7 @@ def test_square_service(mosec_service, http_client):
             "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.arrow
         ),
         pytest.param(
-            "mixin_ipc_shm_service redis", "", id="shm_plasma", marks=pytest.mark.arrow
+            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.arrow
         ),
     ],
     indirect=["mosec_service", "http_client"],
