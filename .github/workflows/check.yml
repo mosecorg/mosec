@@ -61,7 +61,15 @@ jobs:
       matrix:
         python-version: [3.8, 3.9, "3.10", "3.11"]
         os: [ubuntu-latest , macos-latest]
-        redis-version: [4, 5, 6]
+
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v3
@@ -71,10 +79,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Set up Redis ${{ matrix.redis-version }}
-        uses: supercharge/redis-github-action@1.5.0
-        with:
-          redis-version: ${{ matrix.redis-version }}
       - uses: ./.github/actions/cache
       - name: Install dependencies
         run: |
