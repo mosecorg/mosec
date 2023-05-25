@@ -41,7 +41,7 @@ def mosec_service(request):
     name = params[0]
     args = " ".join(params[1:])
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{name}.py --port {TEST_PORT} {args}"),
+        shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
     yield service
