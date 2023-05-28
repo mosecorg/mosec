@@ -20,7 +20,7 @@ mod metrics;
 mod protocol;
 mod tasks;
 
-use std::{env, fs::read_to_string, net::SocketAddr, str::FromStr};
+use std::{env, fs::read_to_string, net::SocketAddr, path::Path, str::FromStr};
 
 use axum::{
     extract::State,
@@ -228,7 +228,7 @@ struct RustApiDoc;
 
 #[tokio::main]
 async fn run(opts: &Opts) {
-    let python_schema = read_to_string(env::temp_dir().join(MOSEC_OPENAPI_PATH))
+    let python_schema = read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH))
         .expect("Failed to read python doc json");
     let api = MosecApiDoc {
         rust_api: RustApiDoc::openapi(),

@@ -41,10 +41,10 @@ IPC Wrapper
 
 import multiprocessing as mp
 import os
+import pathlib
 import shutil
 import signal
 import subprocess
-import tempfile
 import traceback
 from functools import partial
 from multiprocessing.synchronize import Event
@@ -395,9 +395,11 @@ class Server:
             "res_schema": res_schema,
             "schemas": schemas,
         }
-        tmp_path = os.path.join(tempfile.gettempdir(), MOSEC_OPENAPI_PATH)
-        with open(tmp_path, "w", encoding="utf-8") as file:
-            file.write(msgspec.json.encode(schema).decode("utf-8"))
+        tmp_path = pathlib.Path(os.path.join(self._configs["path"], MOSEC_OPENAPI_PATH))
+        tmp_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path.write_text(
+            msgspec.json.encode(schema).decode("utf-8"), encoding="utf-8"
+        )
 
     def run(self):
         """Start the mosec model server."""
