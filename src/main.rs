@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod apidoc;
 mod args;
 mod coordinator;
 mod errors;
@@ -19,7 +20,7 @@ mod metrics;
 mod protocol;
 mod tasks;
 
-use std::net::SocketAddr;
+use std::{env, fs::read_to_string, net::SocketAddr, str::FromStr};
 
 use axum::{
     extract::State,
@@ -38,23 +39,33 @@ use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::{filter, prelude::*, Layer};
+use utoipa::{openapi, OpenApi};
 
-use crate::args::Opts;
+use crate::apidoc::MosecApiDoc;
 use crate::coordinator::Coordinator;
 use crate::errors::ServiceError;
 use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
+use crate::{apidoc::InferenceSchemas, args::Opts};
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
-
+const MOSEC_OPENAPI_PATH: &str = "mosec_openapi.json";
 #[derive(Clone)]
 struct AppState {
     mime: String,
 }
 
+#[utoipa::path(
+    get,
+    path = "/",
+    responses(
+        (status = StatusCode::OK, description = "Get metrics",body=String),
+        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE",body=String)
+    )
+)]
 async fn index(_: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     if task_manager.is_shutdown() {
@@ -67,6 +78,13 @@ async fn index(_: Request<Body>) -> Response<Body> {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/metrics",
+    responses(
+        (status = StatusCode::OK, description = "Get metrics",body=String)
+    )
+)]
 async fn metrics(_: Request<Body>) -> Response<Body> {
     let mut encoded = String::new();
     let registry = REGISTRY.get().unwrap();
@@ -74,6 +92,32 @@ async fn metrics(_: Request<Body>) -> Response<Body> {
     build_response(StatusCode::OK, Bytes::from(encoded))
 }
 
+#[utoipa::path(
+    get,
+    path = "/openapi",
+    responses(
+        (status = StatusCode::OK, description = "Get Openapi Doc",body=String)
+    )
+)]
+async fn openapi(_: Request<Body>, doc: openapi::OpenApi) -> Response<Body> {
+    let s = serde_json::to_string(&doc).unwrap_or("Openapi generation failed".to_string());
+    build_response(StatusCode::OK, Bytes::from(s))
+}
+
+#[utoipa::path(
+    post,
+    request_body=InferenceRequest,
+    path = "/inference",
+    responses(
+        (status = StatusCode::OK, description = "Inference",body=InferenceResponse),
+        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
+        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
+        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
+        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
+        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
+    )
+)]
 async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
@@ -168,9 +212,29 @@ async fn shutdown_signal() {
         };
     }
 }
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        index,
+        metrics,
+        inference,
+        openapi,
+    ),
+    tags(
+        (name = "Mosec", description = "Mosec Open API Docs")
+    )
+)]
+struct RustApiDoc;
 
 #[tokio::main]
 async fn run(opts: &Opts) {
+    let python_schema = read_to_string(env::temp_dir().join(MOSEC_OPENAPI_PATH))
+        .expect("Failed to read python doc json");
+    let api = MosecApiDoc {
+        rust_api: RustApiDoc::openapi(),
+    }
+    .merge(InferenceSchemas::from_str(&python_schema).expect("failed to parse python doc json"));
+
     let state = AppState {
         mime: opts.mime.clone(),
     };
@@ -180,6 +244,7 @@ async fn run(opts: &Opts) {
 
     let app = Router::new()
         .route("/", get(index))
+        .route("/openapi", get(|req| openapi(req, api)))
         .route("/metrics", get(metrics))
         .route("/inference", post(inference))
         .with_state(state);

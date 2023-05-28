@@ -40,9 +40,11 @@ IPC Wrapper
 """
 
 import multiprocessing as mp
+import os
 import shutil
 import signal
 import subprocess
+import tempfile
 import traceback
 from functools import partial
 from multiprocessing.synchronize import Event
@@ -50,6 +52,7 @@ from pathlib import Path
 from time import monotonic, sleep
 from typing import Dict, List, Optional, Type, Union
 
+import msgspec
 import pkg_resources
 
 from mosec.args import mosec_args
@@ -58,6 +61,11 @@ from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
+from mosec.mixin.typed_worker import (
+    TypedMsgPackMixin,
+    parse_cls_param_typ,
+    parse_cls_return_typ,
+)
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -65,6 +73,8 @@ logger = get_internal_logger()
 
 GUARD_CHECK_INTERVAL = 1
 NEW_PROCESS_METHOD = {"spawn", "fork"}
+MOSEC_REF_TEMPLATE = "#/components/schemas/{name}"
+MOSEC_OPENAPI_PATH = "mosec_openapi.json"
 
 
 class Server:
@@ -363,6 +373,32 @@ class Server:
         self._coordinator_ctx.append(start_method)
         self._coordinator_pools.append([None] * num)
 
+    def _generate_openapi(self):
+        """Generate the OpenAPI specification."""
+        if not self._worker_cls:
+            return
+        req_w, res_w = self._worker_cls[0], self._worker_cls[-1]
+        if not (
+            issubclass(req_w, TypedMsgPackMixin)
+            and issubclass(res_w, TypedMsgPackMixin)
+        ):
+            return
+        req_typ, res_typ = parse_cls_param_typ(req_w.forward), parse_cls_return_typ(
+            res_w.forward
+        )
+        schema, schemas = msgspec.json.schema_components(
+            [req_typ, res_typ], MOSEC_REF_TEMPLATE
+        )
+        req_schema, res_schema = schema
+        schema = {
+            "req_schema": req_schema,
+            "res_schema": res_schema,
+            "schemas": schemas,
+        }
+        tmp_path = os.path.join(tempfile.gettempdir(), MOSEC_OPENAPI_PATH)
+        with open(tmp_path, "w", encoding="utf-8") as file:
+            file.write(msgspec.json.encode(schema).decode("utf-8"))
+
     def run(self):
         """Start the mosec model server."""
         self._validate_server()
@@ -376,6 +412,7 @@ class Server:
 
         self._handle_signal()
         self._start_controller()
+        self._generate_openapi()
         try:
             self._manage_coordinators()
         # pylint: disable=broad-except
