@@ -413,8 +413,8 @@ class Server:
             return
 
         self._handle_signal()
-        self._start_controller()
         self._generate_openapi()
+        self._start_controller()
         try:
             self._manage_coordinators()
         # pylint: disable=broad-except
