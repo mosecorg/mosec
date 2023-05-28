@@ -21,7 +21,7 @@ use utoipa::openapi::{
     PathItemType, RefOr, ResponseBuilder, Responses, Schema,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub(crate) struct InferenceSchemas {
     req_schema: RefOr<Schema>,
     res_schema: RefOr<Schema>,

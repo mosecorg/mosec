@@ -20,7 +20,7 @@ mod metrics;
 mod protocol;
 mod tasks;
 
-use std::{env, fs::read_to_string, net::SocketAddr, path::Path, str::FromStr};
+use std::{env, fs::read_to_string, net::SocketAddr, path::Path};
 
 use axum::{
     extract::State,
@@ -42,11 +42,11 @@ use tracing_subscriber::{filter, prelude::*, Layer};
 use utoipa::{openapi, OpenApi};
 
 use crate::apidoc::MosecApiDoc;
+use crate::args::Opts;
 use crate::coordinator::Coordinator;
 use crate::errors::ServiceError;
 use crate::metrics::Metrics;
 use crate::tasks::{TaskCode, TaskManager};
-use crate::{apidoc::InferenceSchemas, args::Opts};
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
@@ -228,12 +228,12 @@ struct RustApiDoc;
 
 #[tokio::main]
 async fn run(opts: &Opts) {
-    let python_schema = read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH))
-        .expect("Failed to read python doc json");
+    let python_schema =
+        read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
     let api = MosecApiDoc {
         rust_api: RustApiDoc::openapi(),
     }
-    .merge(InferenceSchemas::from_str(&python_schema).expect("failed to parse python doc json"));
+    .merge(python_schema.parse().unwrap_or_default());
 
     let state = AppState {
         mime: opts.mime.clone(),
