@@ -31,9 +31,7 @@ def build():
     base(dev=True)
     install.conda()
     install.python()
-    install.python_packages(requirements="requirements/dev.txt")
     rust()
-    # run(["make install"], mount_host=True)
     runtime.init(["make install"])
 
 
