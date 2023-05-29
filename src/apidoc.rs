@@ -24,7 +24,7 @@ use utoipa::openapi::{
 #[derive(Deserialize, Default)]
 pub(crate) struct InferenceSchemas {
     req_schema: RefOr<Schema>,
-    res_schema: RefOr<Schema>,
+    resp_schema: RefOr<Schema>,
     schemas: BTreeMap<String, RefOr<Schema>>,
 }
 
@@ -36,7 +36,8 @@ impl FromStr for InferenceSchemas {
 }
 
 pub(crate) struct MosecApiDoc {
-    pub rust_api: OpenApi,
+    pub api: OpenApi,
+    pub mime: String,
 }
 
 impl MosecApiDoc {
@@ -80,31 +81,33 @@ impl MosecApiDoc {
 
     fn merge_request(&self, req_body: &mut RequestBody, req_schema: RefOr<Schema>) {
         let content = ContentBuilder::new().schema(req_schema).build();
-        req_body
-            .content
-            .insert("application/json".to_string(), content);
+        req_body.content.insert(self.mime.clone(), content);
     }
 
-    fn merge_response(&self, response: &mut Responses, res_schema: RefOr<Schema>) {
+    fn merge_response(&self, response: &mut Responses, resp_schema: RefOr<Schema>) {
         let ok_res = ResponseBuilder::new()
-            .content("application/json", Content::new(res_schema))
+            .content(self.mime.clone(), Content::new(resp_schema))
             .build();
         response
             .responses
             .insert(StatusCode::OK.as_str().to_string(), RefOr::from(ok_res));
     }
 
-    pub fn merge(&self, python_schema: InferenceSchemas) -> OpenApi {
-        let mut api = self.rust_api.clone();
+    pub fn merge(&self, route: &str, python_schema: InferenceSchemas) -> Self {
+        // merge InferenceSchemas of target route
+        let mut api = self.api.clone();
         self.merge_schemas(&mut api, python_schema.schemas.clone());
 
         let req_body = self
-            .get_route_request_body(&mut api, "/inference", &PathItemType::Post)
+            .get_route_request_body(&mut api, route, &PathItemType::Post)
             .unwrap();
         self.merge_request(req_body, python_schema.req_schema);
 
-        let response = self.get_route_responses(&mut api, "/inference", &PathItemType::Post);
-        self.merge_response(response, python_schema.res_schema);
-        api
+        let response = self.get_route_responses(&mut api, route, &PathItemType::Post);
+        self.merge_response(response, python_schema.resp_schema);
+        MosecApiDoc {
+            api: api,
+            mime: self.mime.clone(),
+        }
     }
 }

@@ -62,7 +62,7 @@ struct AppState {
     get,
     path = "/",
     responses(
-        (status = StatusCode::OK, description = "Get metrics",body=String),
+        (status = StatusCode::OK, description = "Root path, can be used for liveness health check",body=String),
         (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE",body=String)
     )
 )]
@@ -230,10 +230,11 @@ struct RustApiDoc;
 async fn run(opts: &Opts) {
     let python_schema =
         read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
-    let api = MosecApiDoc {
-        rust_api: RustApiDoc::openapi(),
+    let doc = MosecApiDoc {
+        api: RustApiDoc::openapi(),
+        mime: opts.mime.clone(),
     }
-    .merge(python_schema.parse().unwrap_or_default());
+    .merge("/inference", python_schema.parse().unwrap_or_default());
 
     let state = AppState {
         mime: opts.mime.clone(),
@@ -244,7 +245,7 @@ async fn run(opts: &Opts) {
 
     let app = Router::new()
         .route("/", get(index))
-        .route("/openapi", get(|req| openapi(req, api)))
+        .route("/openapi", get(|req| openapi(req, doc.api)))
         .route("/metrics", get(metrics))
         .route("/inference", post(inference))
         .with_state(state);

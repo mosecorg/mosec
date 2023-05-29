@@ -46,13 +46,13 @@ import shutil
 import signal
 import subprocess
 import traceback
+import warnings
 from functools import partial
 from multiprocessing.synchronize import Event
 from pathlib import Path
 from time import monotonic, sleep
 from typing import Dict, List, Optional, Type, Union
 
-import msgspec
 import pkg_resources
 
 from mosec.args import mosec_args
@@ -61,11 +61,7 @@ from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.mixin.typed_worker import (
-    TypedMsgPackMixin,
-    parse_cls_param_typ,
-    parse_cls_return_typ,
-)
+from mosec.mixin.typed_worker import parse_cls_param_typ, parse_cls_return_typ
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -377,29 +373,26 @@ class Server:
         """Generate the OpenAPI specification."""
         if not self._worker_cls:
             return
-        req_w, res_w = self._worker_cls[0], self._worker_cls[-1]
-        if not (
-            issubclass(req_w, TypedMsgPackMixin)
-            and issubclass(res_w, TypedMsgPackMixin)
-        ):
+        # pylint: disable=import-outside-toplevel
+        try:
+            import msgspec
+        except ImportError:
+            warnings.warn("msgpack is required for generate_openapi", ImportWarning)
             return
-        req_typ, res_typ = parse_cls_param_typ(req_w.forward), parse_cls_return_typ(
-            res_w.forward
+        req_w, resp_w = self._worker_cls[0], self._worker_cls[-1]
+        req_typ = parse_cls_param_typ(req_w.forward)
+        resp_typ = parse_cls_return_typ(resp_w.forward)
+        (req_schema, resp_schema), schemas = msgspec.json.schema_components(
+            [req_typ, resp_typ], MOSEC_REF_TEMPLATE
         )
-        schema, schemas = msgspec.json.schema_components(
-            [req_typ, res_typ], MOSEC_REF_TEMPLATE
-        )
-        req_schema, res_schema = schema
         schema = {
             "req_schema": req_schema,
-            "res_schema": res_schema,
+            "resp_schema": resp_schema,
             "schemas": schemas,
         }
         tmp_path = pathlib.Path(os.path.join(self._configs["path"], MOSEC_OPENAPI_PATH))
         tmp_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path.write_text(
-            msgspec.json.encode(schema).decode("utf-8"), encoding="utf-8"
-        )
+        tmp_path.write_bytes(msgspec.json.encode(schema))
 
     def run(self):
         """Start the mosec model server."""

@@ -27,7 +27,7 @@ except ImportError:
     warnings.warn("msgpack is required for TypedMsgPackMixin", ImportWarning)
 
 
-def parse_forward_input_type(func, target="parameters", index=0):
+def parse_forward_type(func, target="parameters", index=0):
     """Parse the input type of the forward function.
 
     - single request: return the type
@@ -36,15 +36,13 @@ def parse_forward_input_type(func, target="parameters", index=0):
     sig = inspect.signature(func)
     if target == "parameters":
         params = list(sig.parameters.values())
-        if len(params) < 1:
-            raise TypeError("`forward` method doesn't have enough(1) parameters")
+        if len(params) < index + 1:
+            raise TypeError(
+                f"`forward` method doesn't have enough({index + 1}) parameters"
+            )
         typ = params[index].annotation
     else:
         typ = sig.return_annotation
-        if typ is inspect.Signature.empty:
-            raise TypeError("`forward` method doesn't have return annotation")
-        if not inspect.isclass(typ):
-            typ = msgspec.inspect.type_info(typ).__class__
 
     origin = getattr(typ, "__origin__", None)
     if origin is None:
@@ -62,17 +60,17 @@ def parse_forward_input_type(func, target="parameters", index=0):
 
 def parse_instance_param_typ(func):
     """Parse the input type of the forward function for instance."""
-    return parse_forward_input_type(func, "parameters", 0)
+    return parse_forward_type(func, "parameters", 0)
 
 
 def parse_cls_param_typ(func):
     """Parse the input type of the forward function for class."""
-    return parse_forward_input_type(func, "parameters", 1)
+    return parse_forward_type(func, "parameters", 1)
 
 
 def parse_cls_return_typ(func):
     """Parse the return type of the forward function for class."""
-    return parse_forward_input_type(func, "return")
+    return parse_forward_type(func, "return")
 
 
 class TypedMsgPackMixin(Worker):
