@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/38581401/134487662-49733d45-2ba0-4c19-aa07-1f43fd35c453.png" height="230" alt="MOSEC" />
+  <img src="https://user-images.githubusercontent.com/38581401/240117836-f06199ba-c80d-413a-9cb4-5adc76316bda.png" height="230" alt="MOSEC" />
 </p>
 
 <p align="center">
@@ -28,6 +28,10 @@
 </p>
 
 ## Introduction
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/38581401/234162688-efd74e46-4063-4624-ac32-b197e4d8e56b.png" height="230" alt="MOSEC" />
+</p>
 
 Mosec is a high-performance and flexible model serving framework for building ML model-enabled backend and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
 
@@ -117,7 +121,7 @@ Finally, we append the worker to the server to construct a *single-stage* workfl
 ```python
 if __name__ == "__main__":
     server = Server()
-    # 1) `num` specify the number of processes that will be spawned to run in parallel.
+    # 1) `num` specifies the number of processes that will be spawned to run in parallel.
     # 2) By configuring the `max_batch_size` with the value > 1, the input data in your
     # `forward` function will be a list (batch); otherwise, it's a single item.
     server.append_worker(StableDiffusion, num=1, max_batch_size=4, max_wait_time=10)
@@ -159,6 +163,7 @@ That's it! You have just hosted your **_stable-diffusion model_** as a service! 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/examples/index.html) section. It includes:
 
 - [Multi-stage workflow demo](https://mosecorg.github.io/mosec/examples/echo.html): a simple echo demo even without any ML model.
+- [Request validation](https://mosecorg.github.io/mosec/examples/validate.html): validate the request with type annotation.
 - [Shared memory IPC](https://mosecorg.github.io/mosec/examples/ipc.html): inter-process communication with shared memory.
 - [Customized GPU allocation](https://mosecorg.github.io/mosec/examples/env.html): deploy multiple replicas, each using different GPUs.
 - [Customized metrics](https://mosecorg.github.io/mosec/examples/metric.html): record your own metrics for monitoring.
@@ -192,8 +197,10 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 
 Here are some of the companies and individual users that are using Mosec:
 
-- [MOSS](https://txsun1997.github.io/blogs/moss.html): An open sourced conversational language model like ChatGPT.
-- [TensorChord](https://tensorchord.ai/): A platform for building and deploying AI models.
+- [Modelz](https://modelz.ai): Serverless platform for ML inference.
+- [MOSS](https://github.com/OpenLMLab/MOSS/blob/main/README_en.md): An open sourced conversational language model like ChatGPT.
+- [TencentCloud](https://www.tencentcloud.com/document/product/1141/45261): Tencent Cloud Machine Learning Platform, using Mosec as the [core inference server framework](https://cloud.tencent.com/document/product/851/74148).
+- [TensorChord](https://github.com/tensorchord): Cloud native AI infrastructure company.
 
 ## Citation
 
@@ -213,22 +220,3 @@ If you find this software useful for your research, please consider citing
 We welcome any kind of contribution. Please give us feedback by [raising issues](https://github.com/mosecorg/mosec/issues/new/choose) or discussing on [Discord](https://discord.gg/Jq5vxuH69W). You could also directly [contribute](https://mosecorg.github.io/mosec/development/contributing.html) your code and pull request!
 
 To start develop, you can use [envd](https://github.com/tensorchord/envd) to create an isolated and clean Python & Rust environment. Check the [envd-docs](https://envd.tensorchord.ai/) or [build.envd](https://github.com/mosecorg/mosec/blob/main/build.envd) for more information.
-
-## Qualitative Comparison<sup>\*</sup>
-
-|                                                             | Batcher | Pipeline | Parallel | I/O Format<sup>(1)</sup>                                                                                                                    | Framework<sup>(2)</sup> | Backend | Activity                                                                      |
-| ----------------------------------------------------------- | :-----: | :------: | :------: | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------- |
-| [TF Serving](https://github.com/tensorflow/serving)         |    ✅    |    ✅     |    ✅     | Limited<a href="https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/api_rest.md#request-format-1"><sup>(a)</sup></a> | Heavily TF              | C++     | ![](https://img.shields.io/github/last-commit/tensorflow/serving)             |
-| [Triton](https://github.com/triton-inference-server/server) |    ✅    |    ✅     |    ✅     | Limited                                                                                                                                     | Multiple                | C++     | ![](https://img.shields.io/github/last-commit/triton-inference-server/server) |
-| [MMS](https://github.com/awslabs/multi-model-server)        |    ✅    |    ❌     |    ✅     | Limited                                                                                                                                     | Heavily MX              | Java    | ![](https://img.shields.io/github/last-commit/awslabs/multi-model-server)     |
-| [BentoML](https://github.com/bentoml/BentoML)               |    ✅    |    ❌     |    ❌     | Limited<a href="https://docs.bentoml.org/en/latest/reference/api_io_descriptors.html"><sup>(b)</sup></a>                              | Multiple                | Python  | ![](https://img.shields.io/github/last-commit/bentoml/BentoML)                |
-| [Streamer](https://github.com/ShannonAI/service-streamer)   |    ✅    |    ❌     |    ✅     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/ShannonAI/service-streamer)     |
-| [Flask](https://github.com/pallets/flask)<sup>(3)</sup>     |    ❌    |    ❌     |    ❌     | Customizable                                                                                                                                | Agnostic                | Python  | ![](https://img.shields.io/github/last-commit/pallets/flask)                  |
-| **[Mosec](https://github.com/mosecorg/mosec)**              |    ✅    |    ✅     |    ✅     | Customizable                                                                                                                                | Agnostic                | Rust    | ![](https://img.shields.io/github/last-commit/mosecorg/mosec)                 |
-
-
-<sup>\*As accessed on 08 Oct 2021. By no means is this comparison showing that other frameworks are inferior, but rather it is used to illustrate the trade-off. The information is not guaranteed to be absolutely accurate. Please let us know if you find anything that may be incorrect.</sup>
-
-<sup>**(1)**: Data format of the service's request and response. "Limited" in the sense that the framework has pre-defined requirements on the format.</sup>
-<sup>**(2)**: Supported machine learning frameworks. "Heavily" means the serving framework is designed towards a specific ML framework. Thus it is hard, if not impossible, to adapt to others. "Multiple" means the serving framework provides adaptation to several existing ML frameworks. "Agnostic" means the serving framework does not necessarily care about the ML framework. Hence it supports all ML frameworks (in Python).</sup>
-<sup>**(3)**: Flask is a representative of general purpose web frameworks to host ML models.</sup>

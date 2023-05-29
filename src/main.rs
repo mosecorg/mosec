@@ -22,8 +22,10 @@ mod tasks;
 
 use std::net::SocketAddr;
 
-use axum::routing::{get, post};
-use axum::Router;
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
@@ -31,7 +33,7 @@ use tracing_subscriber::{filter, prelude::*, Layer};
 
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
-use crate::routes::{index, inference, metrics, sse_inference};
+use crate::routes::{index, inference, metrics, sse_inference, AppState};
 use crate::tasks::TaskManager;
 
 async fn shutdown_signal() {
@@ -57,6 +59,9 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn run(opts: &Opts) {
+    let state = AppState {
+        mime: opts.mime.clone(),
+    };
     let coordinator = Coordinator::init_from_opts(opts);
     let barrier = coordinator.run();
     barrier.wait().await;
@@ -65,7 +70,8 @@ async fn run(opts: &Opts) {
         .route("/", get(index))
         .route("/metrics", get(metrics))
         .route("/inference", post(inference))
-        .route("/sse_inference", post(sse_inference));
+        .route("/sse_inference", post(sse_inference))
+        .with_state(state);
 
     let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
     info!(?addr, "http service is running");

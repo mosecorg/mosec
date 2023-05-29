@@ -2,6 +2,7 @@ include Cargo.*
 include src/*.rs
 include CITATION.cff
 include LICENSE
+include license.json
 include README.md
 include mosec/py.typed
 

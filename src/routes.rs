@@ -1,24 +1,30 @@
-use std::convert::Infallible;
 use std::time::Duration;
 
-use async_stream::stream;
 use axum::body::BoxBody;
+use axum::extract::State;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use futures::Stream;
-use hyper::service::Service;
-use hyper::{body::to_bytes, header::HeaderValue, Body, Request, Response, StatusCode};
-use prometheus::{Encoder, TextEncoder};
+use hyper::{
+    body::to_bytes,
+    header::{HeaderValue, CONTENT_TYPE},
+    Body, Request, Response, StatusCode,
+};
+use prometheus_client::encoding::text::encode;
 
 use crate::errors::ServiceError;
-use crate::metrics::Metrics;
+use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
 use crate::tasks::{TaskCode, TaskManager};
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
+
+#[derive(Clone)]
+pub(crate) struct AppState {
+    pub mime: String,
+}
 
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
     Response::builder()
@@ -41,14 +47,13 @@ pub(crate) async fn index(_: Request<Body>) -> Response<Body> {
 }
 
 pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
-    let encoder = TextEncoder::new();
-    let metrics = prometheus::gather();
-    let mut buffer = vec![];
-    encoder.encode(&metrics, &mut buffer).unwrap();
-    build_response(StatusCode::OK, Bytes::from(buffer))
+    let mut encoded = String::new();
+    let registry = REGISTRY.get().unwrap();
+    encode(&mut encoded, registry).unwrap();
+    build_response(StatusCode::OK, Bytes::from(encoded))
 }
 
-pub(crate) async fn inference(req: Request<Body>) -> Response<Body> {
+pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
     let metrics = Metrics::global();
@@ -74,7 +79,11 @@ pub(crate) async fn inference(req: Request<Body>) -> Response<Body> {
                     // Record latency only for successful tasks
                     metrics
                         .duration
-                        .with_label_values(&["total", "total"])
+                        .get_or_create(
+                            DURATION_LABEL
+                                .get()
+                                .expect("DURATION_LABEL is not initialized"),
+                        )
                         .observe(task.create_at.elapsed().as_secs_f64());
                     StatusCode::OK
                 }
@@ -97,10 +106,17 @@ pub(crate) async fn inference(req: Request<Body>) -> Response<Body> {
     metrics.remaining_task.dec();
     metrics
         .throughput
-        .with_label_values(&[status.as_str()])
+        .get_or_create(&CodeLabel {
+            code: status.as_u16(),
+        })
         .inc();
 
-    build_response(status, content)
+    let mut resp = build_response(status, content);
+    if status == StatusCode::OK {
+        resp.headers_mut()
+            .insert(CONTENT_TYPE, HeaderValue::from_str(&state.mime).unwrap());
+    }
+    resp
 }
 
 pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
@@ -124,7 +140,7 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
     match task_manager.submit_sse_task(data).await {
         Ok((task, mut rx)) => {
             let stream = async_stream::stream! {
-                while let Some(_) = rx.recv().await {
+                while let Some(_msg) = rx.recv().await {
                     yield match task.code {
                         TaskCode::Normal => Ok(Event::default().data(String::from_utf8_lossy(&task.data))),
                         _ => Err(ServiceError::SseError),

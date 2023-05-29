@@ -130,7 +130,7 @@ impl TaskManager {
         data: Bytes,
     ) -> Result<(Task, mpsc::Receiver<()>), ServiceError> {
         let (id, rx) = self.add_new_task(data)?;
-        let (sender, receiver) = mpsc::channel(16);
+        let (_sender, receiver) = mpsc::channel(16);
         if let Err(err) = time::timeout(self.timeout, rx).await {
             warn!(%id, %err, "task was not completed in the expected time");
             {

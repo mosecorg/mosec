@@ -29,13 +29,15 @@ from mosec.errors import DecodingError, EncodingError
 try:
     import msgpack  # type: ignore
 except ImportError:
-    warnings.warn("msgpack is required for MsgpackWorker", ImportWarning)
+    warnings.warn("msgpack is required for MsgpackMixin", ImportWarning)
 
 
 class MsgpackMixin:
     """Msgpack worker mixin interface."""
 
     # pylint: disable=no-self-use
+
+    resp_mime_type = "application/msgpack"
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with msgpack for the last stage (egress).
@@ -54,7 +56,7 @@ class MsgpackMixin:
             data_bytes = msgpack.packb(data)
         except Exception as err:
             raise EncodingError from err
-        return data_bytes
+        return data_bytes  # type: ignore
 
     def deserialize(self, data: bytes) -> Any:
         """Deserialize method for the first stage (ingress).

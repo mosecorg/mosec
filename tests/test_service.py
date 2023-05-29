@@ -21,6 +21,7 @@ from http import HTTPStatus
 from threading import Thread
 
 import httpx
+import msgpack  # type: ignore
 import pytest
 
 from tests.utils import wait_for_port_open
@@ -36,9 +37,11 @@ def http_client():
 
 @pytest.fixture(scope="session")
 def mosec_service(request):
-    name = request.param
+    params = request.param.split(" ")
+    name = params[0]
+    args = " ".join(params[1:])
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{name}.py --port {TEST_PORT}"),
+        shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
     yield service
@@ -50,12 +53,6 @@ def mosec_service(request):
     "mosec_service, http_client",
     [
         pytest.param("square_service", "", id="basic"),
-        pytest.param(
-            "square_service_shm",
-            "",
-            marks=pytest.mark.arrow,
-            id="shm_arrow",
-        ),
     ],
     indirect=["mosec_service", "http_client"],
 )
@@ -82,6 +79,25 @@ def test_square_service(mosec_service, http_client):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
+        pytest.param(
+            "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.arrow
+        ),
+        pytest.param(
+            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.arrow
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_mixin_ipc_shm_service(mosec_service, http_client):
+    resp = http_client.post("/inference", json={"size": 8})
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert len(resp.json().get("x")) == 8
+    assert resp.headers["content-type"] == "application/json"
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
         pytest.param("mixin_numbin_service", "", id="numbin"),
     ],
     indirect=["mosec_service", "http_client"],
@@ -90,18 +106,38 @@ def test_mixin_ipc_service(mosec_service, http_client):
     resp = http_client.post("/inference", json={"num": 8})
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.json() == "equal"
+    assert resp.headers["content-type"] == "application/json"
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("mixin_typed_service", "", id="typed"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_mixin_typed_service(mosec_service, http_client):
+    resp = http_client.post(
+        "/inference",
+        content=msgpack.packb(
+            {
+                "media": "text",
+                "binary": b"hello mosec",
+            }
+        ),
+    )
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.headers["content-type"] == "application/msgpack"
+    assert msgpack.unpackb(resp.content) == 11
+
+    resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, resp
 
 
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
         pytest.param("square_service", "", id="basic"),
-        pytest.param(
-            "square_service_shm",
-            "",
-            marks=pytest.mark.arrow,
-            id="shm_arrow",
-        ),
     ],
     indirect=["mosec_service", "http_client"],
 )

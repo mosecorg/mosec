@@ -2,11 +2,13 @@ setuptools_scm>=7
 pytest>=6
 pytest-mock>=3.5
 mypy>=0.910
-pyright>=1.1.290
+pyright>=1.1.290,<=1.1.308
 pylint>=2.13.8
 pydocstyle>=6.1.1
 black>=20.8.0
 isort>=5.6
 autoflake>=1.4
 pre-commit>=2.15.0
-httpx==0.24.0
+msgpack>=1.0.5
+numpy>=1.24
+httpx==0.24.1

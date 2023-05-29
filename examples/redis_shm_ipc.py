@@ -1,4 +1,4 @@
-# Copyright 2022 MOSEC Authors
+# Copyright 2023 MOSEC Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Example: Using Plasma store with mosec mixin PlasmaShmIPCMixin.
+"""Example: Using Redis store with mosec mixin RedisShmIPCMixin.
 
-We start a subprocess for the plasma server, and pass the path
-to the plasma client which serves as the shm mixin.
-We also register the plasma server process as a daemon, so
-that when it exits the service is able to gracefully shutdown
-and restarted by the orchestrator.
+We start a subprocess for the Redis server, and pass the url
+to the redis client which serves as the shm mixin.
+We also register the redis server process as a daemon, so
+that when it exits the service is able to gracefully shut down
+and be restarted by the orchestrator.
 """
 
+import subprocess
+
 import numpy as np
-from pyarrow import plasma  # type: ignore
 
 from mosec import Server, ValidationError, Worker
-from mosec.mixin import PlasmaShmIPCMixin
+from mosec.mixin import RedisShmIPCMixin
 
 
-class DataProducer(PlasmaShmIPCMixin, Worker):
+class DataProducer(RedisShmIPCMixin, Worker):
     """Sample Data Producer."""
 
     def forward(self, data: dict) -> np.ndarray:
@@ -39,7 +40,7 @@ class DataProducer(PlasmaShmIPCMixin, Worker):
         return nums
 
 
-class DataConsumer(PlasmaShmIPCMixin, Worker):
+class DataConsumer(RedisShmIPCMixin, Worker):
     """Sample Data Consumer."""
 
     def forward(self, data: np.ndarray) -> dict:
@@ -47,17 +48,13 @@ class DataConsumer(PlasmaShmIPCMixin, Worker):
 
 
 if __name__ == "__main__":
-    # 200 Mb store, adjust the size according to your requirement
-    with plasma.start_plasma_store(plasma_store_memory=200 * 1000 * 1000) as (
-        shm_path,
-        shm_process,
-    ):
-        # configure the plasma service path
-        PlasmaShmIPCMixin.set_plasma_path(shm_path)
+    with subprocess.Popen(["redis-server"]) as p:  # start the redis server
+        # configure the redis url
+        RedisShmIPCMixin.set_redis_url("redis://localhost:6379/0")
 
         server = Server()
         # register this process to be monitored
-        server.register_daemon("plasma_server", shm_process)
+        server.register_daemon("redis-server", p)
         server.append_worker(DataProducer, num=2)
         server.append_worker(DataConsumer, num=2)
         server.run()

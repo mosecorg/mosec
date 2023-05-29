@@ -45,9 +45,10 @@ jobs:
       - name: install node for pyright
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
       - name: install pyright
-        run: npm install -g pyright
+        # due to https://github.com/microsoft/pyright/issues/5126
+        run: npm install -g pyright@1.1.308
       - name: Lint
         run: make lint
 
@@ -58,7 +59,7 @@ jobs:
     strategy:
       max-parallel: 10
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10", "3.11"]
+        python-version: [3.8, 3.9, "3.10", "3.11"]
         os: [ubuntu-latest , macos-latest]
 
     steps:
@@ -73,11 +74,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev,plugin]
+          pip install -e .[dev,mixin]
           make dev
       - name: Test
         run: |
           make semantic_lint test
       - name: Test pyarrow in Linux
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
-        run: make test_arrow
+        run: |
+          sudo apt update && sudo apt install redis
+          make test_arrow
