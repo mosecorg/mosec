@@ -87,5 +87,5 @@ convention = "google"
 
 [tool.pytest.ini_options]
 markers = [
-    "arrow: mark a test requires 'pyarrow'",
+    "shm: mark a test is related to shared memory",
 ]
