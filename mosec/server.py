@@ -52,7 +52,7 @@ from typing import Dict, List, Optional, Type, Union
 
 import pkg_resources
 
-from mosec.args import mosec_args
+from mosec.args import parse_arguments
 from mosec.coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
 from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
@@ -102,7 +102,7 @@ class Server:
 
         self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
 
-        self._configs: dict = vars(mosec_args)
+        self._configs: dict = vars(parse_arguments())
 
         self._server_shutdown: bool = False
 

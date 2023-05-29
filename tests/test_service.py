@@ -80,10 +80,10 @@ def test_square_service(mosec_service, http_client):
     "mosec_service, http_client",
     [
         pytest.param(
-            "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.arrow
+            "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.shm
         ),
         pytest.param(
-            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.arrow
+            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.shm
         ),
     ],
     indirect=["mosec_service", "http_client"],
