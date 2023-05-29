@@ -106,7 +106,7 @@ impl MosecApiDoc {
         let response = self.get_route_responses(&mut api, route, &PathItemType::Post);
         self.merge_response(response, python_schema.resp_schema);
         MosecApiDoc {
-            api: api,
+            api,
             mime: self.mime.clone(),
         }
     }
