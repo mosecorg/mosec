@@ -14,30 +14,31 @@
 
 use std::{collections::BTreeMap, str::FromStr};
 
-use hyper::StatusCode;
 use serde::Deserialize;
 use utoipa::openapi::{
-    path::Operation, request_body::RequestBody, Components, Content, ContentBuilder, OpenApi,
-    PathItemType, RefOr, ResponseBuilder, Responses, Schema,
+    path::Operation, request_body::RequestBody, Components, OpenApi, PathItemType, RefOr, Response,
+    Responses, Schema,
 };
 
 #[derive(Deserialize, Default)]
-pub(crate) struct InferenceSchemas {
-    req_schema: RefOr<Schema>,
-    resp_schema: RefOr<Schema>,
-    schemas: BTreeMap<String, RefOr<Schema>>,
+pub(crate) struct PythonApiDoc {
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    request_body: Option<RequestBody>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    responses: Option<BTreeMap<String, RefOr<Response>>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    schemas: Option<BTreeMap<String, RefOr<Schema>>>,
 }
 
-impl FromStr for InferenceSchemas {
+impl FromStr for PythonApiDoc {
     type Err = serde_json::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str::<InferenceSchemas>(s)
+        serde_json::from_str::<PythonApiDoc>(s)
     }
 }
 
 pub(crate) struct MosecApiDoc {
     pub api: OpenApi,
-    pub mime: String,
 }
 
 impl MosecApiDoc {
@@ -58,6 +59,9 @@ impl MosecApiDoc {
         method: &PathItemType,
     ) -> Option<&'a mut RequestBody> {
         let op = self.get_operation(api, route, method).unwrap();
+        if op.request_body.is_none() {
+            op.request_body = Some(RequestBody::default());
+        }
         op.request_body.as_mut()
     }
 
@@ -71,43 +75,33 @@ impl MosecApiDoc {
         &mut op.responses
     }
 
-    fn merge_schemas(&self, api: &mut OpenApi, mut other_schemas: BTreeMap<String, RefOr<Schema>>) {
-        if api.components.is_none() {
-            api.components = Some(Components::default());
-        }
-        let schemas = &mut api.components.as_mut().unwrap().schemas;
-        schemas.append(&mut other_schemas);
-    }
-
-    fn merge_request(&self, req_body: &mut RequestBody, req_schema: RefOr<Schema>) {
-        let content = ContentBuilder::new().schema(req_schema).build();
-        req_body.content.insert(self.mime.clone(), content);
-    }
-
-    fn merge_response(&self, response: &mut Responses, resp_schema: RefOr<Schema>) {
-        let ok_res = ResponseBuilder::new()
-            .content(self.mime.clone(), Content::new(resp_schema))
-            .build();
-        response
-            .responses
-            .insert(StatusCode::OK.as_str().to_string(), RefOr::from(ok_res));
-    }
-
-    pub fn merge(&self, route: &str, python_schema: InferenceSchemas) -> Self {
-        // merge InferenceSchemas of target route
+    pub fn merge(&self, route: &str, python_api: PythonApiDoc) -> Self {
+        // merge PythonApiDoc of target route to mosec api
         let mut api = self.api.clone();
-        self.merge_schemas(&mut api, python_schema.schemas.clone());
 
-        let req_body = self
-            .get_route_request_body(&mut api, route, &PathItemType::Post)
-            .unwrap();
-        self.merge_request(req_body, python_schema.req_schema);
+        if let Some(mut other_schemas) = python_api.schemas {
+            if api.components.is_none() {
+                api.components = Some(Components::default());
+            }
+            api.components
+                .as_mut()
+                .unwrap()
+                .schemas
+                .append(&mut other_schemas);
+        };
 
-        let response = self.get_route_responses(&mut api, route, &PathItemType::Post);
-        self.merge_response(response, python_schema.resp_schema);
-        MosecApiDoc {
-            api,
-            mime: self.mime.clone(),
-        }
+        if let Some(req) = python_api.request_body {
+            let req_body = self
+                .get_route_request_body(&mut api, route, &PathItemType::Post)
+                .unwrap();
+            *req_body = req;
+        };
+
+        if let Some(mut responses) = python_api.responses {
+            let response = self.get_route_responses(&mut api, route, &PathItemType::Post);
+            response.responses.append(&mut responses);
+        };
+
+        MosecApiDoc { api }
     }
 }

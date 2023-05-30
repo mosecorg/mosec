@@ -56,7 +56,7 @@ class JittedInference(Worker):
         else:
             self.batch_forward = self._batch_forward
 
-    def _forward(self, x_single: jnp.ndarray) -> jnp.ndarray:
+    def _forward(self, x_single: jnp.ndarray) -> jnp.ndarray:  # type: ignore
         chex.assert_rank([x_single], [1])
         h_1 = jnp.dot(self._layer1_w.T, x_single) + self._layer1_b
         a_1 = jax.nn.relu(h_1)
@@ -64,7 +64,7 @@ class JittedInference(Worker):
         o_2 = jax.nn.softmax(h_2)
         return jnp.argmax(o_2, axis=-1)
 
-    def _batch_forward(self, x_batch: jnp.ndarray) -> jnp.ndarray:
+    def _batch_forward(self, x_batch: jnp.ndarray) -> jnp.ndarray:  # type: ignore
         chex.assert_rank([x_batch], [2])
         return jax.vmap(self._forward)(x_batch)
 

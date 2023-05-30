@@ -106,10 +106,9 @@ async fn openapi(_: Request<Body>, doc: openapi::OpenApi) -> Response<Body> {
 
 #[utoipa::path(
     post,
-    request_body=InferenceRequest,
     path = "/inference",
     responses(
-        (status = StatusCode::OK, description = "Inference",body=InferenceResponse),
+        (status = StatusCode::OK, description = "Inference"),
         (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
         (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
         (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
@@ -228,13 +227,12 @@ struct RustApiDoc;
 
 #[tokio::main]
 async fn run(opts: &Opts) {
-    let python_schema =
+    let python_api =
         read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
     let doc = MosecApiDoc {
         api: RustApiDoc::openapi(),
-        mime: opts.mime.clone(),
     }
-    .merge("/inference", python_schema.parse().unwrap_or_default());
+    .merge("/inference", python_api.parse().unwrap());
 
     let state = AppState {
         mime: opts.mime.clone(),
