@@ -23,12 +23,15 @@ import struct
 import tempfile
 import time
 from contextlib import ContextDecorator
+from multiprocessing.context import ForkContext, SpawnContext
 from os.path import join
+from typing import Union, cast
 
 import msgpack  # type: ignore
 import pytest
 
 from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.manager import WorkerRuntime
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
@@ -99,21 +102,27 @@ def test_coordinator_worker_property():
     assert c.worker.max_batch_size == 16
 
 
+def make_coordinator(w_cls, shutdown, shutdown_notify, config):
+    return Coordinator(
+        w_cls,
+        config["max_batch_size"],
+        stage,
+        shutdown,
+        shutdown_notify,
+        socket_prefix,
+        config["stage_id"],
+        config["worker_id"],
+        None,
+        config["timeout"],
+    )
+
+
 def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
-    return mp.get_context(c_ctx).Process(
-        target=Coordinator,
-        args=(
-            w_cls,
-            config["max_batch_size"],
-            stage,
-            shutdown,
-            shutdown_notify,
-            socket_prefix,
-            config["stage_id"],
-            config["worker_id"],
-            None,
-            config["timeout"],
-        ),
+    context = mp.get_context(c_ctx)
+    context = cast(Union[SpawnContext, ForkContext], context)
+    return context.Process(
+        target=make_coordinator,
+        args=(w_cls, shutdown, shutdown_notify, config),
         daemon=True,
     )
 
@@ -128,14 +137,8 @@ def test_socket_file_not_found(mocker, base_test_config, caplog):
 
     with CleanDirContext():
         with caplog.at_level(logging.ERROR):
-            _ = Coordinator(
-                EchoWorkerJSON,
-                stage=stage,
-                shutdown=shutdown,
-                shutdown_notify=shutdown_notify,
-                socket_prefix=socket_prefix,
-                ipc_wrapper=None,
-                **base_test_config,
+            _ = make_coordinator(
+                EchoWorkerJSON, shutdown, shutdown_notify, base_test_config
             )
             record = caplog.records[0]
             assert "cannot find the socket file" in record.message
@@ -156,14 +159,8 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
         open(sock_addr, "w").close()
 
         with caplog.at_level(logging.ERROR):
-            _ = Coordinator(
-                EchoWorkerJSON,
-                stage=stage,
-                shutdown=shutdown,
-                shutdown_notify=shutdown_notify,
-                socket_prefix=socket_prefix,
-                ipc_wrapper=None,
-                **base_test_config,
+            _ = make_coordinator(
+                EchoWorkerJSON, shutdown, shutdown_notify, base_test_config
             )
             record = caplog.records[0]
             assert "connection error" in record.message
@@ -176,14 +173,8 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
 
         with caplog.at_level(logging.ERROR):
             # with pytest.raises(RuntimeError, match=r".*Connection refused.*"):
-            _ = Coordinator(
-                EchoWorkerJSON,
-                stage=stage,
-                shutdown=shutdown,
-                shutdown_notify=shutdown_notify,
-                socket_prefix=socket_prefix,
-                ipc_wrapper=None,
-                **base_test_config,
+            _ = make_coordinator(
+                EchoWorkerJSON, shutdown, shutdown_notify, base_test_config
             )
             record = caplog.records[0]
             assert "socket connection error" in record.message
