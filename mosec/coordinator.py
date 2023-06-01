@@ -15,9 +15,11 @@
 """The Coordinator is used to control the data flow between `Worker` and `Server`."""
 
 import os
+import queue
 import signal
 import socket
 import struct
+import threading
 import time
 import traceback
 from contextlib import contextmanager
@@ -106,8 +108,13 @@ class Coordinator:
         self.worker.worker_id = worker_id
         self.worker.max_batch_size = max_batch_size
         self.worker.stage = stage
+        self.stream: queue.SimpleQueue = queue.SimpleQueue()
+        self.semaphore: threading.Semaphore = threading.Semaphore()
+        self.worker._stream_queue = self.stream
+        self.worker._stream_semaphore = self.semaphore
         self.timeout = timeout
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
+        self.current_ids: Sequence[bytes] = []
 
         self.protocol = Protocol(
             name=self.name,
@@ -132,6 +139,7 @@ class Coordinator:
 
         self.warmup()
         self.init_protocol()
+        threading.Thread(target=self.streaming, daemon=True).start()
         self.run()
 
     def init_protocol(self):
@@ -156,6 +164,19 @@ class Coordinator:
             self.name,
             self.protocol.addr,
         )
+
+    def streaming(self):
+        """Send stream data from the worker to the server through the socket."""
+        while not self.shutdown.is_set():
+            try:
+                text, index = self.stream.get(timeout=self.timeout)
+                # encode the text with UTF-8
+                payloads = (text.encode(),)
+                ids = (self.current_ids[index],)
+                self.protocol.send(HTTPStautsCode.STREAM_EVENT, ids, payloads)
+                self.semaphore.release()
+            except queue.Empty:
+                continue
 
     def warmup(self):
         """Warmup to allocate resources (useful for GPU workload)[Optional]."""
@@ -263,6 +284,8 @@ class Coordinator:
         while not self.shutdown.is_set():
             try:
                 _, ids, payloads = protocol_recv()
+                # expose here to be used by stream event
+                self.current_ids = ids
             except socket.timeout:
                 continue
             except (struct.error, OSError) as err:
@@ -299,10 +322,14 @@ class Coordinator:
                 payloads = ["inference internal error".encode()] * length
 
             try:
+                # pylint: disable=consider-using-with
+                self.semaphore.acquire(timeout=self.timeout)
                 protocol_send(status, ids, payloads)
             except OSError as err:
                 logger.error("%s failed to send to socket: %s", self.name, err)
                 break
+            finally:
+                self.semaphore.release()
 
         self.protocol.close()
         time.sleep(CONN_CHECK_INTERVAL)

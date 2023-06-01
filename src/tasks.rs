@@ -26,13 +26,15 @@ use tracing::{debug, error, info, warn};
 use crate::errors::ServiceError;
 use crate::metrics::Metrics;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TaskCode {
     Normal,
     BadRequestError,
     ValidationError,
     TimeoutError,
     InternalError,
+    // special case
+    StreamEvent,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +63,7 @@ impl Task {
 pub(crate) struct TaskManager {
     table: RwLock<HashMap<u32, Task>>,
     notifiers: Mutex<HashMap<u32, oneshot::Sender<()>>>,
+    stream_senders: Mutex<HashMap<u32, mpsc::Sender<(Bytes, TaskCode)>>>,
     timeout: Duration,
     current_id: Mutex<u32>,
     channel: async_channel::Sender<u32>,
@@ -78,6 +81,7 @@ impl TaskManager {
         Self {
             table: RwLock::new(HashMap::new()),
             notifiers: Mutex::new(HashMap::new()),
+            stream_senders: Mutex::new(HashMap::new()),
             timeout,
             current_id: Mutex::new(0),
             channel,
@@ -105,14 +109,7 @@ impl TaskManager {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
             warn!(%id, %err, "task was not completed in the expected time");
-            {
-                let mut notifiers = self.notifiers.lock().unwrap();
-                notifiers.remove(&id);
-            }
-            {
-                let mut table = self.table.write().unwrap();
-                table.remove(&id);
-            }
+            self.delete_task(id, false);
             return Err(ServiceError::Timeout);
         }
         let mut table = self.table.write().unwrap();
@@ -128,28 +125,49 @@ impl TaskManager {
     pub(crate) async fn submit_sse_task(
         &self,
         data: Bytes,
-    ) -> Result<(Task, mpsc::Receiver<()>), ServiceError> {
+    ) -> Result<mpsc::Receiver<(Bytes, TaskCode)>, ServiceError> {
         let (id, rx) = self.add_new_task(data)?;
-        let (_sender, receiver) = mpsc::channel(16);
-        if let Err(err) = time::timeout(self.timeout, rx).await {
-            warn!(%id, %err, "task was not completed in the expected time");
-            {
-                let mut notifiers = self.notifiers.lock().unwrap();
-                notifiers.remove(&id);
-            }
-            {
-                let mut table = self.table.write().unwrap();
-                table.remove(&id);
-            }
-            return Err(ServiceError::Timeout);
+        let (sender, receiver) = mpsc::channel(16);
+
+        {
+            let mut stream_senders = self.stream_senders.lock().unwrap();
+            stream_senders.insert(id, sender);
         }
-        let mut table = self.table.write().unwrap();
-        match table.remove(&id) {
-            Some(task) => Ok((task, receiver)),
-            None => {
-                error!(%id, "cannot find the task when trying to remove it");
-                Err(ServiceError::UnknownError)
-            }
+        tokio::spawn(wait_sse_finish(id, self.timeout, rx));
+
+        Ok(receiver)
+    }
+
+    // pub(crate) async fn send_event(&self, ids: &[u32], data: &[Bytes]) {
+    //     let stream_senders = self.stream_senders.lock().unwrap();
+    //     for index in 0..ids.len() {
+    //         debug!(ids=ids[index], "send event to the channel");
+    //         let sender = stream_senders.get(&ids[index]);
+    //         if let Some(sender) = sender {
+    //             if let Err(err) = sender.send((data[index].clone(), TaskCode::StreamEvent)).await {
+    //                 info!(%err, id=ids[index], "send stream event failed");
+    //             }
+    //         }
+    //     }
+    // }
+
+    pub(crate) fn get_stream_sender(&self, id: &u32) -> Option<mpsc::Sender<(Bytes, TaskCode)>> {
+        let stream_senders = self.stream_senders.lock().unwrap();
+        stream_senders.get(id).cloned()
+    }
+
+    pub(crate) fn delete_task(&self, id: u32, has_stream: bool) {
+        {
+            let mut notifiers = self.notifiers.lock().unwrap();
+            notifiers.remove(&id);
+        }
+        {
+            let mut table = self.table.write().unwrap();
+            table.remove(&id);
+        }
+        if has_stream {
+            let mut stream_senders = self.stream_senders.lock().unwrap();
+            stream_senders.remove(&id);
         }
     }
 
@@ -177,14 +195,7 @@ impl TaskManager {
 
         if self.channel.try_send(id).is_err() {
             warn!(%id, "reach the capacity limit, will delete this task");
-            {
-                let mut notifiers = self.notifiers.lock().unwrap();
-                notifiers.remove(&id);
-            }
-            {
-                let mut table = self.table.write().unwrap();
-                table.remove(&id);
-            }
+            self.delete_task(id, false);
             return Err(ServiceError::TooManyRequests);
         }
         Ok((id, rx))
@@ -382,4 +393,12 @@ mod tests {
             vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")]
         );
     }
+}
+
+async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver<()>) {
+    let task_manager = TaskManager::global();
+    if let Err(err) = time::timeout(timeout, notifier).await {
+        warn!(%err, "task was not completed in the expected time");
+    }
+    task_manager.delete_task(id, true);
 }

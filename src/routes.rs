@@ -1,3 +1,17 @@
+// Copyright 2023 MOSEC Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::time::Duration;
 
 use axum::body::BoxBody;
@@ -90,7 +104,7 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
                 TaskCode::BadRequestError => StatusCode::BAD_REQUEST,
                 TaskCode::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
                 TaskCode::TimeoutError => StatusCode::REQUEST_TIMEOUT,
-                TaskCode::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
             }
         }
         Err(err) => {
@@ -138,11 +152,11 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
 
     // metrics.remaining_task.inc();
     match task_manager.submit_sse_task(data).await {
-        Ok((task, mut rx)) => {
+        Ok(mut rx) => {
             let stream = async_stream::stream! {
-                while let Some(_msg) = rx.recv().await {
-                    yield match task.code {
-                        TaskCode::Normal => Ok(Event::default().data(String::from_utf8_lossy(&task.data))),
+                while let Some((msg, code)) = rx.recv().await {
+                    yield match code {
+                        TaskCode::StreamEvent => Ok(Event::default().data(String::from_utf8_lossy(&msg))),
                         _ => Err(ServiceError::SseError),
                     }
                 }
@@ -177,16 +191,4 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
             (status, content).into_response()
         }
     }
-    // metrics.remaining_task.dec();
-    // metrics
-    //     .throughput
-    //     .with_label_values(&[status.as_str()])
-    //     .inc();
-
-    // if status == StatusCode::CONTINUE {
-    //     return Sse::new(stream)
-    //         .keep_alive(KeepAlive::new().interval(Duration::from_secs(3)))
-    //         .into_response();
-    // }
-    // (status, content).into_response()
 }

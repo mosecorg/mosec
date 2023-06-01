@@ -38,6 +38,9 @@ class HTTPStautsCode(IntFlag):
     INTERNAL_ERROR = 8  # 500
     TIMEOUT_ERROR = 16  # 408
 
+    # special one, not used in HTTP
+    STREAM_EVENT = 32768
+
 
 class Protocol:
     """IPC protocol.
@@ -130,9 +133,10 @@ class Protocol:
         self.socket.sendall(data.getbuffer())
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "%s sent %d tasks with ids: %s",
+                "%s sent %d(%d) tasks with ids: %s",
                 self.name,
                 len(ids),
+                flag,
                 struct.unpack("!" + "I" * len(ids), b"".join(ids)),
             )
 

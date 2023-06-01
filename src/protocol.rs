@@ -35,6 +35,7 @@ const BIT_STATUS_OK: u16 = 0b1;
 const BIT_STATUS_BAD_REQ: u16 = 0b10;
 const BIT_STATUS_VALIDATION_ERR: u16 = 0b100;
 const BIT_STATUS_TIMEOUT_ERR: u16 = 0b10000;
+const BIT_STATUS_STREAM_EVENT: u16 = 0b1000000000000000;
 // Others are treated as Internal Error
 
 #[allow(clippy::too_many_arguments)]
@@ -67,7 +68,7 @@ pub(crate) async fn communicate(
                     let task_manager = TaskManager::global();
                     let metrics = Metrics::global();
                     let metric_label = StageConnectionLabel {
-                        stage: stage_id_label,
+                        stage: stage_id_label.clone(),
                         connection: connection_id_label,
                     };
                     loop {
@@ -96,7 +97,7 @@ pub(crate) async fn communicate(
                                 .observe(data.len() as f64);
                         }
                         if let Err(err) = send_message(&mut stream, &ids, &data).await {
-                            error!(%err, %connection_id, "socket send message error");
+                            error!(%err, %stage_id_label, %connection_id, "socket send message error");
                             info!(
                                 "service failed to write data to stream, will try to \
                                 send task back to see if other thread can handle it"
@@ -106,13 +107,28 @@ pub(crate) async fn communicate(
                             }
                             break;
                         }
+                        debug!(%stage_id_label, %connection_id, "socket finished to send message");
+
                         ids.clear();
                         data.clear();
                         if let Err(err) =
                             read_message(&mut stream, &mut code, &mut ids, &mut data).await
                         {
-                            error!(%err, %connection_id, "socket receive message error");
+                            error!(%err, %stage_id_label, %connection_id, "socket receive message error");
                             break;
+                        }
+                        debug!(%stage_id_label, %connection_id, "socket finished to read message");
+                        while code == TaskCode::StreamEvent {
+                            send_stream_event(&ids, &data).await;
+                            ids.clear();
+                            data.clear();
+                            if let Err(err) =
+                                read_message(&mut stream, &mut code, &mut ids, &mut data).await
+                            {
+                                error!(%err, %stage_id_label, %connection_id, "socket receive message error");
+                                break;
+                            }
+                            debug!(%stage_id_label, %connection_id, "socket finished to read message");
                         }
                         task_manager.update_multi_tasks(code, &ids, &data);
                         match code {
@@ -133,6 +149,8 @@ pub(crate) async fn communicate(
                                 warn!(
                                     ?ids,
                                     ?code,
+                                    ?stage_id_label,
+                                    ?connection_id,
                                     "abnormal tasks, check Python log for more details"
                                 );
                             }
@@ -145,8 +163,25 @@ pub(crate) async fn communicate(
                 }
             }
             Err(err) => {
-                error!(%err, %connection_id, "socket failed to accept the connection");
+                error!(%err, %stage_id, %connection_id, "socket failed to accept the connection");
                 break;
+            }
+        }
+    }
+}
+
+async fn send_stream_event(ids: &[u32], data: &[Bytes]) {
+    let task_manager = TaskManager::global();
+    debug!("sending stream event");
+    for (id, data) in ids.iter().zip(data.iter()) {
+        match task_manager.get_stream_sender(id) {
+            Some(sender) => {
+                if let Err(err) = sender.send((data.clone(), TaskCode::StreamEvent)).await {
+                    info!(%err, %id, "failed to send stream event");
+                }
+            }
+            None => {
+                info!(%id, "stream sender not found");
             }
         }
     }
@@ -174,9 +209,12 @@ async fn read_message(
         TaskCode::ValidationError
     } else if flag & BIT_STATUS_TIMEOUT_ERR > 0 {
         TaskCode::TimeoutError
+    } else if flag & BIT_STATUS_STREAM_EVENT > 0 {
+        TaskCode::StreamEvent
     } else {
         TaskCode::InternalError
     };
+    debug!(?flag, ?flag_buf, "read message");
 
     let mut id_buf = [0u8; TASK_ID_U8_SIZE];
     let mut length_buf = [0u8; LENGTH_U8_SIZE];
