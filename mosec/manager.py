@@ -88,10 +88,10 @@ class WorkerRuntime:
         self.pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
 
     @staticmethod
-    def _process_healthy(process: Union[BaseProcess, None]):
+    def _process_healthy(process: Union[BaseProcess, None]) -> bool:
         return process is not None and process.exitcode is not None
 
-    def _healthy(self, method: Callable[[Iterable[object]], bool]):
+    def _healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
         return method(self.pool)
 
     def _start_process(
@@ -133,7 +133,7 @@ class WorkerRuntime:
         work_path: str,
         shutdown: Event,
         shutdown_notify: Event,
-    ):
+    ) -> bool:
         """Start the worker process.
 
         Args:
@@ -202,16 +202,16 @@ class CoordinatorManager:
         return self._worker_runtimes.__iter__()
 
     @property
-    def worker_count(self):
+    def worker_count(self) -> int:
         """Get number of workers."""
         return len(self._worker_runtimes)
 
     @property
-    def workers(self):
+    def workers(self) -> List[Type[Worker]]:
         """Get List of workers."""
         return [r.worker for r in self._worker_runtimes]
 
-    def egress_mime(self):
+    def egress_mime(self) -> str:
         """Return mime of egress worker."""
         return self._worker_runtimes[-1].worker.resp_mime_type
 
@@ -219,7 +219,7 @@ class CoordinatorManager:
         """Sequentially appends workers to the workflow pipeline."""
         self._worker_runtimes.append(runtime)
 
-    def _label_stage(self, stage_id: int):
+    def _label_stage(self, stage_id: int) -> str:
         stage = ""
         if stage_id == 0:
             stage += STAGE_INGRESS
@@ -288,7 +288,7 @@ class Controller:
             logger.error("failed to terminate mosec service, will try to kill it")
             self._process.kill()
 
-    def start(self):
+    def start(self) -> subprocess.Popen:
         """Start the Mosec process."""
         # pylint: disable=consider-using-with
         self._process = subprocess.Popen([self._server_path] + self._controller_args())
@@ -297,7 +297,6 @@ class Controller:
     def _controller_args(self):
         args = []
         self._configs.pop("dry_run")
-        self._configs["debug"] = True
         for key, value in self._configs.items():
             args.extend([f"--{key}", str(value).lower()])
         for worker_runtime in self._coordinator_manager:
