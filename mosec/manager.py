@@ -85,14 +85,14 @@ class WorkerRuntime:
         self.env = env
         self.ipc_wrapper = ipc_wrapper
 
-        self.pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
+        self._pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
 
     @staticmethod
     def _process_healthy(process: Union[BaseProcess, None]) -> bool:
         return process is not None and process.exitcode is not None
 
     def _healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
-        return method(self.pool)
+        return method(self._pool)
 
     def _start_process(
         self,
@@ -124,7 +124,7 @@ class WorkerRuntime:
         with env_var_context(self.env, worker_id):
             coordinator_process.start()
 
-        self.pool[worker_id] = coordinator_process
+        self._pool[worker_id] = coordinator_process
 
     def start(
         self,
@@ -147,7 +147,7 @@ class WorkerRuntime:
             Whether the worker is started successfully
         """
         # for every sequential stage
-        self.pool = [p if self._process_healthy(p) else None for p in self.pool]
+        self._pool = [p if self._process_healthy(p) else None for p in self._pool]
         if self._healthy(all):
             # this stage is healthy
             return True
@@ -156,7 +156,7 @@ class WorkerRuntime:
             return False
 
         need_start_id = [
-            worker_id for worker_id in range(self.num) if self.pool[worker_id] is None
+            worker_id for worker_id in range(self.num) if self._pool[worker_id] is None
         ]
         for worker_id in need_start_id:
             # for every worker in each stage

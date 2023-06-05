@@ -78,18 +78,18 @@ class Pool:
             process_context: server context of spawn process
             shutdown_notify: event of server will shutdown
         """
-        self.process_context = process_context
-        self.shutdown_notify = shutdown_notify
+        self._process_context = process_context
+        self._shutdown_notify = shutdown_notify
 
         self._pool: List[SpawnProcess] = []
-        self.sender_pipes: List[PipeConnection] = []
-        self.receiver_pipes: List[PipeConnection] = []
+        self._sender_pipes: List[PipeConnection] = []
+        self._receiver_pipes: List[PipeConnection] = []
 
     def new_pipe(self):
         """Create new pipe for dry run workers to communicate."""
-        receiver, sender = self.process_context.Pipe(duplex=False)
-        self.sender_pipes.append(sender)
-        self.receiver_pipes.append(receiver)
+        receiver, sender = self._process_context.Pipe(duplex=False)
+        self._sender_pipes.append(sender)
+        self._receiver_pipes.append(receiver)
 
     def start_worker(self, worker_runtime: WorkerRuntime, first: bool):
         """Start the worker process for dry run.
@@ -100,15 +100,15 @@ class Pool:
 
         """
         self.new_pipe()
-        coordinator = self.process_context.Process(
+        coordinator = self._process_context.Process(
             target=dry_run_func,
             args=(
                 worker_runtime.worker,
                 worker_runtime.max_batch_size,
-                self.receiver_pipes[-2],
-                self.sender_pipes[-1],
+                self._receiver_pipes[-2],
+                self._sender_pipes[-1],
                 first,
-                self.shutdown_notify,
+                self._shutdown_notify,
             ),
             daemon=True,
         )
@@ -147,7 +147,7 @@ class Pool:
 
     def first_last_pipe(self):
         """Get first sender and last receiver pipes."""
-        return self.sender_pipes[0], self.receiver_pipes[-1]
+        return self._sender_pipes[0], self._receiver_pipes[-1]
 
 
 class DryRunner:
@@ -165,10 +165,10 @@ class DryRunner:
         """Init dry runner."""
         logger.info("init dry runner for %s", manager.workers)
 
-        self.manager = manager
-        self.process_context: SpawnContext = SpawnContext()
-        self.shutdown_notify: Event = self.process_context.Event()
-        self.pool = Pool(self.process_context, self.shutdown_notify)
+        self._manager = manager
+        self._process_context: SpawnContext = SpawnContext()
+        self._shutdown_notify: Event = self._process_context.Event()
+        self._pool = Pool(self._process_context, self._shutdown_notify)
 
         signal.signal(signal.SIGTERM, self.terminate)
         signal.signal(signal.SIGINT, self.terminate)
@@ -176,26 +176,26 @@ class DryRunner:
     def terminate(self, signum, framestack):
         """Terminate the dry run."""
         logger.info("received terminate signal [%s] %s", signum, framestack)
-        self.shutdown_notify.set()
+        self._shutdown_notify.set()
 
     def run(self):
         """Execute thr dry run process."""
-        self.pool.new_pipe()
-        for i, worker_runtime in enumerate(self.manager):
-            self.pool.start_worker(worker_runtime, i == 0)
+        self._pool.new_pipe()
+        for i, worker_runtime in enumerate(self._manager):
+            self._pool.start_worker(worker_runtime, i == 0)
 
         logger.info("dry run init successful")
         self.warmup()
 
         logger.info("wait for worker init done")
-        if not self.shutdown_notify.is_set():
-            self.shutdown_notify.set()
+        if not self._shutdown_notify.is_set():
+            self._shutdown_notify.set()
 
-        failed, exitcode = self.pool.wait_all()
+        failed, exitcode = self._pool.wait_all()
         if failed is not None:
             logger.warning(
                 "detect %s with abnormal exit code %d",
-                self.manager.workers[failed],
+                self._manager.workers[failed],
                 exitcode,
             )
             sys.exit(exitcode)
@@ -207,7 +207,7 @@ class DryRunner:
         If neither `example` nor `multi_examples` is provided, it will only
         init the worker class.
         """
-        ingress = self.manager.workers[0]
+        ingress = self._manager.workers[0]
         example = None
         if ingress.example:
             example = ingress.example
@@ -221,25 +221,25 @@ class DryRunner:
             logger.info("cannot find the example in the 1st stage worker, skip warmup")
             return
 
-        sender, receiver = self.pool.first_last_pipe()
+        sender, receiver = self._pool.first_last_pipe()
         start_time = time.perf_counter()
         sender.send(example)
 
-        while not self.shutdown_notify.is_set():
+        while not self._shutdown_notify.is_set():
             if receiver.poll(0.1):
                 break
             # liveness probe
-            failed, exitcode = self.pool.probe_worker_liveness()
+            failed, exitcode = self._pool.probe_worker_liveness()
             if failed is not None:
                 logger.warning(
                     "worker %s exit with code %d",
-                    self.manager.workers[failed],
+                    self._manager.workers[failed],
                     exitcode,
                 )
-                self.shutdown_notify.set()
+                self._shutdown_notify.set()
                 break
 
-        if self.shutdown_notify.is_set():
+        if self._shutdown_notify.is_set():
             sys.exit(1)
 
         res = receiver.recv_bytes()
