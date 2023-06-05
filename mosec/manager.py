@@ -39,7 +39,7 @@ NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-arguments
-class WorkerRuntime:
+class Runtime:
     """The wrapper with one worker and its arguments."""
 
     def __init__(
@@ -180,7 +180,7 @@ class WorkerRuntime:
         ), f"start method must be one of {NEW_PROCESS_METHOD}"
 
 
-class CoordinatorManager:
+class PyRuntimeManager:
     """The manager to control coordinator process."""
 
     def __init__(self, work_path: str, shutdown: Event, shutdown_notify: Event):
@@ -191,7 +191,7 @@ class CoordinatorManager:
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
         """
-        self._worker_runtimes: List[WorkerRuntime] = []
+        self._runtimes: List[Runtime] = []
 
         self._work_path = work_path
         self._shutdown = shutdown
@@ -199,25 +199,25 @@ class CoordinatorManager:
 
     def __iter__(self):
         """Iterate workers of manager."""
-        return self._worker_runtimes.__iter__()
+        return self._runtimes.__iter__()
 
     @property
     def worker_count(self) -> int:
         """Get number of workers."""
-        return len(self._worker_runtimes)
+        return len(self._runtimes)
 
     @property
     def workers(self) -> List[Type[Worker]]:
         """Get List of workers."""
-        return [r.worker for r in self._worker_runtimes]
+        return [r.worker for r in self._runtimes]
 
     def egress_mime(self) -> str:
         """Return mime of egress worker."""
-        return self._worker_runtimes[-1].worker.resp_mime_type
+        return self._runtimes[-1].worker.resp_mime_type
 
-    def append(self, runtime: WorkerRuntime):
+    def append(self, runtime: Runtime):
         """Sequentially appends workers to the workflow pipeline."""
-        self._worker_runtimes.append(runtime)
+        self._runtimes.append(runtime)
 
     def _label_stage(self, stage_id: int) -> str:
         stage = ""
@@ -227,13 +227,13 @@ class CoordinatorManager:
             stage += STAGE_EGRESS
         return stage
 
-    def check_and_start(self, first: bool) -> Union[WorkerRuntime, None]:
+    def check_and_start(self, first: bool) -> Union[Runtime, None]:
         """Check all worker processes and try to start failed ones.
 
         Args:
             first: whether the worker is tried to start at first time
         """
-        for stage_id, worker_runtime in enumerate(self._worker_runtimes):
+        for stage_id, worker_runtime in enumerate(self._runtimes):
             label = self._label_stage(stage_id)
             success = worker_runtime.start(
                 first, label, self._work_path, self._shutdown, self._shutdown_notify
@@ -243,22 +243,22 @@ class CoordinatorManager:
         return None
 
 
-class Controller:
+class RsRuntimeManage:
     """The manager to control Mosec process."""
 
     def __init__(
-        self, manager: CoordinatorManager, endpoint: str, configs: Dict[str, Any]
+        self, py_manager: PyRuntimeManager, endpoint: str, configs: Dict[str, Any]
     ):
         """Initialize a Mosec manager.
 
         Args:
-            manager: manager of coordinator
+            manager: manager of python coordinator
             endpoint: event of server shutdown
             configs: config
         """
         self._process: Optional[subprocess.Popen] = None
 
-        self._coordinator_manager: CoordinatorManager = manager
+        self._py_manager: PyRuntimeManager = py_manager
         self._endpoint = endpoint
         self._server_path = Path(
             pkg_resources.resource_filename("mosec", "bin"), "mosec"
@@ -299,10 +299,10 @@ class Controller:
         self._configs.pop("dry_run")
         for key, value in self._configs.items():
             args.extend([f"--{key}", str(value).lower()])
-        for worker_runtime in self._coordinator_manager:
+        for worker_runtime in self._py_manager:
             args.extend(["--batches", str(worker_runtime.max_batch_size)])
             args.extend(["--waits", str(worker_runtime.max_wait_time)])
-        mime_type = self._coordinator_manager.egress_mime()
+        mime_type = self._py_manager.egress_mime()
         args.extend(["--mime", mime_type])
         args.extend(["--endpoint", self._endpoint])
         logger.info("mosec received arguments: %s", args)

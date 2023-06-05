@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, List, Tuple, Union
 
 from mosec.env import env_var_context
 from mosec.log import get_internal_logger
-from mosec.manager import CoordinatorManager, WorkerRuntime
+from mosec.manager import PyRuntimeManager, Runtime
 from mosec.worker import Worker
 
 if TYPE_CHECKING:
@@ -91,7 +91,7 @@ class Pool:
         self._sender_pipes.append(sender)
         self._receiver_pipes.append(receiver)
 
-    def start_worker(self, worker_runtime: WorkerRuntime, first: bool):
+    def start_worker(self, worker_runtime: Runtime, first: bool):
         """Start the worker process for dry run.
 
         Args:
@@ -161,7 +161,7 @@ class DryRunner:
     will be used.
     """
 
-    def __init__(self, manager: CoordinatorManager):
+    def __init__(self, manager: PyRuntimeManager):
         """Init dry runner."""
         logger.info("init dry runner for %s", manager.workers)
 

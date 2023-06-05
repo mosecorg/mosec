@@ -53,7 +53,7 @@ from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.manager import Controller, CoordinatorManager, WorkerRuntime
+from mosec.manager import PyRuntimeManager, RsRuntimeManage, Runtime
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -88,10 +88,12 @@ class Server:
         self._shutdown_notify: Event = mp.get_context("spawn").Event()
         self._configs: dict = vars(parse_arguments())
 
-        self.coordinator_manager: CoordinatorManager = CoordinatorManager(
+        self.coordinator_manager: PyRuntimeManager = PyRuntimeManager(
             self._configs["path"], self._shutdown, self._shutdown_notify
         )
-        self.controller = Controller(self.coordinator_manager, endpoint, self._configs)
+        self.controller = RsRuntimeManage(
+            self.coordinator_manager, endpoint, self._configs
+        )
 
         self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
 
@@ -201,7 +203,7 @@ class Server:
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
         stage_id = self.coordinator_manager.worker_count
-        runtime = WorkerRuntime(
+        runtime = Runtime(
             worker,
             num,
             max_batch_size,

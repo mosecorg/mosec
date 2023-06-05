@@ -31,7 +31,7 @@ import msgpack  # type: ignore
 import pytest
 
 from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
-from mosec.manager import WorkerRuntime
+from mosec.manager import Runtime
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
