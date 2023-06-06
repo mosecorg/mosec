@@ -17,6 +17,10 @@ use argh::FromArgs;
 #[derive(FromArgs, Debug, PartialEq)]
 /// MOSEC arguments
 pub(crate) struct Opts {
+    /// the Endpoint of inference
+    #[argh(option, default = "String::from(\"/inference\")")]
+    pub(crate) endpoint: String,
+
     /// the Unix domain socket directory path
     #[argh(option, default = "String::from(\"\")")]
     pub(crate) path: String,

@@ -20,7 +20,7 @@ import contextlib
 import os
 import warnings
 from argparse import Namespace
-from typing import Dict, List
+from typing import Any, Dict, List, Union
 
 MOSEC_ENV_PREFIX = "MOSEC_"
 MOSEC_ENV_CONFIG = {
@@ -72,3 +72,32 @@ def get_env_namespace(prefix: str = MOSEC_ENV_PREFIX) -> Namespace:
             setattr(namespace, name, val)
 
     return namespace
+
+
+def validate_int_ge(number, name, threshold=1):
+    """Validate int number is greater than threshold."""
+    assert isinstance(
+        number, int
+    ), f"{name} must be integer but you give {type(number)}"
+    assert number >= threshold, f"{name} must be no less than {threshold}"
+
+
+def validate_str_dict(dictionary: Dict):
+    """Validate keys and values of the dictionary is string type."""
+    for key, value in dictionary.items():
+        if not (isinstance(key, str) and isinstance(value, str)):
+            return False
+    return True
+
+
+def validate_env(env: Union[Any, List[Dict[str, str]]], num: int):
+    """Validate keys and values of the dictionary is string type."""
+    if env is None:
+        return
+    assert len(env) == num, "len(env) must equal to num"
+    valid = True
+    if not isinstance(env, List):
+        valid = False
+    elif not all(isinstance(x, Dict) and validate_str_dict(x) for x in env):
+        valid = False
+    assert valid, "env must be a list of string dictionary"
