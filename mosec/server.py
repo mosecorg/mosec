@@ -18,25 +18,18 @@ This module provides a way to define the service components for machine learning
 model serving.
 
 Dynamic Batching
-================
+----------------
 
     The user may enable the dynamic batching feature for any stage when the
     corresponding worker is appended, by setting the
     :py:meth:`append_worker(max_batch_size) <Server.append_worker>`.
 
 Multiprocess
-============
+------------
 
     The user may spawn multiple processes for any stage when the
     corresponding worker is appended, by setting the
     :py:meth:`append_worker(num) <Server.append_worker>`.
-
-IPC Wrapper
-===========
-
-    The user may wrap the inter-process communication to use shared memory,
-    e.g. pyarrow plasma, by providing the :py:mod:`IPC Wrapper <mosec.ipc.IPCWrapper>`
-    for the server.
 """
 
 import multiprocessing as mp
@@ -78,7 +71,7 @@ class Server:
         """Initialize a MOSEC Server.
 
         Args:
-            ipc_wrapper: wrapper function (before and after) IPC
+            ipc_wrapper: (deprecated) wrapper function (before and after) IPC
             endpoint: path to route inference
         """
         self.ipc_wrapper = ipc_wrapper
