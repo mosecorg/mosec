@@ -89,7 +89,13 @@ class Runtime:
 
     @staticmethod
     def _process_healthy(process: Union[BaseProcess, None]) -> bool:
-        return process is not None and process.exitcode is not None
+        """Check if the child process is healthy.
+
+        ref: https://docs.python.org/3/library/multiprocessing.html
+
+            The exit code will be None if the process has not yet terminated.
+        """
+        return process is not None and process.exitcode is None
 
     def _healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
         return method(self._pool)
@@ -126,7 +132,7 @@ class Runtime:
 
         self._pool[worker_id] = coordinator_process
 
-    def start(
+    def check(
         self,
         first: bool,
         stage_label: str,
@@ -134,7 +140,7 @@ class Runtime:
         shutdown: Event,
         shutdown_notify: Event,
     ) -> bool:
-        """Start the worker process.
+        """Check and start the worker process if it has not started yet.
 
         Args:
             first: whether the worker is tried to start at first time
@@ -235,7 +241,7 @@ class PyRuntimeManager:
         """
         for stage_id, worker_runtime in enumerate(self._runtimes):
             label = self._label_stage(stage_id)
-            success = worker_runtime.start(
+            success = worker_runtime.check(
                 first, label, self._work_path, self._shutdown, self._shutdown_notify
             )
             if not success:
