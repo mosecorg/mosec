@@ -53,7 +53,7 @@ from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.manager import PyRuntimeManager, RsRuntimeManage, Runtime
+from mosec.manager import PyRuntimeManager, RsRuntimeManager, Runtime
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -91,7 +91,7 @@ class Server:
         self.coordinator_manager: PyRuntimeManager = PyRuntimeManager(
             self._configs["path"], self._shutdown, self._shutdown_notify
         )
-        self.controller = RsRuntimeManage(
+        self.controller = RsRuntimeManager(
             self.coordinator_manager, endpoint, self._configs
         )
 

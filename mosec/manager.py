@@ -243,7 +243,7 @@ class PyRuntimeManager:
         return None
 
 
-class RsRuntimeManage:
+class RsRuntimeManager:
     """The manager to control Mosec process."""
 
     def __init__(
