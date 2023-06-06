@@ -133,7 +133,7 @@ def test_mixin_typed_service(mosec_service, http_client):
 
     # sleep long enough to make sure all the processes have been checked
     # ref to https://github.com/mosecorg/mosec/pull/379#issuecomment-1578304988
-    time.sleep(GUARD_CHECK_INTERVAL)
+    time.sleep(GUARD_CHECK_INTERVAL + 1)
 
     resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, resp
