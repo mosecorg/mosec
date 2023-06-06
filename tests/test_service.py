@@ -24,6 +24,7 @@ import httpx
 import msgpack  # type: ignore
 import pytest
 
+from mosec.server import GUARD_CHECK_INTERVAL
 from tests.utils import wait_for_port_open
 
 TEST_PORT = 5000
@@ -129,6 +130,10 @@ def test_mixin_typed_service(mosec_service, http_client):
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.headers["content-type"] == "application/msgpack"
     assert msgpack.unpackb(resp.content) == 11
+
+    # sleep long enough to make sure all the processes have been checked
+    # ref to https://github.com/mosecorg/mosec/pull/379#issuecomment-1578304988
+    time.sleep(GUARD_CHECK_INTERVAL)
 
     resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, resp
