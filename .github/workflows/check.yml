@@ -83,4 +83,4 @@ jobs:
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
           sudo apt update && sudo apt install redis
-          make test_arrow
+          make test_shm

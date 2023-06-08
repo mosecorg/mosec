@@ -46,8 +46,8 @@ def is_port_available(addr: str, port: int) -> bool:
     )
 
 
-def parse_arguments() -> argparse.Namespace:
-    """Parse user configurations."""
+def build_arguments_parser() -> argparse.ArgumentParser:
+    """Build CLI arguments."""
     parser = argparse.ArgumentParser(
         description="Mosec Server Configurations",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -121,7 +121,12 @@ def parse_arguments() -> argparse.Namespace:
         "This will omit the worker number for each stage.",
         action="store_true",
     )
+    return parser
 
+
+def parse_arguments() -> argparse.Namespace:
+    """Parse user configurations."""
+    parser = build_arguments_parser()
     args, _ = parser.parse_known_args(namespace=get_env_namespace())
 
     if args.wait != 10:
@@ -140,4 +145,8 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-mosec_args = parse_arguments()
+def is_debug_mode() -> bool:
+    """Check if the service is running in debug mode."""
+    parser = build_arguments_parser()
+    args, _ = parser.parse_known_args(namespace=get_env_namespace())
+    return args.debug

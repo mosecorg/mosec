@@ -28,6 +28,6 @@ class SquareService(Worker):
 
 
 if __name__ == "__main__":
-    server = Server()
+    server = Server(endpoint="/v1/inference")
     server.append_worker(SquareService, max_batch_size=8)
     server.run()

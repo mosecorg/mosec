@@ -17,13 +17,13 @@ dev:
 
 test: dev
 	echo "Running tests for the main logic"
-	pytest tests -vv -s -m "not arrow"
+	pytest tests -vv -s -m "not shm"
 	RUST_BACKTRACE=1 cargo test -vv
 
-test_arrow: dev
+test_shm: dev
 	@pip install -q -r requirements/mixin.txt
-	echo "Running tests for the mixin"
-	pytest tests -vv -s -m "arrow"
+	echo "Running tests for the shm mixin"
+	pytest tests -vv -s -m "shm"
 	pip uninstall -y -r requirements/mixin.txt
 
 test_all: dev
