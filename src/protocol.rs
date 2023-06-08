@@ -58,6 +58,7 @@ pub(crate) async fn communicate(
         let receiver_clone = receiver.clone();
         let stage_id_label = stage_id.clone();
         let connection_id_label = connection_id.to_string();
+        info!(?path, "begin listening to socket");
         match listener.accept().await {
             Ok((mut stream, addr)) => {
                 info!(?addr, "socket accepted connection from");

@@ -65,11 +65,10 @@ async fn run(opts: &Opts) {
     let coordinator = Coordinator::init_from_opts(opts);
     let barrier = coordinator.run();
     barrier.wait().await;
-
     let app = Router::new()
         .route("/", get(index))
         .route("/metrics", get(metrics))
-        .route("/inference", post(inference))
+        .route(&opts.endpoint, post(inference))
         .route("/sse_inference", post(sse_inference))
         .with_state(state);
 

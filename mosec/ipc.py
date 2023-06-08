@@ -15,6 +15,11 @@
 """Wrapper layer for IPC between workers.
 
 This will be called before sending data or after receiving data through the Protocol.
+
+
+.. warning::
+    This implementation is deprecated. Please use
+    :py:mod:`PlasmaShmIPCMixin <mosec.mixin.PlasmaShmIPCMixin>`
 """
 
 import abc
