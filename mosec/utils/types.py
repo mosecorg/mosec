@@ -15,10 +15,18 @@
 """Provide useful utils to inspect function type."""
 
 import inspect
-from typing import List, Tuple
+from enum import Enum
+from typing import List
 
 
-def parse_func_type(func, target="parameters", index=0) -> type:
+class ParseTarget(Enum):
+    """Enum to specify the target of parsing func type."""
+
+    INPUT = "INPUT"
+    RETURN = "RETURN"
+
+
+def parse_func_type(func, target: ParseTarget, index=0) -> type:
     """Parse the input type of the target function.
 
     - single request: return the type
@@ -26,7 +34,7 @@ def parse_func_type(func, target="parameters", index=0) -> type:
     """
     sig = inspect.signature(func)
     name = func.__name__
-    if target == "parameters":
+    if target == ParseTarget.INPUT:
         params = list(sig.parameters.values())
         if len(params) < index + 1:
             raise TypeError(
@@ -50,31 +58,17 @@ def parse_func_type(func, target="parameters", index=0) -> type:
     raise TypeError(f"unsupported type {typ}")
 
 
-def _parse_instance_func_input_typ(func) -> type:
-    """Parse the input type of the target function for instance."""
-    return parse_func_type(func, "parameters", 0)
+def parse_instance_func_type(func, target: ParseTarget) -> type:
+    """Parse the input type of the target instance method.
+
+    The `obj.func` already calls the first parameter, so the index is 0.
+    """
+    return parse_func_type(func, target, 0)
 
 
-def _parse_instance_func_return_typ(func) -> type:
-    """Parse the return type of the target function for instance."""
-    return parse_func_type(func, "return", 0)
+def parse_cls_func_type(func, target: ParseTarget) -> type:
+    """Parse the input type of the target cls method.
 
-
-def _parse_cls_func_input_typ(func) -> type:
-    """Parse the input type of the target function for class."""
-    return parse_func_type(func, "parameters", 1)
-
-
-def _parse_cls_func_return_typ(func) -> type:
-    """Parse the return type of the target function for class."""
-    return parse_func_type(func, "return", 1)
-
-
-def parse_instance_func_types(func) -> Tuple[type, type]:
-    """Parse the input and return types of the target function for instance."""
-    return _parse_instance_func_input_typ(func), _parse_instance_func_return_typ(func)
-
-
-def parse_cls_func_types(func) -> Tuple[type, type]:
-    """Parse the input and return types of the target function for class."""
-    return _parse_cls_func_input_typ(func), _parse_cls_func_return_typ(func)
+    The `class.func` remains the original func, so the index is 1.
+    """
+    return parse_func_type(func, target, 1)

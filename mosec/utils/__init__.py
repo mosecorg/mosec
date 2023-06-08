@@ -15,11 +15,12 @@
 """Provide common useful utils to develop MOSEC."""
 
 from mosec.utils.openapi import make_body, make_response
-from mosec.utils.types import parse_cls_func_types, parse_instance_func_types
+from mosec.utils.types import ParseTarget, parse_cls_func_type, parse_instance_func_type
 
 __all__ = [
-    "parse_instance_func_types",
-    "parse_cls_func_types",
+    "parse_instance_func_type",
+    "parse_cls_func_type",
+    "ParseTarget",
     "make_body",
     "make_response",
 ]

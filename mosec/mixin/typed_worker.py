@@ -18,6 +18,7 @@ import warnings
 from typing import Any, Dict, Tuple
 
 from mosec.errors import ValidationError
+from mosec.utils import ParseTarget, parse_cls_func_type, parse_instance_func_type
 from mosec.worker import MOSEC_REF_TEMPLATE, Worker
 
 try:
@@ -35,7 +36,7 @@ class TypedMsgPackMixin(Worker):
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
-        input_typ, _ = self._get_forward_types()
+        input_typ = parse_instance_func_type(self.forward, ParseTarget.INPUT)
         if not issubclass(input_typ, msgspec.Struct):
             # skip other annotation type
             return super().deserialize(data)
@@ -49,11 +50,13 @@ class TypedMsgPackMixin(Worker):
         """Serialize with `msgpack`."""
         return msgspec.msgpack.encode(data)
 
-    def _get_forward_json_schema(
-        self,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
-        input_typ, return_typ = self._get_forward_types()
-        (input_schema, return_schema), comp_schema = msgspec.json.schema_components(
-            [input_typ, return_typ], MOSEC_REF_TEMPLATE
+    @classmethod
+    def get_forward_json_schema(
+        cls, target: ParseTarget
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Get the JSON schema of the forward function."""
+        typ = parse_cls_func_type(cls.forward, target)
+        (schema,), comp_schema = msgspec.json.schema_components(
+            [typ], MOSEC_REF_TEMPLATE
         )
-        return (input_schema, return_schema, comp_schema)
+        return (schema, comp_schema)

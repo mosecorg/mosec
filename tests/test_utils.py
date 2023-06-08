@@ -17,7 +17,7 @@ from typing import List
 from msgspec import Struct
 
 from mosec import Worker
-from mosec.utils import parse_instance_func_types
+from mosec.utils import ParseTarget, parse_instance_func_type
 
 
 class Request(Struct):
@@ -35,8 +35,8 @@ class Demo(Worker):
 def test_parse_forward_input_type():
     demo = Demo()
 
-    single, _ = parse_instance_func_types(demo.forward)
+    single = parse_instance_func_type(demo.forward, ParseTarget.INPUT)
     assert single is Request, single
 
-    batch, _ = parse_instance_func_types(demo.batch_forward)
+    batch = parse_instance_func_type(demo.batch_forward, ParseTarget.INPUT)
     assert batch is Request, batch

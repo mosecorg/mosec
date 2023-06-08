@@ -61,7 +61,7 @@ from mosec.dry_run import DryRunner
 from mosec.env import env_var_context
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.utils import make_body, make_response
+from mosec.utils import ParseTarget, make_body, make_response
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -372,9 +372,9 @@ class Server:
         """Generate the OpenAPI specification."""
         if not self._worker_cls:
             return
-        req_w, resp_w = self._worker_cls[0](), self._worker_cls[-1]()
-        input_schema, _, req_comp = req_w.get_forward_json_schema()
-        _, return_schema, resp_comp = resp_w.get_forward_json_schema()
+        req_w, resp_w = self._worker_cls[0], self._worker_cls[-1]
+        input_schema, req_comp = req_w.get_forward_json_schema(ParseTarget.INPUT)
+        return_schema, resp_comp = resp_w.get_forward_json_schema(ParseTarget.RETURN)
         schema = {
             "request_body": make_body(
                 "Mosec Inference Request Body", req_w.resp_mime_type, input_schema

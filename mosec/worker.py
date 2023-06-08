@@ -25,10 +25,10 @@ This module provides the interface to define a worker with such behaviors:
 import abc
 import json
 import pickle
-from typing import Any, Dict, Sequence, Tuple, Union
+from typing import Any, Dict, Sequence, Tuple
 
 from mosec.errors import DecodingError, EncodingError
-from mosec.utils.types import parse_instance_func_types
+from mosec.utils import ParseTarget
 
 MOSEC_REF_TEMPLATE = "#/components/schemas/{name}"
 
@@ -62,7 +62,6 @@ class Worker(abc.ABC):
     _worker_id: int = 0
     _stage: str = ""
     _max_batch_size: int = 1
-    _forward_types: Union[Tuple[type, type], None] = None
 
     def __init__(self):
         """Initialize the worker.
@@ -191,43 +190,29 @@ class Worker(abc.ABC):
         """
         raise NotImplementedError
 
-    def _get_forward_types(self) -> Tuple[type, type]:
-        """Get `forward` types.
-
-        Returns:
-            A tuple containing the types of the input variable and return
-            variable of the `self.forward` function.
-
-        Note:
-            This function inspects the type annotations of the `self.forward`
-            function to determine the types of the input and return variables.
-
-        Example usage:
-            input_type, return_type = self._get_forward_types()
-            # Use the retrieved types for further processing or validation.
-        """
-        if self._forward_types is None:
-            self._forward_types = parse_instance_func_types(self.forward)
-        return self._forward_types
-
+    @classmethod
     def get_forward_json_schema(
-        self,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
-        """Get `forward` json schema.
+        cls, target: ParseTarget  # pylint: disable=unused-argument
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Retrieve the JSON schema for the `forward` method of the class.
+
+        Args:
+            cls (type): The class object.
+            target (ParseTarget): The target variable to parse the schema for.
 
         Returns:
-            A tuple containing three dictionaries representing the JSON schema:
-                - The JSON schema for the input variable.
-                - The JSON schema for the return variable.
-                - The JSON schema for all the components.
+            Tuple[Dict[str, Any], Dict[str, Any]]: A tuple containing the schema
+              and the component schemas.
+
+        The `get_forward_json_schema` method is a class method that returns the
+          JSON schema for the `forward` method of the given class `cls`.
+          It takes a `target` argument specifying the target to parse the schema for.
+        The returned value is a tuple containing the schema and the component schema.
 
         Note:
-            This function retrieves the JSON schema for the input variable,
-            return variable, and all the components involved in the `forward` function.
-
-        Example usage:
-            input_schema, return_schema, (components_schema
-                                ) = self._get_forward_json_schema()
-            # Use the retrieved JSON schemas for validation or openapi generation.
+            Developer must implement this function to retrieve the JSON schema
+              to enable openapi spec.
+            The `MOSEC_REF_TEMPLATE` constant should be used as a reference template
+              according to openapi standards.
         """
-        return ({}, {}, {})
+        return ({}, {})

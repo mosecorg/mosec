@@ -43,7 +43,7 @@ class Preprocess(TypedMsgPackMixin, Worker):
 class Inference(TypedMsgPackMixin, Worker):
     """Dummy batch inference."""
 
-    def forward(self, data: List[bytes]) -> Any:
+    def forward(self, data: List[bytes]) -> List[int]:
         return [len(buf) for buf in data]
 
 
