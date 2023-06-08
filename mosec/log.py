@@ -22,7 +22,7 @@ import os
 from datetime import datetime
 from typing import Any, MutableMapping
 
-from mosec.args import mosec_args
+from mosec.args import is_debug_mode
 
 MOSEC_LOG_NAME = __name__
 MOSEC_LOG_PREFIX = "mosec"
@@ -178,4 +178,4 @@ def set_logger(debug=False):
 
 
 # need to configure it here to make sure all the process can get the same one
-set_logger(mosec_args.debug)
+set_logger(is_debug_mode())

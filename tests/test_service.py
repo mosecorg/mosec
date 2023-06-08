@@ -24,6 +24,7 @@ import httpx
 import msgpack  # type: ignore
 import pytest
 
+from mosec.server import GUARD_CHECK_INTERVAL
 from tests.utils import wait_for_port_open
 
 TEST_PORT = 5000
@@ -66,11 +67,11 @@ def test_square_service(mosec_service, http_client):
     resp = http_client.get("/metrics")
     assert resp.status_code == HTTPStatus.OK
 
-    resp = http_client.post("/inference", json={"msg": 2})
+    resp = http_client.post("/v1/inference", json={"msg": 2})
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert resp.text == "request validation error: 'x'"
 
-    resp = http_client.post("/inference", content=b"bad-binary-request")
+    resp = http_client.post("/v1/inference", content=b"bad-binary-request")
     assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
@@ -80,10 +81,10 @@ def test_square_service(mosec_service, http_client):
     "mosec_service, http_client",
     [
         pytest.param(
-            "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.arrow
+            "mixin_ipc_shm_service plasma", "", id="shm_plasma", marks=pytest.mark.shm
         ),
         pytest.param(
-            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.arrow
+            "mixin_ipc_shm_service redis", "", id="shm_redis", marks=pytest.mark.shm
         ),
     ],
     indirect=["mosec_service", "http_client"],
@@ -130,6 +131,10 @@ def test_mixin_typed_service(mosec_service, http_client):
     assert resp.headers["content-type"] == "application/msgpack"
     assert msgpack.unpackb(resp.content) == 11
 
+    # sleep long enough to make sure all the processes have been checked
+    # ref to https://github.com/mosecorg/mosec/pull/379#issuecomment-1578304988
+    time.sleep(GUARD_CHECK_INTERVAL + 1)
+
     resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, resp
 
@@ -157,7 +162,7 @@ def test_square_service_mp(mosec_service, http_client):
 
 
 def validate_square_service(http_client, x):
-    resp = http_client.post("/inference", json={"x": x})
+    resp = http_client.post("/v1/inference", json={"x": x})
     assert resp.status_code == HTTPStatus.OK
     assert resp.json()["x"] == x**2
 

@@ -59,6 +59,10 @@ class PlasmaShmWrapper(IPCWrapper):
         Args:
             shm_path (str): path of the plasma server.
         """
+        warnings.warn(
+            "PlasmaShmWrapper is deprecated, please use RedisShmIPCMixin.",
+            DeprecationWarning,
+        )
         self.client = plasma.connect(shm_path)
 
     def _put_plasma(self, data: List[bytes]) -> List[plasma.ObjectID]:
