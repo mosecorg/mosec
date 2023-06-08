@@ -49,8 +49,8 @@ from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.utils import ParseTarget, make_body, make_response
 from mosec.manager import PyRuntimeManager, RsRuntimeManager, Runtime
+from mosec.utils import ParseTarget, make_body, make_response
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -217,9 +217,10 @@ class Server:
 
     def _generate_openapi(self):
         """Generate the OpenAPI specification."""
-        if not self._worker_cls:
+        if self.coordinator_manager.worker_count <= 0:
             return
-        req_w, resp_w = self._worker_cls[0], self._worker_cls[-1]
+        workers = self.coordinator_manager.workers
+        req_w, resp_w = workers[0], workers[-1]
         input_schema, req_comp = req_w.get_forward_json_schema(ParseTarget.INPUT)
         return_schema, resp_comp = resp_w.get_forward_json_schema(ParseTarget.RETURN)
         schema = {
