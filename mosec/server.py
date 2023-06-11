@@ -50,8 +50,8 @@ from mosec.dry_run import DryRunner
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.manager import PyRuntimeManager, RsRuntimeManager, Runtime
-from mosec.utils import ParseTarget, make_body, make_response
-from mosec.worker import Worker
+from mosec.utils import ParseTarget
+from mosec.worker import MOSEC_REF_TEMPLATE, Worker
 
 logger = get_internal_logger()
 
@@ -220,21 +220,38 @@ class Server:
         if self.coordinator_manager.worker_count <= 0:
             return
         workers = self.coordinator_manager.workers
-        req_w, resp_w = workers[0], workers[-1]
-        input_schema, req_comp = req_w.get_forward_json_schema(ParseTarget.INPUT)
-        return_schema, resp_comp = resp_w.get_forward_json_schema(ParseTarget.RETURN)
+        request_worker_cls, response_worker_cls = workers[0], workers[-1]
+        input_schema, input_components = request_worker_cls.get_forward_json_schema(
+            ParseTarget.INPUT, MOSEC_REF_TEMPLATE
+        )
+        return_schema, return_components = response_worker_cls.get_forward_json_schema(
+            ParseTarget.RETURN, MOSEC_REF_TEMPLATE
+        )
+
+        def make_body(description, mime, schema):
+            if not schema:
+                return None
+            return {"description": description, "content": {mime: {"schema": schema}}}
+
         schema = {
             "request_body": make_body(
-                "Mosec Inference Request Body", req_w.resp_mime_type, input_schema
+                "Mosec Inference Request Body",
+                request_worker_cls.resp_mime_type,
+                input_schema,
             ),
-            "responses": make_response(
-                "Mosec Inference Result", resp_w.resp_mime_type, return_schema, 200
-            ),
-            "schemas": {**req_comp, **resp_comp},
+            "responses": {
+                200: make_body(
+                    "Mosec Inference Result",
+                    response_worker_cls.resp_mime_type,
+                    return_schema,
+                )
+            },
+            "schemas": {**input_components, **return_components},
         }
         tmp_path = pathlib.Path(os.path.join(self._configs["path"], MOSEC_OPENAPI_PATH))
         tmp_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path.write_text(json.dumps(schema), encoding="utf-8")
+        with open(tmp_path, "w", encoding="utf-8") as file:
+            json.dump(schema, file)
 
     def run(self):
         """Start the mosec model server."""

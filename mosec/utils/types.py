@@ -26,13 +26,14 @@ class ParseTarget(Enum):
     RETURN = "RETURN"
 
 
-def parse_func_type(func, target: ParseTarget, index=0) -> type:
+def parse_func_type(func, target: ParseTarget) -> type:
     """Parse the input type of the target function.
 
     - single request: return the type
     - batch request: return the list item type
     """
     sig = inspect.signature(func)
+    index = 0 if inspect.ismethod(func) else 1
     name = func.__name__
     if target == ParseTarget.INPUT:
         params = list(sig.parameters.values())
@@ -56,19 +57,3 @@ def parse_func_type(func, target: ParseTarget, index=0) -> type:
             )
         return typ.__args__[0]  # type: ignore
     raise TypeError(f"unsupported type {typ}")
-
-
-def parse_instance_func_type(func, target: ParseTarget) -> type:
-    """Parse the input type of the target instance method.
-
-    The `obj.func` already calls the first parameter, so the index is 0.
-    """
-    return parse_func_type(func, target, 0)
-
-
-def parse_cls_func_type(func, target: ParseTarget) -> type:
-    """Parse the input type of the target cls method.
-
-    The `class.func` remains the original func, so the index is 1.
-    """
-    return parse_func_type(func, target, 1)

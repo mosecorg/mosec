@@ -192,27 +192,29 @@ class Worker(abc.ABC):
 
     @classmethod
     def get_forward_json_schema(
-        cls, target: ParseTarget  # pylint: disable=unused-argument
+        cls, target: ParseTarget, ref_template: str  # pylint: disable=unused-argument
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Retrieve the JSON schema for the `forward` method of the class.
 
         Args:
-            cls (type): The class object.
-            target (ParseTarget): The target variable to parse the schema for.
+            cls : The class object.
+            target : The target variable to parse the schema for.
+            ref_template : A template to use when generating ``"$ref"`` fields.
 
         Returns:
-            Tuple[Dict[str, Any], Dict[str, Any]]: A tuple containing the schema
-              and the component schemas.
+            A tuple containing the schema and the component schemas.
 
         The `get_forward_json_schema` method is a class method that returns the
-          JSON schema for the `forward` method of the given class `cls`.
-          It takes a `target` argument specifying the target to parse the schema for.
+        JSON schema for the `forward` method of the given class `cls`. It takes
+        a `target` argument specifying the target to parse the schema for.
+
         The returned value is a tuple containing the schema and the component schema.
 
         Note:
             Developer must implement this function to retrieve the JSON schema
-              to enable openapi spec.
+            to enable openapi spec.
+
             The `MOSEC_REF_TEMPLATE` constant should be used as a reference template
-              according to openapi standards.
+            according to openapi standards.
         """
         return ({}, {})

@@ -62,9 +62,17 @@ struct AppState {
     get,
     path = "/",
     responses(
-        (status = StatusCode::OK, description = "Root path, can be used for liveness health check",body=String),
-        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE",body=String)
-    )
+        (
+            status = StatusCode::OK,
+            description = "Root path, can be used for liveness health check",
+            body = String,
+        ),
+        (
+            status = StatusCode::SERVICE_UNAVAILABLE,
+            description = "SERVICE_UNAVAILABLE",
+            body = String,
+        ),
+    ),
 )]
 async fn index(_: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
@@ -82,8 +90,12 @@ async fn index(_: Request<Body>) -> Response<Body> {
     get,
     path = "/metrics",
     responses(
-        (status = StatusCode::OK, description = "Get metrics",body=String)
-    )
+        (
+            status = StatusCode::OK,
+            description = "Get metrics",
+            body = String,
+        ),
+    ),
 )]
 async fn metrics(_: Request<Body>) -> Response<Body> {
     let mut encoded = String::new();
@@ -108,14 +120,35 @@ async fn openapi(_: Request<Body>, doc: openapi::OpenApi) -> Response<Body> {
     post,
     path = "/inference",
     responses(
-        (status = StatusCode::OK, description = "Inference"),
-        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
-        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
-        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
-        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
-        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
-    )
+        (
+            status = StatusCode::OK,
+            description = "Inference",
+        ),
+        (
+            status = StatusCode::BAD_REQUEST,
+            description = "BAD_REQUEST",
+        ),
+        (
+            status = StatusCode::SERVICE_UNAVAILABLE,
+            description = "SERVICE_UNAVAILABLE",
+        ),
+        (
+            status = StatusCode::UNPROCESSABLE_ENTITY,
+            description = "UNPROCESSABLE_ENTITY",
+        ),
+        (
+            status = StatusCode::REQUEST_TIMEOUT,
+            description = "REQUEST_TIMEOUT",
+        ),
+        (
+            status = StatusCode::INTERNAL_SERVER_ERROR,
+            description = "INTERNAL_SERVER_ERROR",
+        ),
+        (
+            status = StatusCode::TOO_MANY_REQUESTS,
+            description = "TOO_MANY_REQUESTS",
+        ),
+    ),
 )]
 async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
@@ -220,8 +253,11 @@ async fn shutdown_signal() {
         openapi,
     ),
     tags(
-        (name = "Mosec", description = "Mosec Open API Docs")
-    )
+        (
+            name = "Mosec",
+            description = "Mosec Open API Docs",
+        ),
+    ),
 )]
 struct RustApiDoc;
 
@@ -232,7 +268,8 @@ async fn run(opts: &Opts) {
     let doc = MosecApiDoc {
         api: RustApiDoc::openapi(),
     }
-    .merge("/inference", python_api.parse().unwrap());
+    .merge("/inference", python_api.parse().unwrap())
+    .move_path("/inference", &opts.endpoint);
 
     let state = AppState {
         mime: opts.mime.clone(),

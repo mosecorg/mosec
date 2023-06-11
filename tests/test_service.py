@@ -45,7 +45,7 @@ def mosec_service(request):
         shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
-    yield service
+    yield (service, args)
     service.terminate()
     time.sleep(2)  # wait for service to stop
 
@@ -178,3 +178,51 @@ def assert_empty_queue(http_client):
     metrics = http_client.get("/metrics").content.decode()
     remain = re.findall(r"mosec_service_remaining_task \d+", metrics)[0]
     assert int(remain.split(" ")[-1]) == 0
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param(
+            "openapi_service TypedPreprocess/TypedInference",
+            "",
+            id="TypedPreprocess/TypedInference",
+        ),
+        pytest.param(
+            "openapi_service UntypedPreprocess/TypedInference",
+            "",
+            id="UntypedPreprocess/TypedInference",
+        ),
+        pytest.param(
+            "openapi_service TypedPreprocess/UntypedInference",
+            "",
+            id="TypedPreprocess/UntypedInference",
+        ),
+        pytest.param(
+            "openapi_service UntypedPreprocess/UntypedInference",
+            "",
+            id="UntypedPreprocess/UntypedInference",
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_openapi_service(mosec_service, http_client):
+    spec = http_client.get("/openapi").json()
+    (_, args) = mosec_service
+    input_cls, return_cls = args.split("/")
+    path_item = spec["paths"]["/v1/inference"]["post"]
+
+    if input_cls == "TypedPreprocess":
+        want = {
+            "application/msgpack": {"schema": {"$ref": "#/components/schemas/Request"}}
+        }
+        assert path_item["requestBody"]["content"] == want
+        assert "Request" in spec["components"]["schemas"]
+    else:
+        assert "requestBody" not in path_item
+
+    if return_cls == "TypedInference":
+        want = {"application/msgpack": {"schema": {"type": "integer"}}}
+        assert path_item["responses"]["200"]["content"] == want
+    else:
+        assert "content" not in path_item["responses"]["200"]

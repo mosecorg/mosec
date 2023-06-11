@@ -15,16 +15,19 @@
 """MOSEC type validation mixin."""
 
 import warnings
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
+from mosec import get_logger
 from mosec.errors import ValidationError
-from mosec.utils import ParseTarget, parse_cls_func_type, parse_instance_func_type
-from mosec.worker import MOSEC_REF_TEMPLATE, Worker
+from mosec.utils import ParseTarget, parse_func_type
+from mosec.worker import Worker
 
 try:
     import msgspec  # type: ignore
 except ImportError:
     warnings.warn("msgpack is required for TypedMsgPackMixin", ImportWarning)
+
+logger = get_logger()
 
 
 class TypedMsgPackMixin(Worker):
@@ -33,16 +36,18 @@ class TypedMsgPackMixin(Worker):
     # pylint: disable=no-self-use
 
     resp_mime_type = "application/msgpack"
+    input_typ: Optional[type] = None
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
-        input_typ = parse_instance_func_type(self.forward, ParseTarget.INPUT)
-        if not issubclass(input_typ, msgspec.Struct):
+        if not self.input_typ:
+            self.input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
+        if not issubclass(self.input_typ, msgspec.Struct):
             # skip other annotation type
             return super().deserialize(data)
 
         try:
-            return msgspec.msgpack.decode(data, type=input_typ)
+            return msgspec.msgpack.decode(data, type=self.input_typ)
         except msgspec.ValidationError as err:
             raise ValidationError(err)  # pylint: disable=raise-missing-from
 
@@ -52,11 +57,17 @@ class TypedMsgPackMixin(Worker):
 
     @classmethod
     def get_forward_json_schema(
-        cls, target: ParseTarget
+        cls, target: ParseTarget, ref_template: str
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Get the JSON schema of the forward function."""
-        typ = parse_cls_func_type(cls.forward, target)
-        (schema,), comp_schema = msgspec.json.schema_components(
-            [typ], MOSEC_REF_TEMPLATE
-        )
+        schema: Dict[str, Any]
+        comp_schema: Dict[str, Any]
+        (schema, comp_schema) = ({}, {})
+        typ = parse_func_type(cls.forward, target)
+        try:
+            (schema,), comp_schema = msgspec.json.schema_components([typ], ref_template)
+        except TypeError as err:
+            logger.warning(
+                "Failed to generate JSON schema for %s: %s", cls.__name__, err
+            )
         return (schema, comp_schema)
