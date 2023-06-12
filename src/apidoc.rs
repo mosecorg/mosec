@@ -105,10 +105,10 @@ impl MosecApiDoc {
         MosecApiDoc { api }
     }
 
-    pub fn move_path(&self,from:&str,to:&str)->Self{
+    pub fn move_path(&self, from: &str, to: &str) -> Self {
         // move one path to another
-        let mut api=self.api.clone();
-        if let Some(r)=api.paths.paths.remove(from){
+        let mut api = self.api.clone();
+        if let Some(r) = api.paths.paths.remove(from) {
             api.paths.paths.insert(to.to_owned(), r);
         }
         MosecApiDoc { api }
