@@ -268,7 +268,7 @@ async fn run(opts: &Opts) {
     let doc = MosecApiDoc {
         api: RustApiDoc::openapi(),
     }
-    .merge("/inference", python_api.parse().unwrap())
+    .merge("/inference", python_api.parse().unwrap_or_default())
     .move_path("/inference", &opts.endpoint);
 
     let state = AppState {

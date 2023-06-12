@@ -239,7 +239,9 @@ class Server:
                 request_worker_cls.resp_mime_type,
                 input_schema,
             ),
-            "responses": {
+            "responses": None
+            if not return_schema
+            else {
                 200: make_body(
                     "Mosec Inference Result",
                     response_worker_cls.resp_mime_type,
