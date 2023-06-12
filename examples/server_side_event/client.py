@@ -20,4 +20,12 @@ with httpx.Client() as client:
         client, "POST", "http://127.0.0.1:8000/sse_inference", json={"text": "mosec"}
     ) as event_source:
         for sse in event_source.iter_sse():
-            print(f"Event({sse.event}): {sse.data} ")
+            print(f"Event({sse.event}): {sse.data}")
+
+# error handling
+with httpx.Client() as client:
+    with connect_sse(
+        client, "POST", "http://127.0.0.1:8000/sse_inference", json={"error": "mosec"}
+    ) as event_source:
+        for sse in event_source.iter_sse():
+            print(f"Event({sse.event}): {sse.data}")

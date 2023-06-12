@@ -25,6 +25,6 @@ pub(crate) enum ServiceError {
     #[display(fmt = "mosec unknown error")]
     UnknownError,
 
-    #[display(fmt = "sse inference error")]
+    #[display(fmt = "SSE inference error: {_0}")]
     SSEError(TaskCode),
 }

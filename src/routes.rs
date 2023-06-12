@@ -25,7 +25,6 @@ use hyper::{
     Body, Request, Response, StatusCode,
 };
 use prometheus_client::encoding::text::encode;
-use tracing::debug;
 
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
@@ -158,10 +157,10 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
                 while let Some((msg, code)) = rx.recv().await {
                     yield match code {
                         TaskCode::Normal => Ok(Event::default().data(String::from_utf8_lossy(&msg))),
-                        _ => {
-                            debug!(%code, "sent SSE error to the client");
-                            Err(ServiceError::SSEError(code))
+                        TaskCode::BadRequestError | TaskCode::InternalError | TaskCode::ValidationError | TaskCode::TimeoutError => {
+                            Ok(Event::default().event("error").data(ServiceError::SSEError(code).to_string()))
                         }
+                        _ => Err(ServiceError::SSEError(code)),
                     }
                 }
             };
