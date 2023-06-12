@@ -25,6 +25,7 @@ use hyper::{
     Body, Request, Response, StatusCode,
 };
 use prometheus_client::encoding::text::encode;
+use tracing::warn;
 
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
@@ -70,7 +71,6 @@ pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
 pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
-    let metrics = Metrics::global();
 
     if task_manager.is_shutdown() {
         return build_response(
@@ -84,6 +84,7 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
     }
 
     let (status, content);
+    let metrics = Metrics::global();
     metrics.remaining_task.inc();
     match task_manager.submit_task(data).await {
         Ok(task) => {
@@ -136,7 +137,6 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
 pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
-    // let metrics = Metrics::global();
 
     if task_manager.is_shutdown() {
         return (
@@ -150,17 +150,22 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
         return (StatusCode::OK, Bytes::from_static(RESPONSE_EMPTY)).into_response();
     }
 
-    // metrics.remaining_task.inc();
+    let metrics = Metrics::global();
     match task_manager.submit_sse_task(data).await {
         Ok(mut rx) => {
             let stream = async_stream::stream! {
                 while let Some((msg, code)) = rx.recv().await {
                     yield match code {
-                        TaskCode::Normal => Ok(Event::default().data(String::from_utf8_lossy(&msg))),
+                        TaskCode::Normal => {
+                            Ok(Event::default().data(String::from_utf8_lossy(&msg)))
+                        },
                         TaskCode::BadRequestError | TaskCode::InternalError | TaskCode::ValidationError | TaskCode::TimeoutError => {
                             Ok(Event::default().event("error").data(ServiceError::SSEError(code).to_string()))
                         }
-                        _ => Err(ServiceError::SSEError(code)),
+                        _ => {
+                            warn!(?code, ?msg, "unexpected error in SSE");
+                            Err(ServiceError::SSEError(code))
+                        }
                     }
                 }
             };
@@ -176,6 +181,12 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
                 ServiceError::Timeout => StatusCode::REQUEST_TIMEOUT,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
+            metrics
+                .throughput
+                .get_or_create(&CodeLabel {
+                    code: status.as_u16(),
+                })
+                .inc();
             (status, content).into_response()
         }
     }

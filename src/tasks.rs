@@ -18,13 +18,14 @@ use std::sync::{Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 use bytes::Bytes;
+use hyper::StatusCode;
 use once_cell::sync::OnceCell;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
 use crate::errors::ServiceError;
-use crate::metrics::Metrics;
+use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, derive_more::Error)]
 pub(crate) enum TaskCode {
@@ -145,6 +146,8 @@ impl TaskManager {
             let mut stream_senders = self.stream_senders.lock().unwrap();
             stream_senders.insert(id, sender);
         }
+        let metrics = Metrics::global();
+        metrics.remaining_task.inc();
         tokio::spawn(wait_sse_finish(id, self.timeout, rx));
 
         Ok(receiver)
@@ -155,19 +158,21 @@ impl TaskManager {
         stream_senders.get(id).cloned()
     }
 
-    pub(crate) fn delete_task(&self, id: u32, has_stream: bool) {
+    pub(crate) fn delete_task(&self, id: u32, has_stream: bool) -> Option<Task> {
+        let task;
         {
             let mut notifiers = self.notifiers.lock().unwrap();
             notifiers.remove(&id);
         }
         {
             let mut table = self.table.write().unwrap();
-            table.remove(&id);
+            task = table.remove(&id);
         }
         if has_stream {
             let mut stream_senders = self.stream_senders.lock().unwrap();
             stream_senders.remove(&id);
         }
+        task
     }
 
     pub(crate) fn is_shutdown(&self) -> bool {
@@ -284,7 +289,22 @@ async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver
     if let Err(err) = time::timeout(timeout, notifier).await {
         warn!(%err, "task was not completed in the expected time");
     }
-    task_manager.delete_task(id, true);
+
+    let metrics = Metrics::global();
+    if let Some(task) = task_manager.delete_task(id, true) {
+        metrics
+            .duration
+            .get_or_create(DURATION_LABEL.get().expect("DURATION_LABEL is not set"))
+            .observe(task.create_at.elapsed().as_secs_f64());
+    }
+    metrics.remaining_task.dec();
+    // since the SSE will always return status code 200
+    metrics
+        .throughput
+        .get_or_create(&CodeLabel {
+            code: StatusCode::OK.as_u16(),
+        })
+        .inc();
 }
 
 #[cfg(test)]
