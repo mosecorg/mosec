@@ -131,7 +131,7 @@ pub(crate) async fn communicate(
                             }
                             debug!(%stage_id_label, %connection_id, "socket finished to read message");
                         }
-                        task_manager.update_multi_tasks(code, &ids, &data);
+                        task_manager.update_multi_tasks(code, &ids, &data).await;
                         match code {
                             TaskCode::Normal => {
                                 for id in &ids {
@@ -177,7 +177,7 @@ async fn send_stream_event(ids: &[u32], data: &[Bytes]) {
     for (id, data) in ids.iter().zip(data.iter()) {
         match task_manager.get_stream_sender(id) {
             Some(sender) => {
-                if let Err(err) = sender.send((data.clone(), TaskCode::StreamEvent)).await {
+                if let Err(err) = sender.send((data.clone(), TaskCode::Normal)).await {
                     info!(%err, %id, "failed to send stream event");
                 }
             }

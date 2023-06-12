@@ -25,6 +25,7 @@ use hyper::{
     Body, Request, Response, StatusCode,
 };
 use prometheus_client::encoding::text::encode;
+use tracing::debug;
 
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
@@ -156,29 +157,17 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
             let stream = async_stream::stream! {
                 while let Some((msg, code)) = rx.recv().await {
                     yield match code {
-                        TaskCode::StreamEvent => Ok(Event::default().data(String::from_utf8_lossy(&msg))),
-                        _ => Err(ServiceError::SseError),
+                        TaskCode::Normal => Ok(Event::default().data(String::from_utf8_lossy(&msg))),
+                        _ => {
+                            debug!(%code, "sent SSE error to the client");
+                            Err(ServiceError::SSEError(code))
+                        }
                     }
                 }
             };
             Sse::new(stream)
                 .keep_alive(KeepAlive::new().interval(Duration::from_secs(3)))
                 .into_response()
-            // content = task.data;
-            // status = match task.code {
-            //     TaskCode::Normal => {
-            //         // Record latency only for successful tasks
-            //         metrics
-            //             .duration
-            //             .with_label_values(&["total", "total"])
-            //             .observe(task.create_at.elapsed().as_secs_f64());
-            //         StatusCode::OK
-            //     }
-            //     TaskCode::BadRequestError => StatusCode::BAD_REQUEST,
-            //     TaskCode::ValidationError => StatusCode::UNPROCESSABLE_ENTITY,
-            //     TaskCode::TimeoutError => StatusCode::REQUEST_TIMEOUT,
-            //     TaskCode::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-            // }
         }
         Err(err) => {
             // Handle errors for which tasks cannot be retrieved

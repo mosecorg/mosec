@@ -204,7 +204,7 @@ class Worker(abc.ABC):
             - for a single-stage worker, data will go through
                 ``<deserialize> -> <forward> -> <serialize>``
 
-            - for a multi-stage worker that is neithor `ingress` not `egress`, data
+            - for a multi-stage worker that is neither `ingress` not `egress`, data
                 will go through ``<deserialize_ipc> -> <forward> -> <serialize_ipc>``
         """
         raise NotImplementedError

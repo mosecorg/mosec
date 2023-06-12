@@ -19,7 +19,7 @@ logger = get_logger()
 
 class Preprocess(Worker):
     def forward(self, data):
-        return data
+        return data["text"]
 
 
 class Inference(Worker):

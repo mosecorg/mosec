@@ -38,7 +38,7 @@ class HTTPStautsCode(IntFlag):
     INTERNAL_ERROR = 8  # 500
     TIMEOUT_ERROR = 16  # 408
 
-    # special one, not used in HTTP
+    # special one, indicate that it's a SSE
     STREAM_EVENT = 32768
 
 

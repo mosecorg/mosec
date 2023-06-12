@@ -26,14 +26,20 @@ use tracing::{debug, error, info, warn};
 use crate::errors::ServiceError;
 use crate::metrics::Metrics;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, derive_more::Error)]
 pub(crate) enum TaskCode {
+    #[display(fmt = "200: OK")]
     Normal,
+    #[display(fmt = "400: Bad Request")]
     BadRequestError,
+    #[display(fmt = "422: Unprocessable Content")]
     ValidationError,
+    #[display(fmt = "408: Request Timeout")]
     TimeoutError,
+    #[display(fmt = "500: Internal Server Error")]
     InternalError,
     // special case
+    #[display(fmt = "500: Internal Server Error")]
     StreamEvent,
 }
 
@@ -93,10 +99,16 @@ impl TaskManager {
         self.shutdown.store(true, Ordering::Release);
         let fut = time::timeout(self.timeout, async {
             let mut interval = time::interval(Duration::from_millis(100));
+            let mut retry = 0;
             loop {
                 interval.tick().await;
-                if self.table.read().unwrap().len() == 0 {
+                let remaining_task_num = self.table.read().unwrap().len();
+                if remaining_task_num == 0 {
                     break;
+                }
+                retry += 1;
+                if (retry % 10) == 0 {
+                    info!(%remaining_task_num, "waiting for remaining tasks to complete");
                 }
             }
         });
@@ -137,19 +149,6 @@ impl TaskManager {
 
         Ok(receiver)
     }
-
-    // pub(crate) async fn send_event(&self, ids: &[u32], data: &[Bytes]) {
-    //     let stream_senders = self.stream_senders.lock().unwrap();
-    //     for index in 0..ids.len() {
-    //         debug!(ids=ids[index], "send event to the channel");
-    //         let sender = stream_senders.get(&ids[index]);
-    //         if let Some(sender) = sender {
-    //             if let Err(err) = sender.send((data[index].clone(), TaskCode::StreamEvent)).await {
-    //                 info!(%err, id=ids[index], "send stream event failed");
-    //             }
-    //         }
-    //     }
-    // }
 
     pub(crate) fn get_stream_sender(&self, id: &u32) -> Option<mpsc::Sender<(Bytes, TaskCode)>> {
         let stream_senders = self.stream_senders.lock().unwrap();
@@ -238,34 +237,54 @@ impl TaskManager {
         });
     }
 
-    pub(crate) fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
-        let mut table = self.table.write().unwrap();
+    pub(crate) async fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
         let mut abnormal_tasks = Vec::new();
-        for i in 0..ids.len() {
-            let task = table.get_mut(&ids[i]);
-            match task {
-                Some(task) => {
-                    task.update(code, &data[i]);
-                    match code {
-                        TaskCode::Normal => {}
-                        _ => {
-                            abnormal_tasks.push(ids[i]);
+        {
+            // make sure the table lock is released since the next func call may need to acquire
+            // the notifiers lock, we'd better only hold one lock at a time
+            let mut table = self.table.write().unwrap();
+            for i in 0..ids.len() {
+                let task = table.get_mut(&ids[i]);
+                match task {
+                    Some(task) => {
+                        task.update(code, &data[i]);
+                        match code {
+                            TaskCode::Normal => {}
+                            _ => {
+                                abnormal_tasks.push(ids[i]);
+                            }
                         }
                     }
-                }
-                None => {
-                    // if the task is already timeout, it may be removed by another thread
-                    info!(id=%ids[i], "cannot find this task, maybe it has expired");
+                    None => {
+                        // if the task is already timeout, it may be removed by another thread
+                        info!(id=%ids[i], "cannot find this task, maybe it has expired");
+                    }
                 }
             }
         }
-        // make sure the table lock is released since the next func call may need to acquire
-        // the notifiers lock, we'd better only hold one lock at a time
-        drop(table);
+        // check if it's a SSE task
+        {
+            for task_id in &abnormal_tasks {
+                if let Some(sender) = self.get_stream_sender(task_id) {
+                    if let Err(err) = sender.send(("".into(), code)).await {
+                        info!(%err, %task_id, "failed to send stream event");
+                    }
+                    debug!(%task_id, %code, "sent abnormal task event to the channel");
+                }
+            }
+        }
         for task_id in abnormal_tasks {
             self.notify_task_done(task_id);
         }
     }
+}
+
+async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver<()>) {
+    let task_manager = TaskManager::global();
+    if let Err(err) = time::timeout(timeout, notifier).await {
+        warn!(%err, "task was not completed in the expected time");
+    }
+    task_manager.delete_task(id, true);
 }
 
 #[cfg(test)]
@@ -384,7 +403,9 @@ mod tests {
 
         // update tasks
         data = vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")];
-        task_manager.update_multi_tasks(TaskCode::Normal, &task_ids, &data);
+        task_manager
+            .update_multi_tasks(TaskCode::Normal, &task_ids, &data)
+            .await;
         let mut new_data = Vec::new();
         task_manager.get_multi_tasks_data(&mut task_ids, &mut new_data);
         assert_eq!(task_ids, vec![0, 1]);
@@ -393,12 +414,4 @@ mod tests {
             vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")]
         );
     }
-}
-
-async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver<()>) {
-    let task_manager = TaskManager::global();
-    if let Err(err) = time::timeout(timeout, notifier).await {
-        warn!(%err, "task was not completed in the expected time");
-    }
-    task_manager.delete_task(id, true);
 }

@@ -29,8 +29,8 @@ from mosec.protocol import HTTPStautsCode
 class MosecError(Exception):
     """Mosec basic exception."""
 
-    code = HTTPStautsCode.INTERNAL_ERROR
-    msg = "mosec error"
+    code: HTTPStautsCode = HTTPStautsCode.INTERNAL_ERROR
+    msg: str = "mosec error"
 
 
 class ClientError(MosecError):
