@@ -41,7 +41,7 @@ use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::{filter, prelude::*, Layer};
 use utoipa::{openapi, OpenApi};
 
-use crate::apidoc::MosecApiDoc;
+use crate::apidoc::MosecAPIDoc;
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
 use crate::errors::ServiceError;
@@ -265,7 +265,7 @@ struct RustApiDoc;
 async fn run(opts: &Opts) {
     let python_api =
         read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
-    let doc = MosecApiDoc {
+    let doc = MosecAPIDoc {
         api: RustApiDoc::openapi(),
     }
     .merge("/inference", python_api.parse().unwrap_or_default())

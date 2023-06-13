@@ -37,11 +37,11 @@ impl FromStr for PythonAPIDoc {
     }
 }
 
-pub(crate) struct MosecApiDoc {
+pub(crate) struct MosecAPIDoc {
     pub api: OpenApi,
 }
 
-impl MosecApiDoc {
+impl MosecAPIDoc {
     fn get_operation<'a>(
         &self,
         api: &'a mut OpenApi,
@@ -75,8 +75,8 @@ impl MosecApiDoc {
         &mut op.responses
     }
 
+    /// merge PythonAPIDoc of target route to mosec api
     pub fn merge(&self, route: &str, python_api: PythonAPIDoc) -> Self {
-        // merge PythonAPIDoc of target route to mosec api
         let mut api = self.api.clone();
 
         if let Some(mut other_schemas) = python_api.schemas {
@@ -102,17 +102,22 @@ impl MosecApiDoc {
             response.responses.append(&mut responses);
         };
 
-        MosecApiDoc { api }
+        MosecAPIDoc { api }
     }
 
+    /// This function replaces a [OpenAPI Path Item Object][path_item] from path `from` to path `to`.
+    ///
+    /// e.g. /inference -> /v1/inference.
+    ///
+    /// It is used to handle cases where variable paths are not supported by the [utoipa-gen][utoipa-gen] library.
+    ///
+    /// [path_item]: https://spec.openapis.org/oas/latest.html#path-item-object
+    /// [utoipa-gen]: https://crates.io/crates/utoipa-gen
     pub fn replace_path_item(&self, from: &str, to: &str) -> Self {
-        // replace path item from path `from` to path `to`
-        // e.g. /inference -> /v1/inference
-        // because utoipa_gen::proc_macro::OpenApi can't handle variable path
         let mut api = self.api.clone();
         if let Some(r) = api.paths.paths.remove(from) {
             api.paths.paths.insert(to.to_owned(), r);
         }
-        MosecApiDoc { api }
+        MosecAPIDoc { api }
     }
 }

@@ -65,7 +65,7 @@ class UntypedInference(TypedMsgPackMixin, Worker):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Please specify a shm to run: plasma or redis")
+        print("Please specify the worker mapping. e.g. TypedPreprocess/TypedInference")
         exit(1)
 
     worker_mapping: Dict[str, Type[Worker]] = {
