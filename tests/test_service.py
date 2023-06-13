@@ -178,3 +178,54 @@ def assert_empty_queue(http_client):
     metrics = http_client.get("/metrics").content.decode()
     remain = re.findall(r"mosec_service_remaining_task \d+", metrics)[0]
     assert int(remain.split(" ")[-1]) == 0
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client, args",
+    [
+        pytest.param(
+            "openapi_service TypedPreprocess/TypedInference",
+            "",
+            "TypedPreprocess/TypedInference",
+            id="TypedPreprocess/TypedInference",
+        ),
+        pytest.param(
+            "openapi_service UntypedPreprocess/TypedInference",
+            "",
+            "UntypedPreprocess/TypedInference",
+            id="UntypedPreprocess/TypedInference",
+        ),
+        pytest.param(
+            "openapi_service TypedPreprocess/UntypedInference",
+            "",
+            "TypedPreprocess/UntypedInference",
+            id="TypedPreprocess/UntypedInference",
+        ),
+        pytest.param(
+            "openapi_service UntypedPreprocess/UntypedInference",
+            "",
+            "UntypedPreprocess/UntypedInference",
+            id="UntypedPreprocess/UntypedInference",
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_openapi_service(mosec_service, http_client, args):
+    spec = http_client.get("/openapi").json()
+    input_cls, return_cls = args.split("/")
+    path_item = spec["paths"]["/v1/inference"]["post"]
+
+    if input_cls == "TypedPreprocess":
+        want = {
+            "application/msgpack": {"schema": {"$ref": "#/components/schemas/Request"}}
+        }
+        assert path_item["requestBody"]["content"] == want
+        assert "Request" in spec["components"]["schemas"]
+    else:
+        assert "requestBody" not in path_item
+
+    if return_cls == "TypedInference":
+        want = {"application/msgpack": {"schema": {"type": "integer"}}}
+        assert path_item["responses"]["200"]["content"] == want
+    else:
+        assert "content" not in path_item["responses"]["200"]
