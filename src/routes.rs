@@ -160,7 +160,9 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
                             Ok(Event::default().data(String::from_utf8_lossy(&msg)))
                         },
                         TaskCode::BadRequestError | TaskCode::InternalError | TaskCode::ValidationError | TaskCode::TimeoutError => {
-                            Ok(Event::default().event("error").data(ServiceError::SSEError(code).to_string()))
+                            Ok(Event::default().event("error").data(
+                                format!("{}: {}", ServiceError::SSEError(code), String::from_utf8_lossy(&msg))),
+                            )
                         }
                         _ => {
                             warn!(?code, ?msg, "unexpected error in SSE");

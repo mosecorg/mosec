@@ -269,12 +269,12 @@ impl TaskManager {
         }
         // check if it's a SSE task
         {
-            for task_id in &abnormal_tasks {
-                if let Some(sender) = self.get_stream_sender(task_id) {
-                    if let Err(err) = sender.send(("".into(), code)).await {
-                        info!(%err, %task_id, "failed to send stream event");
+            for i in 0..abnormal_tasks.len() {
+                if let Some(sender) = self.get_stream_sender(&abnormal_tasks[i]) {
+                    if let Err(err) = sender.send((data[i].clone(), code)).await {
+                        info!(%err, task_id=abnormal_tasks[i], "failed to send stream event");
                     }
-                    debug!(%task_id, %code, "sent abnormal task event to the channel");
+                    debug!(%code, task_id=abnormal_tasks[i], "sent abnormal task event to the channel");
                 }
             }
         }

@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mosec import Server, Worker, get_logger
+from mosec import Server, ValidationError, Worker, get_logger
 
 logger = get_logger()
 
 
 class Preprocess(Worker):
     def forward(self, data):
-        return data["text"]
+        text = data.get("text")
+        if text is None:
+            raise ValidationError("text is required")
+        return text
 
 
 class Inference(Worker):
