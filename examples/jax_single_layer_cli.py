@@ -14,6 +14,7 @@
 """Example: Client of the Jax server."""
 
 import random
+import sys
 
 import httpx
 
@@ -28,3 +29,4 @@ if prediction.status_code == 200:
     print(prediction.json())
 else:
     print(prediction.status_code, prediction.json())
+    sys.exit(1)

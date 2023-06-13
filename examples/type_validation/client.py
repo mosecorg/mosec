@@ -27,3 +27,4 @@ if resp.status_code == HTTPStatus.OK:
     print(f"OK: {msgpack.unpackb(resp.content)}")
 else:
     print(f"err[{resp.status_code}] {resp.text}")
+    exit(1)
