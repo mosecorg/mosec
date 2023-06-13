@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::BTreeMap, str::FromStr};
+use std::collections::BTreeMap;
+use std::str::FromStr;
 
 use serde::Deserialize;
-use utoipa::openapi::{
-    path::Operation, request_body::RequestBody, Components, OpenApi, PathItemType, RefOr, Response,
-    Responses, Schema,
-};
+use utoipa::openapi::path::Operation;
+use utoipa::openapi::request_body::RequestBody;
+use utoipa::openapi::{Components, OpenApi, PathItemType, RefOr, Response, Responses, Schema};
 
 #[derive(Deserialize, Default)]
 pub(crate) struct PythonAPIDoc {

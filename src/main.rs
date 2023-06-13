@@ -21,16 +21,17 @@ mod protocol;
 mod routes;
 mod tasks;
 
-use std::{fs::read_to_string, net::SocketAddr, path::Path};
+use std::fs::read_to_string;
+use std::net::SocketAddr;
+use std::path::Path;
 
-use axum::{
-    routing::{get, post},
-    Router,
-};
+use axum::routing::{get, post};
+use axum::Router;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
-use tracing_subscriber::{filter, prelude::*, Layer};
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{filter, Layer};
 use utoipa::OpenApi;
 
 use crate::apidoc::MosecOpenAPI;

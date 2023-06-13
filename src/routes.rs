@@ -19,11 +19,9 @@ use axum::extract::State;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use hyper::{
-    body::to_bytes,
-    header::{HeaderValue, CONTENT_TYPE},
-    Body, Request, Response, StatusCode,
-};
+use hyper::body::to_bytes;
+use hyper::header::{HeaderValue, CONTENT_TYPE};
+use hyper::{Body, Request, Response, StatusCode};
 use prometheus_client::encoding::text::encode;
 use tracing::warn;
 use utoipa::OpenApi;

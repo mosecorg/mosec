@@ -100,8 +100,8 @@ pub(crate) async fn communicate(
                         if let Err(err) = send_message(&mut stream, &ids, &data).await {
                             error!(%err, %stage_id_label, %connection_id, "socket send message error");
                             info!(
-                                "service failed to write data to stream, will try to \
-                                send task back to see if other thread can handle it"
+                                "service failed to write data to stream, will try to send task \
+                                 back to see if other thread can handle it"
                             );
                             for id in &ids {
                                 last_sender_clone.send(*id).await.expect("sender is closed");
