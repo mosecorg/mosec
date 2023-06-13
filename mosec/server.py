@@ -32,7 +32,10 @@ Multiprocess
     :py:meth:`append_worker(num) <Server.append_worker>`.
 """
 
+import json
 import multiprocessing as mp
+import os
+import pathlib
 import shutil
 import signal
 import subprocess
@@ -47,12 +50,14 @@ from mosec.dry_run import DryRunner
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.manager import PyRuntimeManager, RsRuntimeManager, Runtime
-from mosec.worker import Worker
+from mosec.utils import ParseTarget
+from mosec.worker import MOSEC_REF_TEMPLATE, Worker
 
 logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 1
+MOSEC_OPENAPI_PATH = "mosec_openapi.json"
 
 
 class Server:
@@ -210,6 +215,46 @@ class Server:
         runtime.validate()
         self.coordinator_manager.append(runtime)
 
+    def _generate_openapi(self):
+        """Generate the OpenAPI specification."""
+        if self.coordinator_manager.worker_count <= 0:
+            return
+        workers = self.coordinator_manager.workers
+        request_worker_cls, response_worker_cls = workers[0], workers[-1]
+        input_schema, input_components = request_worker_cls.get_forward_json_schema(
+            ParseTarget.INPUT, MOSEC_REF_TEMPLATE
+        )
+        return_schema, return_components = response_worker_cls.get_forward_json_schema(
+            ParseTarget.RETURN, MOSEC_REF_TEMPLATE
+        )
+
+        def make_body(description, mime, schema):
+            if not schema:
+                return None
+            return {"description": description, "content": {mime: {"schema": schema}}}
+
+        schema = {
+            "request_body": make_body(
+                "Mosec Inference Request Body",
+                request_worker_cls.resp_mime_type,
+                input_schema,
+            ),
+            "responses": None
+            if not return_schema
+            else {
+                200: make_body(
+                    "Mosec Inference Result",
+                    response_worker_cls.resp_mime_type,
+                    return_schema,
+                )
+            },
+            "schemas": {**input_components, **return_components},
+        }
+        tmp_path = pathlib.Path(os.path.join(self._configs["path"], MOSEC_OPENAPI_PATH))
+        tmp_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(tmp_path, "w", encoding="utf-8") as file:
+            json.dump(schema, file)
+
     def run(self):
         """Start the mosec model server."""
         self._validate_server()
@@ -218,6 +263,7 @@ class Server:
             return
 
         self._handle_signal()
+        self._generate_openapi()
         self._start_controller()
         try:
             self._manage_coordinators()

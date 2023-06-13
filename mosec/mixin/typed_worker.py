@@ -14,11 +14,12 @@
 
 """MOSEC type validation mixin."""
 
-import inspect
 import warnings
-from typing import Any, List
+from typing import Any, Dict, Optional, Tuple
 
+from mosec import get_logger
 from mosec.errors import ValidationError
+from mosec.utils import ParseTarget, parse_func_type
 from mosec.worker import Worker
 
 try:
@@ -26,31 +27,7 @@ try:
 except ImportError:
     warnings.warn("msgpack is required for TypedMsgPackMixin", ImportWarning)
 
-
-def parse_forward_input_type(func):
-    """Parse the input type of the forward function.
-
-    - single request: return the type
-    - batch request: return the list item type
-    """
-    sig = inspect.signature(func)
-    params = list(sig.parameters.values())
-    if len(params) < 1:
-        raise TypeError("`forward` method doesn't have enough(1) parameters")
-
-    typ = params[0].annotation
-    origin = getattr(typ, "__origin__", None)
-    if origin is None:
-        return typ
-    # GenericAlias, `func` could be batch inference
-    if origin is list or origin is List:
-        if not hasattr(typ, "__args__") or len(typ.__args__) != 1:
-            raise TypeError(
-                "`forward` with dynamic batch should use "
-                "`List[Struct]` as the input annotation"
-            )
-        return typ.__args__[0]
-    raise TypeError(f"unsupported type {typ}")
+logger = get_logger()
 
 
 class TypedMsgPackMixin(Worker):
@@ -59,26 +36,38 @@ class TypedMsgPackMixin(Worker):
     # pylint: disable=no-self-use
 
     resp_mime_type = "application/msgpack"
-    _input_type = None
+    _input_typ: Optional[type] = None
 
-    def _get_input_type(self):
-        """Get the input type from annotations."""
-        if self._input_type is None:
-            self._input_type = parse_forward_input_type(self.forward)
-        return self._input_type
-
-    def deserialize(self, data: Any) -> bytes:
+    def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
-        schema = self._get_input_type()
-        if not issubclass(schema, msgspec.Struct):
+        if not self._input_typ:
+            self._input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
+        if not issubclass(self._input_typ, msgspec.Struct):
             # skip other annotation type
             return super().deserialize(data)
 
         try:
-            return msgspec.msgpack.decode(data, type=schema)
+            return msgspec.msgpack.decode(data, type=self._input_typ)
         except msgspec.ValidationError as err:
             raise ValidationError(err)  # pylint: disable=raise-missing-from
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with `msgpack`."""
         return msgspec.msgpack.encode(data)
+
+    @classmethod
+    def get_forward_json_schema(
+        cls, target: ParseTarget, ref_template: str
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Get the JSON schema of the forward function."""
+        schema: Dict[str, Any]
+        comp_schema: Dict[str, Any]
+        schema, comp_schema = {}, {}
+        typ = parse_func_type(cls.forward, target)
+        try:
+            (schema,), comp_schema = msgspec.json.schema_components([typ], ref_template)
+        except TypeError as err:
+            logger.warning(
+                "Failed to generate JSON schema for %s: %s", cls.__name__, err
+            )
+        return schema, comp_schema

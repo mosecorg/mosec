@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod apidoc;
 mod args;
 mod coordinator;
 mod errors;
@@ -20,7 +21,7 @@ mod protocol;
 mod routes;
 mod tasks;
 
-use std::net::SocketAddr;
+use std::{fs::read_to_string, net::SocketAddr, path::Path};
 
 use axum::{
     routing::{get, post},
@@ -30,11 +31,15 @@ use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::{filter, prelude::*, Layer};
+use utoipa::OpenApi;
 
+use crate::apidoc::MosecOpenAPI;
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
-use crate::routes::{index, inference, metrics, sse_inference, AppState};
+use crate::routes::{index, inference, metrics, openapi_json, sse_inference, AppState, RustAPIDoc};
 use crate::tasks::TaskManager;
+
+const MOSEC_OPENAPI_PATH: &str = "mosec_openapi.json";
 
 async fn shutdown_signal() {
     let mut interrupt = signal(SignalKind::interrupt()).unwrap();
@@ -59,14 +64,25 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn run(opts: &Opts) {
+    let python_api =
+        read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
+    let mut api = MosecOpenAPI {
+        api: RustAPIDoc::openapi(),
+    };
+    api.merge("/inference", python_api.parse().unwrap_or_default());
+    api.replace_path_item("/inference", &opts.endpoint);
+    println!("{}", api.api.to_json().unwrap_or_default());
+
     let state = AppState {
         mime: opts.mime.clone(),
+        openapi: api,
     };
     let coordinator = Coordinator::init_from_opts(opts);
     let barrier = coordinator.run();
     barrier.wait().await;
     let app = Router::new()
         .route("/", get(index))
+        .route("/openapi", get(openapi_json))
         .route("/metrics", get(metrics))
         .route(&opts.endpoint, post(inference))
         .route("/sse_inference", post(sse_inference))

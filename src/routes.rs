@@ -26,7 +26,9 @@ use hyper::{
 };
 use prometheus_client::encoding::text::encode;
 use tracing::warn;
+use utoipa::OpenApi;
 
+use crate::apidoc::MosecOpenAPI;
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
 use crate::tasks::{TaskCode, TaskManager};
@@ -39,6 +41,7 @@ const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 #[derive(Clone)]
 pub(crate) struct AppState {
     pub mime: String,
+    pub openapi: MosecOpenAPI,
 }
 
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
@@ -49,6 +52,22 @@ fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
         .unwrap()
 }
 
+#[utoipa::path(
+    get,
+    path = "/",
+    responses(
+        (
+            status = StatusCode::OK,
+            description = "Root path, can be used for liveness health check",
+            body = String,
+        ),
+        (
+            status = StatusCode::SERVICE_UNAVAILABLE,
+            description = "SERVICE_UNAVAILABLE",
+            body = String,
+        ),
+    ),
+)]
 pub(crate) async fn index(_: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     if task_manager.is_shutdown() {
@@ -61,6 +80,13 @@ pub(crate) async fn index(_: Request<Body>) -> Response<Body> {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/metrics",
+    responses(
+        (status = StatusCode::OK, description = "Get metrics", body = String),
+    ),
+)]
 pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
     let mut encoded = String::new();
     let registry = REGISTRY.get().unwrap();
@@ -68,6 +94,38 @@ pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
     build_response(StatusCode::OK, Bytes::from(encoded))
 }
 
+#[utoipa::path(
+    get,
+    path = "/openapi",
+    responses(
+        (status = StatusCode::OK, description = "Get OpenAPI doc", body = String)
+    )
+)]
+pub(crate) async fn openapi_json(
+    State(state): State<AppState>,
+    _: Request<Body>,
+) -> Response<Body> {
+    let s = state
+        .openapi
+        .api
+        .to_json()
+        .unwrap_or("OpenAPI generation failed".to_string());
+    build_response(StatusCode::OK, Bytes::from(s))
+}
+
+#[utoipa::path(
+    post,
+    path = "/inference",
+    responses(
+        (status = StatusCode::OK, description = "Inference"),
+        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
+        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
+        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
+        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
+        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
+    ),
+)]
 pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
@@ -134,6 +192,19 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
     resp
 }
 
+#[utoipa::path(
+    post,
+    path = "/sse_inference",
+    responses(
+        (status = StatusCode::OK, description = "Inference"),
+        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
+        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
+        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
+        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
+        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
+    ),
+)]
 pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
     let task_manager = TaskManager::global();
     let data = to_bytes(req.into_body()).await.unwrap();
@@ -193,3 +264,7 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
         }
     }
 }
+
+#[derive(OpenApi)]
+#[openapi(paths(index, metrics, openapi_json, inference, sse_inference))]
+pub(crate) struct RustAPIDoc;
