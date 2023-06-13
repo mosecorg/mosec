@@ -21,7 +21,7 @@ use utoipa::openapi::{
 };
 
 #[derive(Deserialize, Default)]
-pub(crate) struct PythonApiDoc {
+pub(crate) struct PythonAPIDoc {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     request_body: Option<RequestBody>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -30,10 +30,10 @@ pub(crate) struct PythonApiDoc {
     schemas: Option<BTreeMap<String, RefOr<Schema>>>,
 }
 
-impl FromStr for PythonApiDoc {
+impl FromStr for PythonAPIDoc {
     type Err = serde_json::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str::<PythonApiDoc>(s)
+        serde_json::from_str::<PythonAPIDoc>(s)
     }
 }
 
@@ -75,8 +75,8 @@ impl MosecApiDoc {
         &mut op.responses
     }
 
-    pub fn merge(&self, route: &str, python_api: PythonApiDoc) -> Self {
-        // merge PythonApiDoc of target route to mosec api
+    pub fn merge(&self, route: &str, python_api: PythonAPIDoc) -> Self {
+        // merge PythonAPIDoc of target route to mosec api
         let mut api = self.api.clone();
 
         if let Some(mut other_schemas) = python_api.schemas {
@@ -105,8 +105,10 @@ impl MosecApiDoc {
         MosecApiDoc { api }
     }
 
-    pub fn move_path(&self, from: &str, to: &str) -> Self {
-        // move one path to another
+    pub fn replace_path_item(&self, from: &str, to: &str) -> Self {
+        // replace path item from path `from` to path `to`
+        // e.g. /inference -> /v1/inference
+        // because utoipa_gen::proc_macro::OpenApi can't handle variable path
         let mut api = self.api.clone();
         if let Some(r) = api.paths.paths.remove(from) {
             api.paths.paths.insert(to.to_owned(), r);

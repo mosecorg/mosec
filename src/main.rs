@@ -108,7 +108,7 @@ async fn metrics(_: Request<Body>) -> Response<Body> {
     get,
     path = "/openapi",
     responses(
-        (status = StatusCode::OK, description = "Get Openapi Doc",body=String)
+        (status = StatusCode::OK, description = "Get OpenAPI doc",body=String)
     )
 )]
 async fn openapi(_: Request<Body>, doc: openapi::OpenApi) -> Response<Body> {
@@ -269,7 +269,7 @@ async fn run(opts: &Opts) {
         api: RustApiDoc::openapi(),
     }
     .merge("/inference", python_api.parse().unwrap_or_default())
-    .move_path("/inference", &opts.endpoint);
+    .replace_path_item("/inference", &opts.endpoint);
 
     let state = AppState {
         mime: opts.mime.clone(),

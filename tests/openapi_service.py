@@ -76,6 +76,7 @@ if __name__ == "__main__":
     }
 
     server = Server(endpoint="/v1/inference")
-    for w in sys.argv[1].split("/"):
-        server.append_worker(worker_mapping[w])
+    preprocess_worker, inference_worker = sys.argv[1].split("/")
+    server.append_worker(worker_mapping[preprocess_worker])
+    server.append_worker(worker_mapping[inference_worker], max_batch_size=16)
     server.run()

@@ -36,18 +36,18 @@ class TypedMsgPackMixin(Worker):
     # pylint: disable=no-self-use
 
     resp_mime_type = "application/msgpack"
-    input_typ: Optional[type] = None
+    _input_typ: Optional[type] = None
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
-        if not self.input_typ:
-            self.input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
-        if not issubclass(self.input_typ, msgspec.Struct):
+        if not self._input_typ:
+            self._input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
+        if not issubclass(self._input_typ, msgspec.Struct):
             # skip other annotation type
             return super().deserialize(data)
 
         try:
-            return msgspec.msgpack.decode(data, type=self.input_typ)
+            return msgspec.msgpack.decode(data, type=self._input_typ)
         except msgspec.ValidationError as err:
             raise ValidationError(err)  # pylint: disable=raise-missing-from
 
@@ -62,7 +62,7 @@ class TypedMsgPackMixin(Worker):
         """Get the JSON schema of the forward function."""
         schema: Dict[str, Any]
         comp_schema: Dict[str, Any]
-        (schema, comp_schema) = ({}, {})
+        schema, comp_schema = {}, {}
         typ = parse_func_type(cls.forward, target)
         try:
             (schema,), comp_schema = msgspec.json.schema_components([typ], ref_template)
@@ -70,4 +70,4 @@ class TypedMsgPackMixin(Worker):
             logger.warning(
                 "Failed to generate JSON schema for %s: %s", cls.__name__, err
             )
-        return (schema, comp_schema)
+        return schema, comp_schema

@@ -204,17 +204,20 @@ class Worker(abc.ABC):
         Returns:
             A tuple containing the schema and the component schemas.
 
-        The `get_forward_json_schema` method is a class method that returns the
-        JSON schema for the `forward` method of the given class `cls`. It takes
-        a `target` argument specifying the target to parse the schema for.
+        The :py:meth:`get_forward_json_schema` method is a class method that returns the
+        JSON schema for the :py:meth:`forward` method of the :py:class:`cls` class.
+        It takes a :py:obj:`target` param specifying the target to parse the schema for.
 
         The returned value is a tuple containing the schema and the component schema.
 
-        Note:
+        .. note::
+
             Developer must implement this function to retrieve the JSON schema
             to enable openapi spec.
 
-            The `MOSEC_REF_TEMPLATE` constant should be used as a reference template
-            according to openapi standards.
+        .. note::
+
+            The :py:const:`MOSEC_REF_TEMPLATE` constant should be used as a reference
+            template according to openapi standards.
         """
-        return ({}, {})
+        return {}, {}

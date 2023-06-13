@@ -45,7 +45,7 @@ def mosec_service(request):
         shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
-    yield (service, args)
+    yield service
     service.terminate()
     time.sleep(2)  # wait for service to stop
 
@@ -181,34 +181,37 @@ def assert_empty_queue(http_client):
 
 
 @pytest.mark.parametrize(
-    "mosec_service, http_client",
+    "mosec_service, http_client, args",
     [
         pytest.param(
             "openapi_service TypedPreprocess/TypedInference",
             "",
+            "TypedPreprocess/TypedInference",
             id="TypedPreprocess/TypedInference",
         ),
         pytest.param(
             "openapi_service UntypedPreprocess/TypedInference",
             "",
+            "UntypedPreprocess/TypedInference",
             id="UntypedPreprocess/TypedInference",
         ),
         pytest.param(
             "openapi_service TypedPreprocess/UntypedInference",
             "",
+            "TypedPreprocess/UntypedInference",
             id="TypedPreprocess/UntypedInference",
         ),
         pytest.param(
             "openapi_service UntypedPreprocess/UntypedInference",
             "",
+            "UntypedPreprocess/UntypedInference",
             id="UntypedPreprocess/UntypedInference",
         ),
     ],
     indirect=["mosec_service", "http_client"],
 )
-def test_openapi_service(mosec_service, http_client):
+def test_openapi_service(mosec_service, http_client, args):
     spec = http_client.get("/openapi").json()
-    (_, args) = mosec_service
     input_cls, return_cls = args.split("/")
     path_item = spec["paths"]["/v1/inference"]["post"]
 
