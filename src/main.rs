@@ -265,11 +265,11 @@ struct RustApiDoc;
 async fn run(opts: &Opts) {
     let python_api =
         read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
-    let doc = MosecAPIDoc {
+    let mut doc = MosecAPIDoc {
         api: RustApiDoc::openapi(),
-    }
-    .merge("/inference", python_api.parse().unwrap_or_default())
-    .replace_path_item("/inference", &opts.endpoint);
+    };
+    doc.merge("/inference", python_api.parse().unwrap_or_default())
+        .replace_path_item("/inference", &opts.endpoint);
 
     let state = AppState {
         mime: opts.mime.clone(),
