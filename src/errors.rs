@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use derive_more::Display;
+use crate::tasks::TaskCode;
 
-#[derive(Debug, Display, derive_more::Error)]
+#[derive(Debug, derive_more::From, derive_more::Display, derive_more::Error)]
 pub(crate) enum ServiceError {
     #[display(fmt = "inference timeout")]
     Timeout,
@@ -24,4 +24,7 @@ pub(crate) enum ServiceError {
 
     #[display(fmt = "mosec unknown error")]
     UnknownError,
+
+    #[display(fmt = "SSE inference error: {_0}")]
+    SSEError(TaskCode),
 }

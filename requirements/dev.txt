@@ -12,3 +12,4 @@ pre-commit>=2.15.0
 msgpack>=1.0.5
 numpy>=1.24
 httpx==0.24.1
+httpx-sse==0.3.0

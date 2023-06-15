@@ -78,6 +78,7 @@ output-format = "colorized"
 reports = "no"
 score = "yes"
 max-args = 7
+max-attributes = 10
 
 [tool.pylint.messages_control]
 disable = []

@@ -23,6 +23,7 @@ from threading import Thread
 import httpx
 import msgpack  # type: ignore
 import pytest
+from httpx_sse import connect_sse
 
 from mosec.server import GUARD_CHECK_INTERVAL
 from tests.utils import wait_for_port_open
@@ -137,6 +138,38 @@ def test_mixin_typed_service(mosec_service, http_client):
 
     resp = http_client.post("/inference", content=msgpack.packb({"media": "none"}))
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, resp
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("sse_service", "", id="sse"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_sse_service(mosec_service, http_client):
+    round = 0
+    with connect_sse(
+        http_client, "POST", "/sse_inference", json={"text": "mosec"}
+    ) as event_source:
+        for sse in event_source.iter_sse():
+            round += 1
+            assert sse.event == "message"
+            assert sse.data == "mosec"
+    assert round == 5
+
+    round = 0
+    with connect_sse(
+        http_client, "POST", "/sse_inference", json={"bad": "req"}
+    ) as event_source:
+        for sse in event_source.iter_sse():
+            round += 1
+            assert sse.event == "error"
+            assert sse.data == (
+                "SSE inference error: 422: Unprocessable Content: "
+                "request validation error: text is required"
+            )
+    assert round == 1
 
 
 @pytest.mark.parametrize(

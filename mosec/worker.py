@@ -22,15 +22,21 @@ This module provides the interface to define a worker with such behaviors:
     4. data processing
 """
 
+from __future__ import annotations
+
 import abc
 import json
 import pickle
-from typing import Any, Dict, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Tuple
 
 from mosec.errors import DecodingError, EncodingError
 from mosec.utils import ParseTarget
 
 MOSEC_REF_TEMPLATE = "#/components/schemas/{name}"
+
+if TYPE_CHECKING:
+    from queue import SimpleQueue
+    from threading import Semaphore
 
 
 class Worker(abc.ABC):
@@ -62,6 +68,8 @@ class Worker(abc.ABC):
     _worker_id: int = 0
     _stage: str = ""
     _max_batch_size: int = 1
+    _stream_queue: Optional[SimpleQueue] = None
+    _stream_semaphore: Optional[Semaphore] = None
 
     def __init__(self):
         """Initialize the worker.
@@ -84,6 +92,20 @@ class Worker(abc.ABC):
             data: input data for :py:meth:`forward`
         """
         return pickle.loads(data)
+
+    def send_stream_event(self, text: str, index: int = 0):
+        """Send a stream event to the client.
+
+        Args:
+            text: the text to be sent, needs to be UTF-8 compatible
+            index: the index of the stream event. For single request, this will always
+                be 0. For dynamic batch request, this should be the index of the
+                request in the batch.
+        """
+        if self._stream_queue is None or self._stream_semaphore is None:
+            raise RuntimeError("the worker stream or semaphore is not initialized")
+        self._stream_semaphore.acquire()
+        self._stream_queue.put((text, index))
 
     @property
     def stage(self) -> str:
@@ -185,7 +207,7 @@ class Worker(abc.ABC):
             - for a single-stage worker, data will go through
                 ``<deserialize> -> <forward> -> <serialize>``
 
-            - for a multi-stage worker that is neithor `ingress` not `egress`, data
+            - for a multi-stage worker that is neither `ingress` not `egress`, data
                 will go through ``<deserialize_ipc> -> <forward> -> <serialize_ipc>``
         """
         raise NotImplementedError

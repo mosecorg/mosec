@@ -18,21 +18,30 @@ use std::sync::{Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 use bytes::Bytes;
+use hyper::StatusCode;
 use once_cell::sync::OnceCell;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
 use crate::errors::ServiceError;
-use crate::metrics::Metrics;
+use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, derive_more::Error)]
 pub(crate) enum TaskCode {
+    #[display(fmt = "200: OK")]
     Normal,
+    #[display(fmt = "400: Bad Request")]
     BadRequestError,
+    #[display(fmt = "422: Unprocessable Content")]
     ValidationError,
+    #[display(fmt = "408: Request Timeout")]
     TimeoutError,
+    #[display(fmt = "500: Internal Server Error")]
     InternalError,
+    // special case
+    #[display(fmt = "500: Internal Server Error")]
+    StreamEvent,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +70,7 @@ impl Task {
 pub(crate) struct TaskManager {
     table: RwLock<HashMap<u32, Task>>,
     notifiers: Mutex<HashMap<u32, oneshot::Sender<()>>>,
+    stream_senders: Mutex<HashMap<u32, mpsc::Sender<(Bytes, TaskCode)>>>,
     timeout: Duration,
     current_id: Mutex<u32>,
     channel: async_channel::Sender<u32>,
@@ -78,6 +88,7 @@ impl TaskManager {
         Self {
             table: RwLock::new(HashMap::new()),
             notifiers: Mutex::new(HashMap::new()),
+            stream_senders: Mutex::new(HashMap::new()),
             timeout,
             current_id: Mutex::new(0),
             channel,
@@ -89,10 +100,16 @@ impl TaskManager {
         self.shutdown.store(true, Ordering::Release);
         let fut = time::timeout(self.timeout, async {
             let mut interval = time::interval(Duration::from_millis(100));
+            let mut retry = 0;
             loop {
                 interval.tick().await;
-                if self.table.read().unwrap().len() == 0 {
+                let remaining_task_num = self.table.read().unwrap().len();
+                if remaining_task_num == 0 {
                     break;
+                }
+                retry += 1;
+                if (retry % 10) == 0 {
+                    info!(%remaining_task_num, "waiting for remaining tasks to complete");
                 }
             }
         });
@@ -105,14 +122,7 @@ impl TaskManager {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
             warn!(%id, %err, "task was not completed in the expected time");
-            {
-                let mut notifiers = self.notifiers.lock().unwrap();
-                notifiers.remove(&id);
-            }
-            {
-                let mut table = self.table.write().unwrap();
-                table.remove(&id);
-            }
+            self.delete_task(id, false);
             return Err(ServiceError::Timeout);
         }
         let mut table = self.table.write().unwrap();
@@ -123,6 +133,46 @@ impl TaskManager {
                 Err(ServiceError::UnknownError)
             }
         }
+    }
+
+    pub(crate) async fn submit_sse_task(
+        &self,
+        data: Bytes,
+    ) -> Result<mpsc::Receiver<(Bytes, TaskCode)>, ServiceError> {
+        let (id, rx) = self.add_new_task(data)?;
+        let (sender, receiver) = mpsc::channel(16);
+
+        {
+            let mut stream_senders = self.stream_senders.lock().unwrap();
+            stream_senders.insert(id, sender);
+        }
+        let metrics = Metrics::global();
+        metrics.remaining_task.inc();
+        tokio::spawn(wait_sse_finish(id, self.timeout, rx));
+
+        Ok(receiver)
+    }
+
+    pub(crate) fn get_stream_sender(&self, id: &u32) -> Option<mpsc::Sender<(Bytes, TaskCode)>> {
+        let stream_senders = self.stream_senders.lock().unwrap();
+        stream_senders.get(id).cloned()
+    }
+
+    pub(crate) fn delete_task(&self, id: u32, has_stream: bool) -> Option<Task> {
+        let task;
+        {
+            let mut notifiers = self.notifiers.lock().unwrap();
+            notifiers.remove(&id);
+        }
+        {
+            let mut table = self.table.write().unwrap();
+            task = table.remove(&id);
+        }
+        if has_stream {
+            let mut stream_senders = self.stream_senders.lock().unwrap();
+            stream_senders.remove(&id);
+        }
+        task
     }
 
     pub(crate) fn is_shutdown(&self) -> bool {
@@ -149,14 +199,7 @@ impl TaskManager {
 
         if self.channel.try_send(id).is_err() {
             warn!(%id, "reach the capacity limit, will delete this task");
-            {
-                let mut notifiers = self.notifiers.lock().unwrap();
-                notifiers.remove(&id);
-            }
-            {
-                let mut table = self.table.write().unwrap();
-                table.remove(&id);
-            }
+            self.delete_task(id, false);
             return Err(ServiceError::TooManyRequests);
         }
         Ok((id, rx))
@@ -199,34 +242,69 @@ impl TaskManager {
         });
     }
 
-    pub(crate) fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
-        let mut table = self.table.write().unwrap();
+    pub(crate) async fn update_multi_tasks(&self, code: TaskCode, ids: &[u32], data: &[Bytes]) {
         let mut abnormal_tasks = Vec::new();
-        for i in 0..ids.len() {
-            let task = table.get_mut(&ids[i]);
-            match task {
-                Some(task) => {
-                    task.update(code, &data[i]);
-                    match code {
-                        TaskCode::Normal => {}
-                        _ => {
-                            abnormal_tasks.push(ids[i]);
+        {
+            // make sure the table lock is released since the next func call may need to acquire
+            // the notifiers lock, we'd better only hold one lock at a time
+            let mut table = self.table.write().unwrap();
+            for i in 0..ids.len() {
+                let task = table.get_mut(&ids[i]);
+                match task {
+                    Some(task) => {
+                        task.update(code, &data[i]);
+                        match code {
+                            TaskCode::Normal => {}
+                            _ => {
+                                abnormal_tasks.push(ids[i]);
+                            }
                         }
                     }
-                }
-                None => {
-                    // if the task is already timeout, it may be removed by another thread
-                    info!(id=%ids[i], "cannot find this task, maybe it has expired");
+                    None => {
+                        // if the task is already timeout, it may be removed by another thread
+                        info!(id=%ids[i], "cannot find this task, maybe it has expired");
+                    }
                 }
             }
         }
-        // make sure the table lock is released since the next func call may need to acquire
-        // the notifiers lock, we'd better only hold one lock at a time
-        drop(table);
+        // check if it's a SSE task
+        {
+            for i in 0..abnormal_tasks.len() {
+                if let Some(sender) = self.get_stream_sender(&abnormal_tasks[i]) {
+                    if let Err(err) = sender.send((data[i].clone(), code)).await {
+                        info!(%err, task_id=abnormal_tasks[i], "failed to send stream event");
+                    }
+                    debug!(%code, task_id=abnormal_tasks[i], "sent abnormal task event to the channel");
+                }
+            }
+        }
         for task_id in abnormal_tasks {
             self.notify_task_done(task_id);
         }
     }
+}
+
+async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver<()>) {
+    let task_manager = TaskManager::global();
+    if let Err(err) = time::timeout(timeout, notifier).await {
+        warn!(%err, "task was not completed in the expected time");
+    }
+
+    let metrics = Metrics::global();
+    if let Some(task) = task_manager.delete_task(id, true) {
+        metrics
+            .duration
+            .get_or_create(DURATION_LABEL.get().expect("DURATION_LABEL is not set"))
+            .observe(task.create_at.elapsed().as_secs_f64());
+    }
+    metrics.remaining_task.dec();
+    // since the SSE will always return status code 200
+    metrics
+        .throughput
+        .get_or_create(&CodeLabel {
+            code: StatusCode::OK.as_u16(),
+        })
+        .inc();
 }
 
 #[cfg(test)]
@@ -345,7 +423,9 @@ mod tests {
 
         // update tasks
         data = vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")];
-        task_manager.update_multi_tasks(TaskCode::Normal, &task_ids, &data);
+        task_manager
+            .update_multi_tasks(TaskCode::Normal, &task_ids, &data)
+            .await;
         let mut new_data = Vec::new();
         task_manager.get_multi_tasks_data(&mut task_ids, &mut new_data);
         assert_eq!(task_ids, vec![0, 1]);
