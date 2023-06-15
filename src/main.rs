@@ -39,7 +39,8 @@ use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::{filter, prelude::*, Layer};
-use utoipa::{openapi, OpenApi};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::apidoc::MosecAPIDoc;
 use crate::args::Opts;
@@ -102,18 +103,6 @@ async fn metrics(_: Request<Body>) -> Response<Body> {
     let registry = REGISTRY.get().unwrap();
     encode(&mut encoded, registry).unwrap();
     build_response(StatusCode::OK, Bytes::from(encoded))
-}
-
-#[utoipa::path(
-    get,
-    path = "/openapi",
-    responses(
-        (status = StatusCode::OK, description = "Get OpenAPI doc",body=String)
-    )
-)]
-async fn openapi(_: Request<Body>, doc: openapi::OpenApi) -> Response<Body> {
-    let s = serde_json::to_string(&doc).unwrap_or("Openapi generation failed".to_string());
-    build_response(StatusCode::OK, Bytes::from(s))
 }
 
 #[utoipa::path(
@@ -250,7 +239,6 @@ async fn shutdown_signal() {
         index,
         metrics,
         inference,
-        openapi,
     ),
     tags(
         (
@@ -278,8 +266,8 @@ async fn run(opts: &Opts) {
     let barrier = coordinator.run();
     barrier.wait().await;
     let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", doc.api))
         .route("/", get(index))
-        .route("/openapi", get(|req| openapi(req, doc.api)))
         .route("/metrics", get(metrics))
         .route(&opts.endpoint, post(inference))
         .with_state(state);

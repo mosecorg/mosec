@@ -27,3 +27,4 @@ axum = "0.6.18"
 utoipa = "3.3.0"
 serde_json = "1.0.96"
 serde = "1.0.163"
+utoipa-swagger-ui = { version = "3", features = ["axum"] }
