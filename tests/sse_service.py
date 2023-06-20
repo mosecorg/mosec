@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mosec import Server, ValidationError, Worker, get_logger
+from mosec import Server, SSEWorker, ValidationError, Worker, get_logger
 
 logger = get_logger()
 
@@ -25,7 +25,7 @@ class Preprocess(Worker):
         return text
 
 
-class Inference(Worker):
+class Inference(SSEWorker):
     def forward(self, data):
         epoch = 5
         for _ in range(epoch):

@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, List, Tuple, Union
 
 from mosec.env import env_var_context
 from mosec.log import get_internal_logger
-from mosec.manager import PyRuntimeManager, Runtime
+from mosec.runtime import PyRuntimeManager, Runtime
 from mosec.worker import Worker
 
 if TYPE_CHECKING:

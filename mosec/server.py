@@ -49,7 +49,7 @@ from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
-from mosec.manager import PyRuntimeManager, RsRuntimeManager, Runtime
+from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
 from mosec.utils import ParseTarget
 from mosec.worker import MOSEC_REF_TEMPLATE, Worker
 

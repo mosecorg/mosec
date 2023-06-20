@@ -23,7 +23,7 @@ from mosec.errors import (
 )
 from mosec.log import get_logger
 from mosec.server import Server
-from mosec.worker import Worker
+from mosec.worker import SSEWorker, Worker
 
 try:
     from mosec._version import __version__  # type: ignore
@@ -35,6 +35,7 @@ except ImportError:
 __all__ = [
     "Server",
     "Worker",
+    "SSEWorker",
     "ServerError",
     "ClientError",
     "ValidationError",

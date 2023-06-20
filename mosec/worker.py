@@ -27,7 +27,7 @@ from __future__ import annotations
 import abc
 import json
 import pickle
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Sequence, Tuple
 
 from mosec.errors import DecodingError, EncodingError
 from mosec.utils import ParseTarget
@@ -68,8 +68,6 @@ class Worker(abc.ABC):
     _worker_id: int = 0
     _stage: str = ""
     _max_batch_size: int = 1
-    _stream_queue: Optional[SimpleQueue] = None
-    _stream_semaphore: Optional[Semaphore] = None
 
     def __init__(self):
         """Initialize the worker.
@@ -92,20 +90,6 @@ class Worker(abc.ABC):
             data: input data for :py:meth:`forward`
         """
         return pickle.loads(data)
-
-    def send_stream_event(self, text: str, index: int = 0):
-        """Send a stream event to the client.
-
-        Args:
-            text: the text to be sent, needs to be UTF-8 compatible
-            index: the index of the stream event. For single request, this will always
-                be 0. For dynamic batch request, this should be the index of the
-                request in the batch.
-        """
-        if self._stream_queue is None or self._stream_semaphore is None:
-            raise RuntimeError("the worker stream or semaphore is not initialized")
-        self._stream_semaphore.acquire()
-        self._stream_queue.put((text, index))
 
     @property
     def stage(self) -> str:
@@ -243,3 +227,24 @@ class Worker(abc.ABC):
             template according to openapi standards.
         """
         return {}, {}
+
+
+class SSEWorker(Worker):
+    """MOSEC worker with Server-Sent Events (SSE) support."""
+
+    _stream_queue: SimpleQueue
+    _stream_semaphore: Semaphore
+
+    def send_stream_event(self, text: str, index: int = 0):
+        """Send a stream event to the client.
+
+        Args:
+            text: the text to be sent, needs to be UTF-8 compatible
+            index: the index of the stream event. For the single request, this will
+                always be 0. For dynamic batch request, this should be the index of
+                the request in this batch.
+        """
+        if self._stream_queue is None or self._stream_semaphore is None:
+            raise RuntimeError("the worker stream or semaphore is not initialized")
+        self._stream_semaphore.acquire()
+        self._stream_queue.put((text, index))

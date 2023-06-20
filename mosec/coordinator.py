@@ -30,7 +30,7 @@ from mosec.errors import MosecError, MosecTimeoutError
 from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.protocol import HTTPStautsCode, Protocol
-from mosec.worker import Worker
+from mosec.worker import SSEWorker, Worker
 
 logger = get_internal_logger()
 
@@ -63,6 +63,26 @@ def set_mosec_timeout(duration: int):
         yield
     finally:
         signal.alarm(0)
+
+
+class FakeSemaphore:
+    """Fake semaphore interface for non-SSE workers."""
+
+    def __init__(self, value: int = 1):
+        """Not intend to be used by users."""
+        self.value = value
+
+    def acquire(self, timeout: Optional[float] = None):
+        """Acquire the semaphore."""
+
+    def release(self):
+        """Release the semaphore."""
+
+    __enter__ = acquire
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context."""
+        self.release()
 
 
 class Coordinator:
@@ -108,13 +128,10 @@ class Coordinator:
         self.worker.worker_id = worker_id
         self.worker.max_batch_size = max_batch_size
         self.worker.stage = stage
-        self.stream: queue.SimpleQueue = queue.SimpleQueue()
-        self.semaphore: threading.Semaphore = threading.Semaphore()
-        self.worker._stream_queue = self.stream
-        self.worker._stream_semaphore = self.semaphore
         self.timeout = timeout
         self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
         self.current_ids: Sequence[bytes] = []
+        self.semaphore = FakeSemaphore()  # type: ignore
 
         self.protocol = Protocol(
             name=self.name,
@@ -137,9 +154,16 @@ class Coordinator:
         self.shutdown = shutdown
         self.shutdown_notify = shutdown_notify
 
+        # SSE support
+        if issubclass(worker, SSEWorker):
+            self.stream: queue.SimpleQueue = queue.SimpleQueue()
+            self.semaphore: threading.Semaphore = threading.Semaphore()  # type: ignore
+            self.worker._stream_queue = self.stream  # type: ignore
+            self.worker._stream_semaphore = self.semaphore  # type: ignore
+            threading.Thread(target=self.streaming, daemon=True).start()
+
         self.warmup()
         self.init_protocol()
-        threading.Thread(target=self.streaming, daemon=True).start()
         self.run()
 
     def init_protocol(self):

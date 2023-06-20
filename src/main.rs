@@ -72,7 +72,6 @@ async fn run(opts: &Opts) {
     };
     api.merge("/inference", python_api.parse().unwrap_or_default());
     api.replace_path_item("/inference", &opts.endpoint);
-    println!("{}", api.api.to_json().unwrap_or_default());
 
     let state = AppState {
         mime: opts.mime.clone(),
