@@ -102,7 +102,7 @@ fn main() {
 
     // this has to be defined before tokio multi-threads
     let timer = OffsetTime::local_rfc_3339().expect("local time offset");
-    if opts.debug {
+    if opts.debug || opts.log_level == "debug" {
         // use colorful log for debug
         let output = tracing_subscriber::fmt::layer().compact().with_timer(timer);
         tracing_subscriber::registry()
@@ -116,8 +116,13 @@ fn main() {
             .init();
     } else {
         // use JSON format for production
+        let level = match opts.log_level.as_str() {
+            "error" => tracing::Level::ERROR,
+            "warning" => tracing::Level::WARN,
+            _ => tracing::Level::INFO,
+        };
         tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::INFO)
+            .with_max_level(level)
             .json()
             .with_timer(timer)
             .init();

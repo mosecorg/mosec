@@ -36,8 +36,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--sleep_duration", type=float, help="worker sleep duration")
-    parser.add_argument("--worker_timeout", type=int, help="worker timeout")
+    parser.add_argument("--sleep-duration", type=float, help="worker sleep duration")
+    parser.add_argument("--worker-timeout", type=int, help="worker timeout")
     parser.add_argument("--port", type=int, help="port")
 
     args = parser.parse_args()

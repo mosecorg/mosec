@@ -34,4 +34,4 @@ jobs:
           make dev
       - name: Test
         run: |
-          python tests/bad_req.py
+          python -m tests.bad_req
