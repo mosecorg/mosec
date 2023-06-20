@@ -24,7 +24,7 @@ import time
 import traceback
 from contextlib import contextmanager
 from multiprocessing.synchronize import Event
-from typing import Any, Callable, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, Type
 
 from mosec.errors import MosecError, MosecTimeoutError
 from mosec.ipc import IPCWrapper
@@ -95,7 +95,7 @@ class Coordinator:
     # pylint: disable=too-many-arguments
     def __init__(
         self,
-        worker: Union[Type[Worker], Type[SSEWorker]],
+        worker: Type[Worker],
         max_batch_size: int,
         stage: str,
         shutdown: Event,
