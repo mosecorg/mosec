@@ -36,8 +36,8 @@ from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
 from tests.utils import imitate_controller_send
 
-socket_prefix = join(tempfile.gettempdir(), "test-mosec")
-stage = STAGE_INGRESS + STAGE_EGRESS
+SOCKET_PREFIX = join(tempfile.gettempdir(), "test-mosec")
+STAGE = STAGE_INGRESS + STAGE_EGRESS
 
 
 logger = logging.getLogger()
@@ -45,8 +45,8 @@ logger.addHandler(logging.StreamHandler())
 
 
 def clean_dir():
-    if os.path.exists(socket_prefix):
-        shutil.rmtree(socket_prefix)
+    if os.path.exists(SOCKET_PREFIX):
+        shutil.rmtree(SOCKET_PREFIX)
 
 
 class CleanDirContext(ContextDecorator):
@@ -105,10 +105,10 @@ def make_coordinator(w_cls, shutdown, shutdown_notify, config):
     return Coordinator(
         w_cls,
         config["max_batch_size"],
-        stage,
+        STAGE,
         shutdown,
         shutdown_notify,
-        socket_prefix,
+        SOCKET_PREFIX,
         config["stage_id"],
         config["worker_id"],
         None,
@@ -147,13 +147,13 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
     mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
 
-    sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
+    sock_addr = join(SOCKET_PREFIX, f"ipc_{base_test_config.get('stage_id')}.socket")
     c_ctx = base_test_config.pop("c_ctx")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
-        os.makedirs(socket_prefix, exist_ok=False)
+        os.makedirs(SOCKET_PREFIX, exist_ok=False)
         # create non-socket file
         open(sock_addr, "w").close()
 
@@ -165,7 +165,7 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
             assert "connection error" in record.message
 
     with CleanDirContext():
-        os.makedirs(socket_prefix, exist_ok=False)
+        os.makedirs(SOCKET_PREFIX, exist_ok=False)
         # bind to a socket file to which no server is listening
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sock_addr)
@@ -207,20 +207,21 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
     ],
 )
 def test_echo_batch(base_test_config, test_data, worker, deserializer):
-    """To test the batched data echo functionality. The batch size is automatically
-    determined by the data's size.
+    """To test the batched data echo functionality.
+
+    The batch size is automatically determined by the data's size.
     """
     c_ctx = base_test_config.pop("c_ctx")
     # whatever value greater than 1, so that coordinator
     # knows this stage enables batching
     base_test_config["max_batch_size"] = 8
 
-    sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
+    sock_addr = join(SOCKET_PREFIX, f"ipc_{base_test_config.get('stage_id')}.socket")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
-        os.makedirs(socket_prefix, exist_ok=False)
+        os.makedirs(SOCKET_PREFIX, exist_ok=False)
 
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sock_addr)

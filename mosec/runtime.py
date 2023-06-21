@@ -304,7 +304,7 @@ class RsRuntimeManager:
         args = []
         self._configs.pop("dry_run")
         for key, value in self._configs.items():
-            args.extend([f"--{key}", str(value).lower()])
+            args.extend([f"--{key.replace('_', '-')}", str(value).lower()])
         for worker_runtime in self._py_manager:
             args.extend(["--batches", str(worker_runtime.max_batch_size)])
             args.extend(["--waits", str(worker_runtime.max_wait_time)])

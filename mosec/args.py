@@ -22,6 +22,7 @@ Arguments parsing for two parts:
 
 import argparse
 import errno
+import logging
 import os
 import random
 import socket
@@ -111,8 +112,15 @@ def build_arguments_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--debug",
-        help="Enable log format",
+        help="Enable the service debug log",
         action="store_true",
+    )
+
+    parser.add_argument(
+        "--log-level",
+        help="Configure the service log level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
     )
 
     parser.add_argument(
@@ -145,8 +153,17 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def is_debug_mode() -> bool:
+def get_log_level() -> int:
     """Check if the service is running in debug mode."""
     parser = build_arguments_parser()
     args, _ = parser.parse_known_args(namespace=get_env_namespace())
-    return args.debug
+    if args.debug:
+        return logging.DEBUG
+
+    level_map = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }
+    return level_map[args.log_level]

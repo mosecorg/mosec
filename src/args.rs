@@ -62,6 +62,10 @@ pub(crate) struct Opts {
     #[argh(option, short = 'd', default = "false")]
     pub(crate) debug: bool,
 
+    /// set the log level
+    #[argh(option, default = "String::from(\"info\")")]
+    pub(crate) log_level: String,
+
     /// response mime type
     #[argh(option, default = "String::from(\"application/json\")")]
     pub(crate) mime: String,

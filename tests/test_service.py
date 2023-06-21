@@ -26,9 +26,10 @@ import pytest
 from httpx_sse import connect_sse
 
 from mosec.server import GUARD_CHECK_INTERVAL
-from tests.utils import wait_for_port_open
+from tests.utils import wait_for_port_free, wait_for_port_open
 
-TEST_PORT = 5000
+# choose a special port to avoid conflict with local services
+TEST_PORT = 5753
 
 
 @pytest.fixture
@@ -43,12 +44,12 @@ def mosec_service(request):
     name = params[0]
     args = " ".join(params[1:])
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
+        shlex.split(f"python -u tests/services/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
     yield service
     service.terminate()
-    time.sleep(2)  # wait for service to stop
+    assert wait_for_port_free(port=TEST_PORT), "service failed to stop"
 
 
 @pytest.mark.parametrize(
@@ -76,6 +77,36 @@ def test_square_service(mosec_service, http_client):
     assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
+
+
+@pytest.mark.parametrize(
+    "mosec_service,http_client,status_code",
+    [
+        pytest.param(
+            "timeout_service --sleep-duration 1.5 --worker-timeout 1",
+            None,
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-worker-timeout",
+        ),
+        pytest.param(
+            "timeout_service --sleep-duration 1.0 --worker-timeout 2",
+            None,
+            HTTPStatus.OK,
+            id="normal-request-within-worker-timeout",
+        ),
+        pytest.param(
+            "timeout_service --sleep-duration 3.5 --worker-timeout 4",
+            None,
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-service-timeout",
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_timeout_service(mosec_service, http_client, status_code):
+    input_data = [random.randint(-99, 99)]
+    resp = http_client.post("/inference", json={"array": input_data})
+    assert resp.status_code == status_code, resp
 
 
 @pytest.mark.parametrize(

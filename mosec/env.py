@@ -32,6 +32,7 @@ MOSEC_ENV_CONFIG = {
     "namespace": str,
     "debug": bool,
     "dry_run": bool,
+    "log_level": str,
 }
 
 
