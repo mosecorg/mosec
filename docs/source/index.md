@@ -1,5 +1,11 @@
 # Machine Learning Model Serving made Efficient in the Cloud
 
+```{eval-rst}
+.. meta::
+    :description lang=en:
+        MOSEC is a high-performance serving framework for ML models, offers dynamic batching and multi-stage pipeline to fully exploit your compute machine.
+```
+
 ```{note}
 {doc}`mosec is licensed under the Apache-2 <license>`.
 ```
