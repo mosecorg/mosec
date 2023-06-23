@@ -184,7 +184,6 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 ## Deployment
 
 - If you're looking for a GPU base image with `mosec` installed, you can check the official image [`mosecorg/mosec`](https://hub.docker.com/r/mosecorg/mosec). For the complex use case, check out [envd](https://github.com/tensorchord/envd).
-- The deep learning service may require some shared memory, remember to set the `--shm-size` flag if you are using docker.
 - This service doesn't need Gunicorn or NGINX, but you can certainly use the ingress controller. BTW, it should be the PID 1 process in the container since it controls multiple processes.
 - Remember to collect the **metrics**.
   - `mosec_service_batch_size_bucket` shows the batch size distribution.
