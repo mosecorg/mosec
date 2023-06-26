@@ -55,10 +55,7 @@ def dry_run_func(
     try:
         data = receiver.recv() if ingress else worker.deserialize(receiver.recv_bytes())
         logger.info("%s received %s", worker, data)
-        if batch > 1:
-            data = worker.forward([data])[0]
-        else:
-            data = worker.forward(data)
+        data = worker.forward([data])[0] if batch > 1 else worker.forward(data)
         logger.info("%s inference result: %s", worker, data)
         data = worker.serialize(data)
         sender.send_bytes(data)

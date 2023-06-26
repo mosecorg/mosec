@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Simulate bad requests:
+
+- Preprocess: raise ValidationError
+- Inference: raise random ServerError
+- client: disconnection
+"""
+
 import time
 from random import random
 from typing import List

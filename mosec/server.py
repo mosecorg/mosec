@@ -86,11 +86,11 @@ class Server:
         self._shutdown_notify: Event = mp.get_context("spawn").Event()
         self._configs: dict = vars(parse_arguments())
 
-        self.coordinator_manager: PyRuntimeManager = PyRuntimeManager(
+        self.py_runtime_manager: PyRuntimeManager = PyRuntimeManager(
             self._configs["path"], self._shutdown, self._shutdown_notify
         )
-        self.controller = RsRuntimeManager(
-            self.coordinator_manager, endpoint, self._configs
+        self.rs_runtime_manager = RsRuntimeManager(
+            self.py_runtime_manager, endpoint, self._configs
         )
 
         self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
@@ -102,7 +102,7 @@ class Server:
         signal.signal(signal.SIGINT, self._terminate)
 
     def _validate_server(self):
-        assert self.coordinator_manager.worker_count > 0, (
+        assert self.py_runtime_manager.worker_count > 0, (
             "no worker registered\n"
             "help: use `.append_worker(...)` to register at least one worker"
         )
@@ -123,21 +123,21 @@ class Server:
                     f"mosec daemon [{name}] exited on error code: {code}",
                 )
 
-    def _start_controller(self):
-        """Subprocess to start controller program."""
+    def _start_rs_runtime(self):
+        """Subprocess to start the rust runtime manager program."""
         if self._server_shutdown:
             return
-        process = self.controller.start()
-        self.register_daemon("controller", process)
+        process = self.rs_runtime_manager.start()
+        self.register_daemon("rs_runtime", process)
 
     def _terminate(self, signum, framestack):
         logger.info("received signum[%s], terminating server [%s]", signum, framestack)
         self._server_shutdown = True
 
-    def _manage_coordinators(self):
+    def _manage_py_runtime(self):
         first = True
         while not self._server_shutdown:
-            failed_worker = self.coordinator_manager.check_and_start(first)
+            failed_worker = self.py_runtime_manager.check_and_start(first)
             if failed_worker is not None:
                 self._terminate(
                     1,
@@ -151,10 +151,10 @@ class Server:
 
     def _halt(self):
         """Graceful shutdown."""
-        # notify coordinators for the shutdown
+        # notify the rs runtime to shutdown
         self._shutdown_notify.set()
-        self.controller.halt()
-        # shutdown coordinators
+        self.rs_runtime_manager.halt()
+        # shutdown py runtime manager
         self._shutdown.set()
         shutil.rmtree(self._configs["path"], ignore_errors=True)
         logger.info("mosec exited normally")
@@ -200,7 +200,7 @@ class Server:
         """
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
-        stage_id = self.coordinator_manager.worker_count
+        stage_id = self.py_runtime_manager.worker_count
         runtime = Runtime(
             worker,
             num,
@@ -213,13 +213,13 @@ class Server:
             None,
         )
         runtime.validate()
-        self.coordinator_manager.append(runtime)
+        self.py_runtime_manager.append(runtime)
 
     def _generate_openapi(self):
         """Generate the OpenAPI specification."""
-        if self.coordinator_manager.worker_count <= 0:
+        if self.py_runtime_manager.worker_count <= 0:
             return
-        workers = self.coordinator_manager.workers
+        workers = self.py_runtime_manager.workers
         request_worker_cls, response_worker_cls = workers[0], workers[-1]
         input_schema, input_components = request_worker_cls.get_forward_json_schema(
             ParseTarget.INPUT, MOSEC_REF_TEMPLATE
@@ -259,14 +259,14 @@ class Server:
         """Start the mosec model server."""
         self._validate_server()
         if self._configs["dry_run"]:
-            DryRunner(self.coordinator_manager).run()
+            DryRunner(self.py_runtime_manager).run()
             return
 
         self._handle_signal()
         self._generate_openapi()
-        self._start_controller()
+        self._start_rs_runtime()
         try:
-            self._manage_coordinators()
+            self._manage_py_runtime()
         # pylint: disable=broad-except
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))

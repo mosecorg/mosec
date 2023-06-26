@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test worker timeout configuration."""
+
 import os
 import time
 from typing import Any
@@ -26,7 +28,7 @@ class SleepyInference(Worker):
 
     def forward(self, data: Any) -> Any:
         sleep_duration = float(os.environ["sleep_duration"])
-        logger.info(f"sleep_duration {sleep_duration}")
+        logger.info("sleep_duration %s", sleep_duration)
         time.sleep(sleep_duration)
         return data
 

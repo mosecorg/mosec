@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test IPC shared memory storage."""
+
 import subprocess
 import sys
 from typing import List
@@ -29,7 +31,7 @@ class PlasmaRandomService(PlasmaShmIPCMixin, Worker):
         try:
             result = [{"x": np.random.rand(int(req["size"]))} for req in data]
         except KeyError as err:
-            raise ValidationError(err)
+            raise ValidationError(err) from err
         return result
 
 
@@ -47,7 +49,7 @@ class RedisRandomService(RedisShmIPCMixin, Worker):
         try:
             result = [{"x": np.random.rand(int(req["size"]))} for req in data]
         except KeyError as err:
-            raise ValidationError(err)
+            raise ValidationError(err) from err
         return result
 
 
@@ -61,13 +63,13 @@ class RedisDummyPostprocess(RedisShmIPCMixin, Worker):
 
 
 def start_redis_shm_mosec():
-    with subprocess.Popen(["redis-server"]) as p:  # start the redis server
+    with subprocess.Popen(["redis-server"]) as process:  # start the redis server
         # configure the plasma service path
         RedisShmIPCMixin.set_redis_url("redis://localhost:6379/0")
 
         server = Server()
         # register this process to be monitored
-        server.register_daemon("redis_server", p)
+        server.register_daemon("redis_server", process)
         server.append_worker(RedisRandomService, max_batch_size=8)
         server.append_worker(RedisDummyPostprocess, num=2)
         server.run()
@@ -91,11 +93,11 @@ def start_plasma_shm_mosec():
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Please specify a shm to run: plasma or redis")
-        exit(1)
+        print("Please specify a shm storage service to run: plasma or redis")
+        sys.exit(1)
 
-    shm = sys.argv[1]
-    if shm == "plasma":
+    SERVICE = sys.argv[1]
+    if SERVICE == "plasma":
         start_plasma_shm_mosec()
-    elif shm == "redis":
+    elif SERVICE == "redis":
         start_redis_shm_mosec()

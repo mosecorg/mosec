@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test MsgPack mixin."""
+
 from typing import Any, List
 
 from msgspec import Struct

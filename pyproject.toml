@@ -90,3 +90,10 @@ convention = "google"
 markers = [
     "shm: mark a test is related to shared memory",
 ]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+select = ["E", "F", "B", "I", "SIM", "TID", "PL"]
+[tool.ruff.pylint]
+max-args = 11

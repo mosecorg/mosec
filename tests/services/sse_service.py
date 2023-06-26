@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test Server-Sent Event."""
+
 from mosec import Server, SSEWorker, ValidationError, Worker, get_logger
 
 logger = get_logger()
@@ -29,6 +31,7 @@ class Inference(SSEWorker):
     def forward(self, data):
         epoch = 5
         for _ in range(epoch):
+            # pylint: disable=consider-using-enumerate
             for j in range(len(data)):
                 self.send_stream_event(f"{data[j]}", index=j)
 
