@@ -3,7 +3,6 @@ ARG base=nvidia/cuda:11.6.2-cudnn8-runtime-ubuntu20.04
 FROM ${base}
 
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
-ENV PATH /opt/conda/bin:$PATH
 
 ARG MOSEC_PORT=8000
 ENV MOSEC_PORT=${MOSEC_PORT}
@@ -46,7 +45,7 @@ RUN set -x && \
     find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
     /opt/conda/bin/conda clean -afy
 
-RUN conda create -n mosec python=3.10
+RUN /opt/conda/bin/conda create -n mosec python=3.10
 
 ENV PYTHON_PREFIX=/opt/conda/envs/mosec/bin
 
