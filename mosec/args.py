@@ -31,6 +31,8 @@ import warnings
 
 from mosec.env import get_env_namespace
 
+DEFAULT_WAIT_MS = 10
+
 
 def is_port_available(addr: str, port: int) -> bool:
     """Check if the port is available to use."""
@@ -38,9 +40,9 @@ def is_port_available(addr: str, port: int) -> bool:
     err = sock.connect_ex((addr, port))
     sock.close()
     # https://docs.python.org/3/library/errno.html
-    if 0 == err:
+    if err == 0:
         return False
-    if errno.ECONNREFUSED == err:
+    if err == errno.ECONNREFUSED:
         return True
     raise RuntimeError(
         f"Check {addr}:{port} socket connection err: {err}{errno.errorcode[err]}"
@@ -86,7 +88,7 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         "--wait",
         help="[deprecated] Wait time for the batcher to batch (milliseconds)",
         type=int,
-        default=10,
+        default=DEFAULT_WAIT_MS,
     )
 
     parser.add_argument(
@@ -137,7 +139,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = build_arguments_parser()
     args, _ = parser.parse_known_args(namespace=get_env_namespace())
 
-    if args.wait != 10:
+    if args.wait != DEFAULT_WAIT_MS:
         warnings.warn(
             "`--wait` is deprecated and will be removed in v1, please configure"
             "the `max_wait_time` on `Server.append_worker`",

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Example: Sample Resnet client."""
 
+from http import HTTPStatus
+
 import httpx
 import msgpack  # type: ignore
 
@@ -25,7 +27,7 @@ prediction = httpx.post(
     "http://127.0.0.1:8000/inference",
     content=msgpack.packb({"image": dog_bytes}),
 )
-if prediction.status_code == 200:
+if prediction.status_code == HTTPStatus.OK:
     print(msgpack.unpackb(prediction.content))
 else:
     print(prediction.status_code, prediction.content)

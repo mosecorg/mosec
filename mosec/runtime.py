@@ -71,7 +71,6 @@ class Runtime:
             env: the environment variables to set before starting the process
             ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
 
-
         Raises:
             TypeError: ipc_wrapper should inherit from `IPCWrapper`
         """

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test Coordinator related logic."""
+
 import json
 import logging
 import multiprocessing as mp
@@ -60,15 +62,12 @@ class CleanDirContext(ContextDecorator):
 
 
 class EchoWorkerJSON(Worker):
-    def __init__(self):
-        super().__init__()
-
     def forward(self, data):
         return data
 
 
 class EchoWorkerMsgPack(MsgpackMixin, EchoWorkerJSON):
-    """"""
+    pass
 
 
 @pytest.fixture
@@ -84,7 +83,7 @@ def base_test_config():
 
 def test_coordinator_worker_property():
     ctx = "spawn"
-    c = Coordinator(
+    coordinator = Coordinator(
         EchoWorkerJSON,
         max_batch_size=16,
         stage=STAGE_EGRESS,
@@ -96,9 +95,9 @@ def test_coordinator_worker_property():
         ipc_wrapper=None,
         timeout=3,
     )
-    assert c.worker.stage == STAGE_EGRESS
-    assert c.worker.worker_id == 3
-    assert c.worker.max_batch_size == 16
+    assert coordinator.worker.stage == STAGE_EGRESS
+    assert coordinator.worker.worker_id == 3
+    assert coordinator.worker.max_batch_size == 16
 
 
 def make_coordinator(w_cls, shutdown, shutdown_notify, config):
@@ -155,7 +154,7 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
     with CleanDirContext():
         os.makedirs(SOCKET_PREFIX, exist_ok=False)
         # create non-socket file
-        open(sock_addr, "w").close()
+        open(sock_addr, "w", encoding="utf-8").close()
 
         with caplog.at_level(logging.ERROR):
             _ = make_coordinator(
@@ -211,6 +210,7 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
 
     The batch size is automatically determined by the data's size.
     """
+    # pylint: disable=too-many-locals
     c_ctx = base_test_config.pop("c_ctx")
     # whatever value greater than 1, so that coordinator
     # knows this stage enables batching
@@ -255,14 +255,12 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
             assert got_flag == HTTPStautsCode.OK
             assert got_ids == sent_ids
             assert all(
-                [
-                    deserializer(x) == deserializer(y)
-                    for x, y in zip(got_payloads, sent_payloads)
-                ]
+                deserializer(x) == deserializer(y)
+                for x, y in zip(got_payloads, sent_payloads)
             )
             shutdown.set()
             # wait for socket timeout, make the client not read closed socket
             time.sleep(PROTOCOL_TIMEOUT)
-        except Exception as e:
+        except Exception as err:
             shutdown.set()
-            raise e
+            raise err

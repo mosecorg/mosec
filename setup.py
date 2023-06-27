@@ -1,3 +1,5 @@
+"""Build the package with Rust binary."""
+
 import os
 import shutil
 import subprocess
@@ -23,6 +25,7 @@ with open(os.path.join(here, "requirements/mixin.txt"), encoding="utf-8") as f:
 
 
 class RustExtension(Extension):
+    # pylint: disable=too-few-public-methods
     """Custom Extension class for rust"""
 
 
@@ -66,6 +69,7 @@ class RustBuildExt(_build_ext):
         if self.inplace:
             os.makedirs(os.path.dirname(libpath), exist_ok=True)
             shutil.copy(build_libpath, libpath)
+        return None
 
 
 setup(
@@ -89,5 +93,5 @@ setup(
     },
     zip_safe=False,
     ext_modules=ext_modules,  # type: ignore
-    cmdclass=dict(build_ext=RustBuildExt),  # type: ignore
+    cmdclass={"build_ext": RustBuildExt},
 )

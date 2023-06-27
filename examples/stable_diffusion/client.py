@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+from http import HTTPStatus
 
 import httpx
 import msgpack  # type: ignore
@@ -40,7 +41,7 @@ resp = httpx.post(
     content=msgpack.packb(args.prompt),
     timeout=httpx.Timeout(20),
 )
-if resp.status_code == 200:
+if resp.status_code == HTTPStatus.OK:
     data = msgpack.unpackb(resp.content)
     with open(args.output, "wb") as f:
         f.write(data)

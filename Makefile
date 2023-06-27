@@ -61,8 +61,9 @@ lint:
 	@pip install -q -e .
 	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
 	black --check --diff ${PY_SOURCE_FILES}
-	pylint -j 8 --recursive=y mosec
+	pylint -j 8 --recursive=y mosec setup.py
 	pylint -j 8 --recursive=y --disable=import-error examples --generated-members=numpy.*,torch.*,cv2.*,cv.*
+	pylint -j 8 --recursive=y tests --disable=unused-argument,missing-function-docstring,missing-class-docstring,redefined-outer-name,too-few-public-methods,consider-using-with
 	pydocstyle mosec
 	@-rm mosec/_version.py
 	pyright --stats

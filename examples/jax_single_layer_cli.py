@@ -14,6 +14,7 @@
 """Example: Client of the Jax server."""
 
 import random
+from http import HTTPStatus
 
 import httpx
 
@@ -24,7 +25,7 @@ prediction = httpx.post(
     "http://127.0.0.1:8000/inference",
     json={"array": input_data},
 )
-if prediction.status_code == 200:
+if prediction.status_code == HTTPStatus.OK:
     print(prediction.json())
 else:
     print(prediction.status_code, prediction.json())

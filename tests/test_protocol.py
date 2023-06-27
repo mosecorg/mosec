@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test protocol related logic."""
+
 import json
 import pickle
 import random
@@ -21,38 +23,40 @@ from typing import List
 import pytest
 
 from mosec.protocol import Protocol
-from tests.mock_socket import socket
+from tests.mock_socket import Socket
 from tests.utils import imitate_controller_send
 
 
-def echo(p: Protocol, datum: List[bytes]):
+def echo(protocol: Protocol, datum: List[bytes]):
     sent_status = random.choice([1, 2, 4, 8])
 
-    sent_ids, sent_payloads = imitate_controller_send(p.socket, datum)
+    sent_ids, sent_payloads = imitate_controller_send(protocol.socket, datum)
 
-    _, got_ids, got_payloads = p.receive()  # client recv
-    assert len(p.socket.buffer) == 0  # type: ignore
+    _, got_ids, got_payloads = protocol.receive()  # client recv
+    assert len(protocol.socket.buffer) == 0  # type: ignore
     assert got_ids == sent_ids
     assert all(
-        [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
+        bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))
     )
     got_payload_bytes = [bytes(x) for x in got_payloads]
-    p.send(sent_status, got_ids, got_payload_bytes)  # client echo
-    got_status, got_ids, got_payloads = p.receive()  # server recv (symmetric protocol)
+    # client echo
+    protocol.send(sent_status, got_ids, got_payload_bytes)
+    # server recv (symmetric protocol)
+    got_status, got_ids, got_payloads = protocol.receive()
 
-    assert len(p.socket.buffer) == 0  # type: ignore
+    assert len(protocol.socket.buffer) == 0  # type: ignore
     assert struct.unpack("!H", got_status)[0] == sent_status
     assert got_ids == sent_ids
     assert all(
-        [bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))]
+        bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))
     )
 
 
 @pytest.fixture
 def mock_protocol(mocker):
-    mocker.patch("mosec.protocol.socket", socket)
-    p = Protocol(name="test", addr="mock.uds")
-    return p
+    mocker.patch("mosec.protocol.socket", Socket)
+    protocol = Protocol(name="test", addr="mock.uds")
+    return protocol
 
 
 @pytest.mark.parametrize(

@@ -33,7 +33,7 @@ from tests.utils import wait_for_port_free, wait_for_port_open
 
 PORT = 5934
 URL = f"http://127.0.0.1:{PORT}/inference"
-REQ_NUM = int(os.getenv("CHAOS_REQUEST", 10000))
+REQ_NUM = int(os.getenv("CHAOS_REQUEST", "10000"))
 # set the thread number in case the CI server cannot get the real CPU number.
 THREAD = 8
 
@@ -44,9 +44,9 @@ def random_req(params, timeout):
 
 
 def main():
-    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD) as e:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD) as executor:
         futures = [
-            e.submit(
+            executor.submit(
                 random_req,
                 {"time": 0.1} if random() > 0.3 else {"hey": 0},
                 random() / 3.0,
@@ -57,7 +57,7 @@ def main():
         for future in concurrent.futures.as_completed(futures):
             try:
                 data = future.result()
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-exception-caught
                 print("[x]", err)
             else:
                 print("[~]", data)

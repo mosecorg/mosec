@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test multiprocessing logging configuration."""
+
 import logging
 
 from mosec.log import get_log_level, get_logger, set_logger

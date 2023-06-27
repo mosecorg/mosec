@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Useful functions for test."""
+
 from __future__ import annotations
 
 import contextlib
@@ -23,7 +25,7 @@ import time
 from typing import TYPE_CHECKING, List, Tuple, Union
 
 if TYPE_CHECKING:
-    from tests.mock_socket import socket as mock_socket
+    from tests.mock_socket import Socket as mock_socket
 
 
 def imitate_controller_send(

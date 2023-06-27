@@ -29,7 +29,7 @@ The plasma is deprecated in `pyarrow`. Please use Redis instead.
 
 import warnings
 from os import environ
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from mosec.worker import Worker
 
@@ -39,9 +39,6 @@ except ImportError:
     warnings.warn(
         "pyarrow is not installed. PlasmaShmMixin is not available.", ImportWarning
     )
-
-if TYPE_CHECKING:
-    from pyarrow import plasma
 
 
 _PLASMA_PATH_ENV = "MOSEC_INTERNAL_PLASMA_PATH"

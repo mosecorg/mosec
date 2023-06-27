@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""End-to-end service tests."""
+
 import random
 import re
 import shlex
@@ -150,18 +152,19 @@ def test_mixin_ipc_service(mosec_service, http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_mixin_typed_service(mosec_service, http_client):
+    text = b"hello mosec"
     resp = http_client.post(
         "/inference",
         content=msgpack.packb(
             {
                 "media": "text",
-                "binary": b"hello mosec",
+                "binary": text,
             }
         ),
     )
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.headers["content-type"] == "application/msgpack"
-    assert msgpack.unpackb(resp.content) == 11
+    assert msgpack.unpackb(resp.content) == len(text)
 
     # sleep long enough to make sure all the processes have been checked
     # ref to https://github.com/mosecorg/mosec/pull/379#issuecomment-1578304988
@@ -179,28 +182,28 @@ def test_mixin_typed_service(mosec_service, http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_sse_service(mosec_service, http_client):
-    round = 0
+    count = 0
     with connect_sse(
         http_client, "POST", "/sse_inference", json={"text": "mosec"}
     ) as event_source:
         for sse in event_source.iter_sse():
-            round += 1
+            count += 1
             assert sse.event == "message"
             assert sse.data == "mosec"
-    assert round == 5
+    assert count == 5
 
-    round = 0
+    count = 0
     with connect_sse(
         http_client, "POST", "/sse_inference", json={"bad": "req"}
     ) as event_source:
         for sse in event_source.iter_sse():
-            round += 1
+            count += 1
             assert sse.event == "error"
             assert sse.data == (
                 "SSE inference error: 422: Unprocessable Content: "
                 "request validation error: text is required"
             )
-    assert round == 1
+    assert count == 1
 
 
 @pytest.mark.parametrize(
@@ -213,29 +216,31 @@ def test_sse_service(mosec_service, http_client):
 def test_square_service_mp(mosec_service, http_client):
     threads = []
     for _ in range(20):
-        t = Thread(
+        thread = Thread(
             target=validate_square_service,
             args=(http_client, random.randint(-500, 500)),
         )
-        t.start()
-        threads.append(t)
-    for t in threads:
-        t.join()
+        thread.start()
+        threads.append(thread)
+    for thread in threads:
+        thread.join()
     assert_batch_larger_than_one(http_client)
     assert_empty_queue(http_client)
 
 
-def validate_square_service(http_client, x):
-    resp = http_client.post("/v1/inference", json={"x": x})
+def validate_square_service(http_client, num):
+    resp = http_client.post("/v1/inference", json={"x": num})
     assert resp.status_code == HTTPStatus.OK
-    assert resp.json()["x"] == x**2
+    assert resp.json()["x"] == num**2
 
 
 def assert_batch_larger_than_one(http_client):
+    def get_batch_size_int(text):
+        return int(text.split(" ")[-1])
+
     metrics = http_client.get("/metrics").content.decode()
-    bs = re.findall(r"batch_size_bucket.+", metrics)
-    get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
-    assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
+    batch_size = re.findall(r"batch_size_bucket.+", metrics)
+    assert get_batch_size_int(batch_size[-1]) > get_batch_size_int(batch_size[0])
 
 
 def assert_empty_queue(http_client):
