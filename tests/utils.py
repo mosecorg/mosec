@@ -12,13 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Useful functions for test."""
+
+from __future__ import annotations
+
+import contextlib
+import os
 import random
 import socket
 import struct
 import time
-from typing import List, Tuple, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 
-from tests.mock_socket import socket as mock_socket
+if TYPE_CHECKING:
+    from tests.mock_socket import Socket as mock_socket
 
 
 def imitate_controller_send(
@@ -41,7 +48,9 @@ def imitate_controller_send(
     return sent_ids, sent_payloads
 
 
-def wait_for_port_open(host: str = "127.0.0.1", port: int = 8000, timeout: int = 10):
+def wait_for_port_open(
+    host: str = "127.0.0.1", port: int = 8000, timeout: int = 10
+) -> bool:
     start_time = time.monotonic()
     while time.monotonic() - start_time < timeout:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,3 +64,29 @@ def wait_for_port_open(host: str = "127.0.0.1", port: int = 8000, timeout: int =
             sock.close()
         time.sleep(0.1)
     return False
+
+
+def wait_for_port_free(
+    host: str = "127.0.0.1", port: int = 8000, timeout: int = 5
+) -> bool:
+    start_time = time.monotonic()
+    while time.monotonic() - start_time < timeout:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.connect((host, port))
+            sock.shutdown(socket.SHUT_RDWR)
+        except (ConnectionRefusedError, OSError):
+            return True
+        finally:
+            sock.close()
+        time.sleep(0.1)
+    return False
+
+
+@contextlib.contextmanager
+def env_context(**kwargs):
+    """Set environment variables for testing."""
+    old_env = os.environ.copy()
+    os.environ.update(kwargs)
+    yield
+    os.environ = old_env

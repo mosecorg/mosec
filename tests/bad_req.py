@@ -24,14 +24,16 @@ import concurrent.futures
 import os
 import shlex
 import subprocess
-import time
 from http import HTTPStatus
 from random import random
 
 import httpx
 
-URL = "http://127.0.0.1:8000/inference"
-REQ_NUM = int(os.getenv("CHAOS_REQUEST", 10000))
+from tests.utils import wait_for_port_free, wait_for_port_open
+
+PORT = 5934
+URL = f"http://127.0.0.1:{PORT}/inference"
+REQ_NUM = int(os.getenv("CHAOS_REQUEST", "10000"))
 # set the thread number in case the CI server cannot get the real CPU number.
 THREAD = 8
 
@@ -42,9 +44,9 @@ def random_req(params, timeout):
 
 
 def main():
-    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD) as e:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD) as executor:
         futures = [
-            e.submit(
+            executor.submit(
                 random_req,
                 {"time": 0.1} if random() > 0.3 else {"hey": 0},
                 random() / 3.0,
@@ -55,7 +57,7 @@ def main():
         for future in concurrent.futures.as_completed(futures):
             try:
                 data = future.result()
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-exception-caught
                 print("[x]", err)
             else:
                 print("[~]", data)
@@ -72,11 +74,13 @@ def main():
 
 if __name__ == "__main__":
     service = subprocess.Popen(
-        shlex.split(f"python tests/bad_service.py --debug --timeout 500")
+        shlex.split(
+            f"python tests/services/bad_service.py --debug --timeout 500 --port {PORT}"
+        )
     )
-    time.sleep(3)
+    assert wait_for_port_open(port=PORT)
     try:
         main()
     finally:
         service.terminate()
-    time.sleep(2)
+    assert wait_for_port_free(port=PORT)

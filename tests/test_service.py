@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""End-to-end service tests."""
+
 import random
 import re
 import shlex
@@ -23,11 +25,13 @@ from threading import Thread
 import httpx
 import msgpack  # type: ignore
 import pytest
+from httpx_sse import connect_sse
 
 from mosec.server import GUARD_CHECK_INTERVAL
-from tests.utils import wait_for_port_open
+from tests.utils import wait_for_port_free, wait_for_port_open
 
-TEST_PORT = 5000
+# choose a special port to avoid conflict with local services
+TEST_PORT = 5753
 
 
 @pytest.fixture
@@ -42,12 +46,12 @@ def mosec_service(request):
     name = params[0]
     args = " ".join(params[1:])
     service = subprocess.Popen(
-        shlex.split(f"python -u tests/{name}.py {args} --port {TEST_PORT}"),
+        shlex.split(f"python -u tests/services/{name}.py {args} --port {TEST_PORT}"),
     )
     assert wait_for_port_open(port=TEST_PORT), "service failed to start"
     yield service
     service.terminate()
-    time.sleep(2)  # wait for service to stop
+    assert wait_for_port_free(port=TEST_PORT), "service failed to stop"
 
 
 @pytest.mark.parametrize(
@@ -75,6 +79,36 @@ def test_square_service(mosec_service, http_client):
     assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
+
+
+@pytest.mark.parametrize(
+    "mosec_service,http_client,status_code",
+    [
+        pytest.param(
+            "timeout_service --sleep-duration 1.5 --worker-timeout 1",
+            None,
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-worker-timeout",
+        ),
+        pytest.param(
+            "timeout_service --sleep-duration 1.0 --worker-timeout 2",
+            None,
+            HTTPStatus.OK,
+            id="normal-request-within-worker-timeout",
+        ),
+        pytest.param(
+            "timeout_service --sleep-duration 3.5 --worker-timeout 4",
+            None,
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-service-timeout",
+        ),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_timeout_service(mosec_service, http_client, status_code):
+    input_data = [random.randint(-99, 99)]
+    resp = http_client.post("/inference", json={"array": input_data})
+    assert resp.status_code == status_code, resp
 
 
 @pytest.mark.parametrize(
@@ -118,18 +152,19 @@ def test_mixin_ipc_service(mosec_service, http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_mixin_typed_service(mosec_service, http_client):
+    text = b"hello mosec"
     resp = http_client.post(
         "/inference",
         content=msgpack.packb(
             {
                 "media": "text",
-                "binary": b"hello mosec",
+                "binary": text,
             }
         ),
     )
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.headers["content-type"] == "application/msgpack"
-    assert msgpack.unpackb(resp.content) == 11
+    assert msgpack.unpackb(resp.content) == len(text)
 
     # sleep long enough to make sure all the processes have been checked
     # ref to https://github.com/mosecorg/mosec/pull/379#issuecomment-1578304988
@@ -142,6 +177,38 @@ def test_mixin_typed_service(mosec_service, http_client):
 @pytest.mark.parametrize(
     "mosec_service, http_client",
     [
+        pytest.param("sse_service", "", id="sse"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_sse_service(mosec_service, http_client):
+    count = 0
+    with connect_sse(
+        http_client, "POST", "/sse_inference", json={"text": "mosec"}
+    ) as event_source:
+        for sse in event_source.iter_sse():
+            count += 1
+            assert sse.event == "message"
+            assert sse.data == "mosec"
+    assert count == 5
+
+    count = 0
+    with connect_sse(
+        http_client, "POST", "/sse_inference", json={"bad": "req"}
+    ) as event_source:
+        for sse in event_source.iter_sse():
+            count += 1
+            assert sse.event == "error"
+            assert sse.data == (
+                "SSE inference error: 422: Unprocessable Content: "
+                "request validation error: text is required"
+            )
+    assert count == 1
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
         pytest.param("square_service", "", id="basic"),
     ],
     indirect=["mosec_service", "http_client"],
@@ -149,29 +216,31 @@ def test_mixin_typed_service(mosec_service, http_client):
 def test_square_service_mp(mosec_service, http_client):
     threads = []
     for _ in range(20):
-        t = Thread(
+        thread = Thread(
             target=validate_square_service,
             args=(http_client, random.randint(-500, 500)),
         )
-        t.start()
-        threads.append(t)
-    for t in threads:
-        t.join()
+        thread.start()
+        threads.append(thread)
+    for thread in threads:
+        thread.join()
     assert_batch_larger_than_one(http_client)
     assert_empty_queue(http_client)
 
 
-def validate_square_service(http_client, x):
-    resp = http_client.post("/v1/inference", json={"x": x})
+def validate_square_service(http_client, num):
+    resp = http_client.post("/v1/inference", json={"x": num})
     assert resp.status_code == HTTPStatus.OK
-    assert resp.json()["x"] == x**2
+    assert resp.json()["x"] == num**2
 
 
 def assert_batch_larger_than_one(http_client):
+    def get_batch_size_int(text):
+        return int(text.split(" ")[-1])
+
     metrics = http_client.get("/metrics").content.decode()
-    bs = re.findall(r"batch_size_bucket.+", metrics)
-    get_bs_int = lambda x: int(x.split(" ")[-1])  # noqa
-    assert get_bs_int(bs[-1]) > get_bs_int(bs[0])
+    batch_size = re.findall(r"batch_size_bucket.+", metrics)
+    assert get_batch_size_int(batch_size[-1]) > get_batch_size_int(batch_size[0])
 
 
 def assert_empty_queue(http_client):
@@ -211,7 +280,7 @@ def assert_empty_queue(http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_openapi_service(mosec_service, http_client, args):
-    spec = http_client.get("/api-docs/openapi.json").json()
+    spec = http_client.get("/openapi").json()
     input_cls, return_cls = args.split("/")
     path_item = spec["paths"]["/v1/inference"]["post"]
 

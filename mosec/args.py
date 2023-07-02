@@ -22,6 +22,7 @@ Arguments parsing for two parts:
 
 import argparse
 import errno
+import logging
 import os
 import random
 import socket
@@ -30,6 +31,8 @@ import warnings
 
 from mosec.env import get_env_namespace
 
+DEFAULT_WAIT_MS = 10
+
 
 def is_port_available(addr: str, port: int) -> bool:
     """Check if the port is available to use."""
@@ -37,9 +40,9 @@ def is_port_available(addr: str, port: int) -> bool:
     err = sock.connect_ex((addr, port))
     sock.close()
     # https://docs.python.org/3/library/errno.html
-    if 0 == err:
+    if err == 0:
         return False
-    if errno.ECONNREFUSED == err:
+    if err == errno.ECONNREFUSED:
         return True
     raise RuntimeError(
         f"Check {addr}:{port} socket connection err: {err}{errno.errorcode[err]}"
@@ -85,7 +88,7 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         "--wait",
         help="[deprecated] Wait time for the batcher to batch (milliseconds)",
         type=int,
-        default=10,
+        default=DEFAULT_WAIT_MS,
     )
 
     parser.add_argument(
@@ -111,8 +114,15 @@ def build_arguments_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--debug",
-        help="Enable log format",
+        help="Enable the service debug log",
         action="store_true",
+    )
+
+    parser.add_argument(
+        "--log-level",
+        help="Configure the service log level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
     )
 
     parser.add_argument(
@@ -129,7 +139,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = build_arguments_parser()
     args, _ = parser.parse_known_args(namespace=get_env_namespace())
 
-    if args.wait != 10:
+    if args.wait != DEFAULT_WAIT_MS:
         warnings.warn(
             "`--wait` is deprecated and will be removed in v1, please configure"
             "the `max_wait_time` on `Server.append_worker`",
@@ -145,8 +155,17 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def is_debug_mode() -> bool:
+def get_log_level() -> int:
     """Check if the service is running in debug mode."""
     parser = build_arguments_parser()
     args, _ = parser.parse_known_args(namespace=get_env_namespace())
-    return args.debug
+    if args.debug:
+        return logging.DEBUG
+
+    level_map = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }
+    return level_map[args.log_level]

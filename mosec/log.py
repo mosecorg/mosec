@@ -22,7 +22,7 @@ import os
 from datetime import datetime
 from typing import Any, MutableMapping
 
-from mosec.args import is_debug_mode
+from mosec.args import get_log_level
 
 MOSEC_LOG_NAME = __name__
 MOSEC_LOG_PREFIX = "mosec"
@@ -157,25 +157,26 @@ def get_logger():
     """Get the logger used by mosec user for multiprocessing."""
     prefix = USER_LOG_PREFIX
     logger_name = USER_LOG_NAME
-    if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
-        return use_pretty_log(prefix=prefix, logger_name=logger_name)
-    return use_json_log(prefix=prefix, logger_name=logger_name)
+    log_level = int(os.environ.get(MOSEC_LOG_NAME, "0"))
+    if log_level == logging.DEBUG:
+        return use_pretty_log(level=log_level, prefix=prefix, logger_name=logger_name)
+    return use_json_log(level=log_level, prefix=prefix, logger_name=logger_name)
 
 
 def get_internal_logger():
     """Get the logger used by mosec internally for multiprocessing."""
     prefix = MOSEC_LOG_PREFIX
     logger_name = MOSEC_LOG_NAME
-    if os.environ.get(MOSEC_LOG_NAME, "") == str(logging.DEBUG):
-        return use_pretty_log(prefix=prefix, logger_name=logger_name)
-    return use_json_log(prefix=prefix, logger_name=logger_name)
+    log_level = int(os.environ.get(MOSEC_LOG_NAME, "0"))
+    if log_level == logging.DEBUG:
+        return use_pretty_log(level=log_level, prefix=prefix, logger_name=logger_name)
+    return use_json_log(level=log_level, prefix=prefix, logger_name=logger_name)
 
 
-def set_logger(debug=False):
+def set_logger(level=logging.INFO):
     """Set the environment variable so all the sub-processes can inherit it."""
-    if debug:
-        os.environ[MOSEC_LOG_NAME] = str(logging.DEBUG)
+    os.environ[MOSEC_LOG_NAME] = str(level)
 
 
 # need to configure it here to make sure all the process can get the same one
-set_logger(is_debug_mode())
+set_logger(get_log_level())

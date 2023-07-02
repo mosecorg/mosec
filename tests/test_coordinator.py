@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test Coordinator related logic."""
+
 import json
 import logging
 import multiprocessing as mp
@@ -31,14 +33,13 @@ import msgpack  # type: ignore
 import pytest
 
 from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
-from mosec.manager import Runtime
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
 from tests.utils import imitate_controller_send
 
-socket_prefix = join(tempfile.gettempdir(), "test-mosec")
-stage = STAGE_INGRESS + STAGE_EGRESS
+SOCKET_PREFIX = join(tempfile.gettempdir(), "test-mosec")
+STAGE = STAGE_INGRESS + STAGE_EGRESS
 
 
 logger = logging.getLogger()
@@ -46,8 +47,8 @@ logger.addHandler(logging.StreamHandler())
 
 
 def clean_dir():
-    if os.path.exists(socket_prefix):
-        shutil.rmtree(socket_prefix)
+    if os.path.exists(SOCKET_PREFIX):
+        shutil.rmtree(SOCKET_PREFIX)
 
 
 class CleanDirContext(ContextDecorator):
@@ -61,15 +62,12 @@ class CleanDirContext(ContextDecorator):
 
 
 class EchoWorkerJSON(Worker):
-    def __init__(self):
-        super().__init__()
-
     def forward(self, data):
         return data
 
 
 class EchoWorkerMsgPack(MsgpackMixin, EchoWorkerJSON):
-    """"""
+    pass
 
 
 @pytest.fixture
@@ -85,7 +83,7 @@ def base_test_config():
 
 def test_coordinator_worker_property():
     ctx = "spawn"
-    c = Coordinator(
+    coordinator = Coordinator(
         EchoWorkerJSON,
         max_batch_size=16,
         stage=STAGE_EGRESS,
@@ -97,19 +95,19 @@ def test_coordinator_worker_property():
         ipc_wrapper=None,
         timeout=3,
     )
-    assert c.worker.stage == STAGE_EGRESS
-    assert c.worker.worker_id == 3
-    assert c.worker.max_batch_size == 16
+    assert coordinator.worker.stage == STAGE_EGRESS
+    assert coordinator.worker.worker_id == 3
+    assert coordinator.worker.max_batch_size == 16
 
 
 def make_coordinator(w_cls, shutdown, shutdown_notify, config):
     return Coordinator(
         w_cls,
         config["max_batch_size"],
-        stage,
+        STAGE,
         shutdown,
         shutdown_notify,
-        socket_prefix,
+        SOCKET_PREFIX,
         config["stage_id"],
         config["worker_id"],
         None,
@@ -148,15 +146,15 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
     mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
 
-    sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
+    sock_addr = join(SOCKET_PREFIX, f"ipc_{base_test_config.get('stage_id')}.socket")
     c_ctx = base_test_config.pop("c_ctx")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
-        os.makedirs(socket_prefix, exist_ok=False)
+        os.makedirs(SOCKET_PREFIX, exist_ok=False)
         # create non-socket file
-        open(sock_addr, "w").close()
+        open(sock_addr, "w", encoding="utf-8").close()
 
         with caplog.at_level(logging.ERROR):
             _ = make_coordinator(
@@ -166,7 +164,7 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
             assert "connection error" in record.message
 
     with CleanDirContext():
-        os.makedirs(socket_prefix, exist_ok=False)
+        os.makedirs(SOCKET_PREFIX, exist_ok=False)
         # bind to a socket file to which no server is listening
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sock_addr)
@@ -208,20 +206,22 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
     ],
 )
 def test_echo_batch(base_test_config, test_data, worker, deserializer):
-    """To test the batched data echo functionality. The batch size is automatically
-    determined by the data's size.
+    """To test the batched data echo functionality.
+
+    The batch size is automatically determined by the data's size.
     """
+    # pylint: disable=too-many-locals
     c_ctx = base_test_config.pop("c_ctx")
     # whatever value greater than 1, so that coordinator
     # knows this stage enables batching
     base_test_config["max_batch_size"] = 8
 
-    sock_addr = join(socket_prefix, f"ipc_{base_test_config.get('stage_id')}.socket")
+    sock_addr = join(SOCKET_PREFIX, f"ipc_{base_test_config.get('stage_id')}.socket")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
     with CleanDirContext():
-        os.makedirs(socket_prefix, exist_ok=False)
+        os.makedirs(SOCKET_PREFIX, exist_ok=False)
 
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sock_addr)
@@ -255,14 +255,12 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
             assert got_flag == HTTPStautsCode.OK
             assert got_ids == sent_ids
             assert all(
-                [
-                    deserializer(x) == deserializer(y)
-                    for x, y in zip(got_payloads, sent_payloads)
-                ]
+                deserializer(x) == deserializer(y)
+                for x, y in zip(got_payloads, sent_payloads)
             )
             shutdown.set()
             # wait for socket timeout, make the client not read closed socket
             time.sleep(PROTOCOL_TIMEOUT)
-        except Exception as e:
+        except Exception as err:
             shutdown.set()
-            raise e
+            raise err

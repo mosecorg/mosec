@@ -12,35 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::BTreeMap, str::FromStr};
+use std::collections::BTreeMap;
+use std::str::FromStr;
 
 use serde::Deserialize;
-use utoipa::openapi::{
-    request_body::RequestBody, Components, OpenApi, PathItemType, RefOr, Response, Schema,
-};
+use utoipa::openapi::request_body::RequestBody;
+use utoipa::openapi::{Components, OpenApi, PathItemType, RefOr, Response, Schema};
 
 #[derive(Deserialize, Default)]
 pub(crate) struct PythonAPIDoc {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     request_body: Option<RequestBody>,
+
     #[serde(skip_serializing_if = "Option::is_none", default)]
     responses: Option<BTreeMap<String, RefOr<Response>>>,
+
     #[serde(skip_serializing_if = "Option::is_none", default)]
     schemas: Option<BTreeMap<String, RefOr<Schema>>>,
 }
 
 impl FromStr for PythonAPIDoc {
     type Err = serde_json::Error;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         serde_json::from_str::<PythonAPIDoc>(s)
     }
 }
 
-pub(crate) struct MosecAPIDoc {
+#[derive(Default, Clone)]
+pub(crate) struct MosecOpenAPI {
     pub api: OpenApi,
 }
 
-impl MosecAPIDoc {
+impl MosecOpenAPI {
     /// merge PythonAPIDoc of target route to mosec api
     pub fn merge(&mut self, route: &str, python_api: PythonAPIDoc) -> &mut Self {
         let path = self.api.paths.paths.get_mut(route).unwrap();

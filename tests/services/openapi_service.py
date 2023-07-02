@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test OpenAPI generated spec."""
 
 import sys
 from typing import Any, Dict, List, Type
@@ -66,7 +67,7 @@ class UntypedInference(TypedMsgPackMixin, Worker):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Please specify the worker mapping. e.g. TypedPreprocess/TypedInference")
-        exit(1)
+        sys.exit(1)
 
     worker_mapping: Dict[str, Type[Worker]] = {
         "TypedPreprocess": TypedPreprocess,

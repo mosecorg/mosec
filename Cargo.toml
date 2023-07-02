@@ -1,6 +1,6 @@
 [package]
 name = "mosec"
-version = "0.7.1"
+version = "0.7.2"
 authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -17,13 +17,14 @@ bytes = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
-derive_more = { version = "0.99", features = ["display", "error"] }
+derive_more = { version = "0.99", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = { version = "1" }
 once_cell = "1.18"
 prometheus-client = "0.21.1"
 argh = "0.1"
 axum = "0.6.18"
+async-stream = "0.3.5"
 utoipa = "3.3.0"
 serde_json = "1.0.96"
 serde = "1.0.163"

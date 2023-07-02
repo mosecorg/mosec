@@ -176,22 +176,24 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 ## Configuration
 
 - Dynamic batching
-  - `max_batch_size` is configured when you `append_worker` (make sure inference with the max value won't cause the out-of-memory in GPU).
-  - `--wait (default=10ms)` is configured through CLI arguments (this usually should <= one batch inference duration).
-  - If enabled, it will collect a batch either when it reaches the `max_batch_size` or the `wait` time.
+  - `max_batch_size` and `max_wait_time (millisecond)` are configured when you call `append_worker`.
+  - Make sure inference with the `max_batch_size` value won't cause the out-of-memory in GPU.
+  - Normally, `max_wait_time` should be less than the batch inference time.
+  - If enabled, it will collect a batch either when it reaches either `max_batch_size` or the `wait` time. The service will only benefit from this feature when traffic is high.
 - Check the [arguments doc](https://mosecorg.github.io/mosec/reference/arguments.html).
 
 ## Deployment
 
-- This may require some shared memory, remember to set the `--shm-size` flag if you are using docker.
-- This service doesn't require Gunicorn or NGINX, but you can certainly use the ingress controller. BTW, it should be the PID 1 process in the container since it controls multiple processes.
+- If you're looking for a GPU base image with `mosec` installed, you can check the official image [`mosecorg/mosec`](https://hub.docker.com/r/mosecorg/mosec). For the complex use case, check out [envd](https://github.com/tensorchord/envd).
+- This service doesn't need Gunicorn or NGINX, but you can certainly use the ingress controller when necessary.
+- This service should be the PID 1 process in the container since it controls multiple processes. If you need to run multiple processes in one container, you will need a supervisor. You may choose [Supervisor](https://github.com/Supervisor/supervisor) or [Horust](https://github.com/FedericoPonzi/Horust).
 - Remember to collect the **metrics**.
   - `mosec_service_batch_size_bucket` shows the batch size distribution.
   - `mosec_service_batch_duration_second_bucket` shows the duration of dynamic batching for each connection in each stage (starts from receiving the first task).
   - `mosec_service_process_duration_second_bucket` shows the duration of processing for each connection in each stage (including the IPC time but excluding the `mosec_service_batch_duration_second_bucket`).
   - `mosec_service_remaining_task` shows the number of currently processing tasks.
   - `mosec_service_throughput` shows the service throughput.
-- Stop the service with `SIGINT` or `SIGTERM` since it has the graceful shutdown logic.
+- Stop the service with `SIGINT` (`CTRL+C`) or `SIGTERM` (`kill {PID}`) since it has the graceful shutdown logic.
 
 ## Adopters
 

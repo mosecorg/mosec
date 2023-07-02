@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test basic `forward` logic for single/concurrency request."""
+
 from typing import List
 
 from mosec import Server, Worker
@@ -23,7 +25,7 @@ class SquareService(Worker):
         try:
             result = [{"x": int(req["x"]) ** 2} for req in data]
         except KeyError as err:
-            raise ValidationError(err)
+            raise ValidationError(err) from err
         return result
 
 

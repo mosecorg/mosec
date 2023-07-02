@@ -12,29 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+"""Test MsgPack mixin."""
 
-import numpy as np
+from typing import Any, List
+
+from msgspec import Struct
 
 from mosec import Server, Worker
-from mosec.mixin import NumBinIPCMixin
+from mosec.mixin import TypedMsgPackMixin
 
 
-class Preprocess(NumBinIPCMixin, Worker):
-    def forward(self, data: Dict[str, str]) -> np.ndarray:
-        num = int(data.get("num", 10))
-        arr = np.ones(num) * (1 / num)
-        return arr
+class Request(Struct):
+    media: str
+    binary: bytes
 
 
-class Inference(NumBinIPCMixin, Worker):
-    def forward(self, data: List[np.ndarray]) -> List[str]:
-        res = ["equal" if np.equal(1, arr.sum()) else "unequal" for arr in data]
-        return res
+class Inference(TypedMsgPackMixin, Worker):
+    def forward(self, data: List[Request]) -> Any:
+        return [len(req.binary) for req in data]
 
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(Preprocess)
-    server.append_worker(Inference, max_batch_size=8)
+    server.append_worker(Inference, max_batch_size=4)
     server.run()
