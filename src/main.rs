@@ -33,11 +33,12 @@ use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{filter, Layer};
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::apidoc::MosecOpenAPI;
 use crate::args::Opts;
 use crate::coordinator::Coordinator;
-use crate::routes::{index, inference, metrics, openapi_json, sse_inference, AppState, RustAPIDoc};
+use crate::routes::{index, inference, metrics, sse_inference, AppState, RustAPIDoc};
 use crate::tasks::TaskManager;
 
 const MOSEC_OPENAPI_PATH: &str = "mosec_openapi.json";
@@ -67,22 +68,21 @@ async fn shutdown_signal() {
 async fn run(opts: &Opts) {
     let python_api =
         read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
-    let mut api = MosecOpenAPI {
+    let mut doc = MosecOpenAPI {
         api: RustAPIDoc::openapi(),
     };
-    api.merge("/inference", python_api.parse().unwrap_or_default());
-    api.replace_path_item("/inference", &opts.endpoint);
+    doc.merge("/inference", python_api.parse().unwrap_or_default())
+        .replace_path_item("/inference", &opts.endpoint);
 
     let state = AppState {
         mime: opts.mime.clone(),
-        openapi: api,
     };
     let coordinator = Coordinator::init_from_opts(opts);
     let barrier = coordinator.run();
     barrier.wait().await;
     let app = Router::new()
+        .merge(SwaggerUi::new("/api/swagger").url("/api/openapi.json", doc.api))
         .route("/", get(index))
-        .route("/openapi", get(openapi_json))
         .route("/metrics", get(metrics))
         .route(&opts.endpoint, post(inference))
         .route("/sse_inference", post(sse_inference))

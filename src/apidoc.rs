@@ -16,9 +16,8 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use serde::Deserialize;
-use utoipa::openapi::path::Operation;
 use utoipa::openapi::request_body::RequestBody;
-use utoipa::openapi::{Components, OpenApi, PathItemType, RefOr, Response, Responses, Schema};
+use utoipa::openapi::{Components, OpenApi, PathItemType, RefOr, Response, Schema};
 
 #[derive(Deserialize, Default)]
 pub(crate) struct PythonAPIDoc {
@@ -46,31 +45,10 @@ pub(crate) struct MosecOpenAPI {
 }
 
 impl MosecOpenAPI {
-    fn get_operation(&mut self, route: &str, method: &PathItemType) -> Option<&mut Operation> {
-        let path = self.api.paths.paths.get_mut(route).unwrap();
-        path.operations.get_mut(method)
-    }
-
-    fn get_route_request_body(
-        &mut self,
-        route: &str,
-        method: &PathItemType,
-    ) -> Option<&mut RequestBody> {
-        let op = self.get_operation(route, method).unwrap();
-        if op.request_body.is_none() {
-            op.request_body = Some(RequestBody::default());
-        }
-        op.request_body.as_mut()
-    }
-
-    fn get_route_responses(&mut self, route: &str, method: &PathItemType) -> &mut Responses {
-        let op = self.get_operation(route, method).unwrap();
-        &mut op.responses
-    }
-
     /// merge PythonAPIDoc of target route to mosec api
-    pub fn merge(&mut self, route: &str, python_api: PythonAPIDoc) {
-        // let mut api = self.api.clone();
+    pub fn merge(&mut self, route: &str, python_api: PythonAPIDoc) -> &mut Self {
+        let path = self.api.paths.paths.get_mut(route).unwrap();
+        let op = path.operations.get_mut(&PathItemType::Post).unwrap();
 
         if let Some(mut other_schemas) = python_api.schemas {
             if self.api.components.is_none() {
@@ -83,18 +61,15 @@ impl MosecOpenAPI {
                 .schemas
                 .append(&mut other_schemas);
         };
-
         if let Some(req) = python_api.request_body {
-            let req_body = self
-                .get_route_request_body(route, &PathItemType::Post)
-                .unwrap();
-            *req_body = req;
+            op.request_body = Some(req);
         };
 
         if let Some(mut responses) = python_api.responses {
-            let response = self.get_route_responses(route, &PathItemType::Post);
-            response.responses.append(&mut responses);
+            op.responses.responses.append(&mut responses);
         };
+
+        self
     }
 
     /// This function replaces a [OpenAPI Path Item Object][path_item] from path `from` to path `to`.
@@ -105,9 +80,10 @@ impl MosecOpenAPI {
     ///
     /// [path_item]: https://spec.openapis.org/oas/latest.html#path-item-object
     /// [utoipa-gen]: https://crates.io/crates/utoipa-gen
-    pub fn replace_path_item(&mut self, from: &str, to: &str) {
-        if let Some(path_item) = self.api.paths.paths.remove(from) {
-            self.api.paths.paths.insert(to.to_owned(), path_item);
+    pub fn replace_path_item(&mut self, from: &str, to: &str) -> &mut Self {
+        if let Some(r) = self.api.paths.paths.remove(from) {
+            self.api.paths.paths.insert(to.to_owned(), r);
         }
+        self
     }
 }

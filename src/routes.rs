@@ -26,7 +26,6 @@ use prometheus_client::encoding::text::encode;
 use tracing::warn;
 use utoipa::OpenApi;
 
-use crate::apidoc::MosecOpenAPI;
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
 use crate::tasks::{TaskCode, TaskManager};
@@ -39,7 +38,6 @@ const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 #[derive(Clone)]
 pub(crate) struct AppState {
     pub mime: String,
-    pub openapi: MosecOpenAPI,
 }
 
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
@@ -90,25 +88,6 @@ pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
     let registry = REGISTRY.get().unwrap();
     encode(&mut encoded, registry).unwrap();
     build_response(StatusCode::OK, Bytes::from(encoded))
-}
-
-#[utoipa::path(
-    get,
-    path = "/openapi",
-    responses(
-        (status = StatusCode::OK, description = "Get OpenAPI doc", body = String)
-    )
-)]
-pub(crate) async fn openapi_json(
-    State(state): State<AppState>,
-    _: Request<Body>,
-) -> Response<Body> {
-    let s = state
-        .openapi
-        .api
-        .to_json()
-        .unwrap_or("OpenAPI generation failed".to_string());
-    build_response(StatusCode::OK, Bytes::from(s))
 }
 
 #[utoipa::path(
@@ -264,5 +243,5 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
 }
 
 #[derive(OpenApi)]
-#[openapi(paths(index, metrics, openapi_json, inference, sse_inference))]
+#[openapi(paths(index, metrics, inference, sse_inference))]
 pub(crate) struct RustAPIDoc;
