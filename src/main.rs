@@ -71,8 +71,8 @@ async fn run(opts: &Opts) {
     let mut doc = MosecOpenAPI {
         api: RustAPIDoc::openapi(),
     };
-    doc.merge("/inference", python_api.parse().unwrap_or_default());
-    doc.replace_path_item("/inference", &opts.endpoint);
+    doc.merge("/inference", python_api.parse().unwrap_or_default())
+        .replace_path_item("/inference", &opts.endpoint);
 
     let state = AppState {
         mime: opts.mime.clone(),
@@ -81,7 +81,7 @@ async fn run(opts: &Opts) {
     let barrier = coordinator.run();
     barrier.wait().await;
     let app = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/openapi", doc.api))
+        .merge(SwaggerUi::new("/api/swagger").url("/api/openapi.json", doc.api))
         .route("/", get(index))
         .route("/metrics", get(metrics))
         .route(&opts.endpoint, post(inference))
