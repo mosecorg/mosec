@@ -1,0 +1,2 @@
+scheme = [ "https", "http", "mailto" ]
+exclude_loopback = true
