@@ -29,6 +29,7 @@ logger = get_logger()
 Returns = Any
 
 INFERENCE_BATCH_SIZE = 32
+INFERENCE_WORKER_NUM = 1
 
 
 class Preprocess(Worker):
@@ -91,6 +92,8 @@ class Inference(Worker):
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(Preprocess)
-    server.append_worker(Inference, max_batch_size=INFERENCE_BATCH_SIZE)
+    server.append_worker(Preprocess, num=2 * INFERENCE_WORKER_NUM)
+    server.append_worker(
+        Inference, max_batch_size=INFERENCE_BATCH_SIZE, num=INFERENCE_WORKER_NUM
+    )
     server.run()

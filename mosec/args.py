@@ -54,9 +54,9 @@ def build_arguments_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Mosec Server Configurations",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        epilog="The following arguments can be set through environment variables: "
-        "(path, capacity, timeout, address, port, namespace, debug, dry_run). "
-        "Note that the environment variable should start with `MOSEC_` with upper "
+        epilog="The following arguments can be set through environment variables: ("
+        "path, capacity, timeout, address, port, namespace, debug, log_level, dry_run"
+        "). Note that the environment variable should start with `MOSEC_` with upper "
         "case. For example: `MOSEC_PORT=8080 MOSEC_TIMEOUT=5000 python main.py`.",
     )
 

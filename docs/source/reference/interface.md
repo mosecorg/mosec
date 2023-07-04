@@ -22,7 +22,7 @@
     :show-inheritance:
 ```
 
-## Mixin
+## Mixins
 
 ```{eval-rst}
 .. automodule:: mosec.mixin

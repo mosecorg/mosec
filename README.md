@@ -92,7 +92,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         )
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.pipe = self.pipe.to(device)
-        self.example = ["useless example prompt"] * 4  # warmup (bs=4)
+        self.example = ["useless example prompt"] * 4  # warmup (batch_size=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:
         logger.debug("generate images for %s", data)
@@ -108,15 +108,15 @@ class StableDiffusion(MsgpackMixin, Worker):
 
 > **Note**
 >
-> (a) In this example we return an image in the binary format, which JSON does not support (unless encoded with base64 that makes it longer). Hence, msgpack suits our need better. If we do not inherit `MsgpackMixin`, JSON will be used by default. In other words, the protocol of the service request/response can either be msgpack or JSON.
+> (a) In this example we return an image in the binary format, which JSON does not support (unless encoded with base64 that makes the payload larger). Hence, msgpack suits our need better. If we do not inherit `MsgpackMixin`, JSON will be used by default. In other words, the protocol of the service request/response can be either msgpack, JSON, or any other format (check our [mixins](https://mosecorg.github.io/mosec/reference/interface.html#module-mosec.mixin)).
 >
 > (b) Warm-up usually helps to allocate GPU memory in advance. If the warm-up example is specified, the service will only be ready after the example is forwarded through the handler. However, if no example is given, the first request's latency is expected to be longer. The `example` should be set as a single item or a tuple depending on what `forward` expects to receive. Moreover, in the case where you want to warm up with multiple different examples, you may set `multi_examples` (demo [here](https://mosecorg.github.io/mosec/examples/jax.html)).
 >
-> (c) This example shows a single-stage service, where the `StableDiffusion` worker directly takes in client's prompt request and responds the image. Thus the `forward` can be considered as a complete service handler. However, we can also design a multi-stage service with workers doing different jobs (e.g., downloading images, forward model, post-processing) in a pipeline. In this case, the whole pipeline is considered as the service handler, with the first worker taking in the request and the last worker sending out the response. The data flow between workers is done by inter-process communication.
+> (c) This example shows a single-stage service, where the `StableDiffusion` worker directly takes in client's prompt request and responds the image. Thus the `forward` can be considered as a complete service handler. However, we can also design a multi-stage service with workers doing different jobs (e.g., downloading images, model inference, post-processing) in a pipeline. In this case, the whole pipeline is considered as the service handler, with the first worker taking in the request and the last worker sending out the response. The data flow between workers is done by inter-process communication.
 >
 > (d) Since dynamic batching is enabled in this example, the `forward` method will wishfully receive a _list_ of string, e.g., `['a cute cat playing with a red ball', 'a man sitting in front of a computer', ...]`, aggregated from different clients for _batch inference_, improving the system throughput.
 
-Finally, we append the worker to the server to construct a *single-stage* workflow (multiple stages can be [pipelined](https://en.wikipedia.org/wiki/Pipeline_(computing)) to further boost the throughput, see [this example](https://mosecorg.github.io/mosec/examples/pytorch.html#computer-vision)), and specify the number of processes we want it to run in parallel (`num=1`), and the maximum batch size (`max_batch_size=4`, the maximum number of requests dynamic batching will accumulate before timeout; timeout is defined with the flag `--wait` in milliseconds, meaning the longest time Mosec waits until sending the batch to the Worker).
+Finally, we append the worker to the server to construct a *single-stage* workflow (multiple stages can be [pipelined](https://en.wikipedia.org/wiki/Pipeline_(computing)) to further boost the throughput, see [this example](https://mosecorg.github.io/mosec/examples/pytorch.html#computer-vision)), and specify the number of processes we want it to run in parallel (`num=1`), and the maximum batch size (`max_batch_size=4`, the maximum number of requests dynamic batching will accumulate before timeout; timeout is defined with the `max_wait_time=10` in milliseconds, meaning the longest time Mosec waits until sending the batch to the Worker).
 
 ```python
 if __name__ == "__main__":
@@ -139,7 +139,7 @@ python examples/stable_diffusion/server.py --help
 Then let's start the server with debug logs:
 
 ```shell
-python examples/stable_diffusion/server.py --debug
+python examples/stable_diffusion/server.py --log-level debug
 ```
 
 And in another terminal, test it:
@@ -179,7 +179,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
   - `max_batch_size` and `max_wait_time (millisecond)` are configured when you call `append_worker`.
   - Make sure inference with the `max_batch_size` value won't cause the out-of-memory in GPU.
   - Normally, `max_wait_time` should be less than the batch inference time.
-  - If enabled, it will collect a batch either when it reaches either `max_batch_size` or the `wait` time. The service will only benefit from this feature when traffic is high.
+  - If enabled, it will collect a batch either when it reaches either `max_batch_size` or the `max_wait_time`. The service will only benefit from this feature when traffic is high.
 - Check the [arguments doc](https://mosecorg.github.io/mosec/reference/arguments.html).
 
 ## Deployment
@@ -194,6 +194,15 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
   - `mosec_service_remaining_task` shows the number of currently processing tasks.
   - `mosec_service_throughput` shows the service throughput.
 - Stop the service with `SIGINT` (`CTRL+C`) or `SIGTERM` (`kill {PID}`) since it has the graceful shutdown logic.
+
+## Performance tuning
+
+- Find out the best `max_batch_size` and `max_wait_time` for your inference service. The metrics will show the histograms of the real batch size and batch duration. Those are the key information to adjust these two parameters.
+- Try to split the whole inference process into separate CPU and GPU stages (ref [DistilBERT](https://mosecorg.github.io/mosec/examples/pytorch.html#natural-language-processing)). Different stages will be run in a [data pipeline](https://en.wikipedia.org/wiki/Pipeline_(software)), which will keep the GPU busy. 
+- You can also adjust the number of workers in each stage. For example, if your pipeline consists of a CPU stage for preprocessing and a GPU stage for model inference, increasing the number of CPU-stage workers can help to produce more data to be batched for model inference at the GPU stage; increasing the GPU-stage workers can fully utilize the GPU memory and computation power. Both ways may contribute to higher GPU utilization, which consequently results in higher service throughput.
+- For multi-stage services, note that the data passing through different stages will be serialized/deserialized by the `serialize_ipc/deserialize_ipc` methods, so extremely large data might make the whole pipeline slow. The serialized data is passed to the next stage through rust by default, you could enable shared memory to potentially reduce the latency (ref [RedisShmIPCMixin](https://mosecorg.github.io/mosec/examples/ipc.html#redis-shm-ipc-py)).
+- You should choose appropriate `serialize/deserialize` methods, which are used to decode the user request and encode the response. By default, both are using JSON. However, images and embeddings are not well supported by JSON. You can choose msgpack which is faster and binary compatible (ref [Stable Diffusion](https://mosecorg.github.io/mosec/examples/stable_diffusion.html)).
+- Configure the threads for OpenBLAS or MKL. It might not be able to choose the most suitable CPUs used by the current Python process. You can configure it for each worker by using the [env](https://mosecorg.github.io/mosec/reference/interface.html#mosec.server.Server.append_worker) (ref [custom GPU allocation](https://mosecorg.github.io/mosec/examples/env.html)).
 
 ## Adopters
 
