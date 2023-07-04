@@ -194,7 +194,8 @@ class Server:
             max_wait_time: the maximum wait time (millisecond) for dynamic batching,
                 needs to be used with `max_batch_size` to enable the feature. If not
                 configure, will use the CLI argument `--wait` (default=10ms)
-            start_method: the process starting method ("spawn" or "fork")
+            start_method: the process starting method ("spawn" or "fork"). (DO NOT
+                change this unless you understand the difference between them)
             env: the environment variables to set before starting the process
             timeout: the timeout (second) for each worker forward processing (>=1)
         """
