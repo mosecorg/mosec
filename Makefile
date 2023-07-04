@@ -34,7 +34,7 @@ test_all: dev
 
 doc:
 	@cd docs && make html && cd ../
-	@python -m http.server -d docs/build/html 7291
+	@python -m http.server -d docs/build/html 7291 -b 127.0.0.1
 
 clean:
 	@cargo clean
