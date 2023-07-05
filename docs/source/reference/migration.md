@@ -6,7 +6,7 @@ This guide will help you migrate from other frameworks to `mosec`.
 
 Both [`PyTriton`](https://github.com/triton-inference-server/pytriton) and [`Triton Python Backend`](https://github.com/triton-inference-server/python_backend) are using [`Triton Inference Server`](https://github.com/triton-inference-server).
 
-- `mosec` doesn't have a specific client, you can use any HTTP client library
+- `mosec` doesn't require a specific client, you can use any HTTP client library
 - dynamic batching is configured when calling the [`append_worker`](mosec.server.Server.append_worker)
 - `mosec` doesn't need to declare the `inputs` and `outputs`. If you want to validate the request, you can use the [`TypedMsgPackMixin`](mosec.mixin.typed_worker.TypedMsgPackMixin) (ref [Validate Request](https://mosecorg.github.io/mosec/examples/validate.html))
 

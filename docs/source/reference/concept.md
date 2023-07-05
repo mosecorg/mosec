@@ -6,7 +6,7 @@ There are a few terms used in `mosec`.
 - `stage`: one processing unit in the pipeline, each stage contains several `worker` replicas
   - each stage retrieves the data from the previous stage and passes the result to the next stage
   - retrieved data will be deserialized by the [`Worker.deserialize_ipc`](mosec.worker.Worker.deserialize_ipc) method
-  - passed data will be serialized by the [`Worker.serialize_ipc`](mosec.worker.Worker.serialize_ipc) method
+  - data to be passed will be serialized by the [`Worker.serialize_ipc`](mosec.worker.Worker.serialize_ipc) method
 - `ingress/egress`: the first/last stage in the pipeline
   - ingress gets data from the client, while egress sends data to the client
   - data will be deserialized by the ingress [`Worker.serialize`](mosec.worker.Worker.serialize) method and serialized by the egress [`Worker.deserialize`](mosec.worker.Worker.deserialize) method
