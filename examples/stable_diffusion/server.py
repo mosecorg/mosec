@@ -30,17 +30,17 @@ class StableDiffusion(MsgpackMixin, Worker):
             "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
         )
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.pipe = self.pipe.to(device)
+        self.pipe = self.pipe.to(device)  # type: ignore
         self.example = ["useless example prompt"] * 4  # warmup (bs=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:
         logger.debug("generate images for %s", data)
-        res = self.pipe(data)
+        res = self.pipe(data)  # type: ignore
         logger.debug("NSFW: %s", res[1])
         images = []
-        for img in res[0]:
+        for img in res[0]:  # type: ignore
             dummy_file = BytesIO()
-            img.save(dummy_file, format="JPEG")
+            img.save(dummy_file, format="JPEG")  # type: ignore
             images.append(dummy_file.getbuffer())
         return images
 

@@ -60,6 +60,9 @@ pip install --upgrade diffusers[torch] transformers
 
 ### Write the server
 
+<details>
+<summary>Click me for server codes with explanations.</summary>
+
 Firstly, we import the libraries and set up a basic logger to better observe what happens.
 
 ```python
@@ -127,8 +130,12 @@ if __name__ == "__main__":
     server.append_worker(StableDiffusion, num=1, max_batch_size=4, max_wait_time=10)
     server.run()
 ```
+</details>
 
 ### Run the server
+
+<details>
+<summary>Click me to see how to run and query the server.</summary>
 
 The above snippets are merged in our example file. You may directly run at the project root level. We first have a look at the _command line arguments_ (explanations [here](https://mosecorg.github.io/mosec/reference/arguments.html)):
 
@@ -157,6 +164,7 @@ curl http://127.0.0.1:8000/metrics
 ```
 
 That's it! You have just hosted your **_stable-diffusion model_** as a service! 😉
+</details>
 
 ## Examples
 
@@ -179,8 +187,8 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
   - `max_batch_size` and `max_wait_time (millisecond)` are configured when you call `append_worker`.
   - Make sure inference with the `max_batch_size` value won't cause the out-of-memory in GPU.
   - Normally, `max_wait_time` should be less than the batch inference time.
-  - If enabled, it will collect a batch either when it reaches either `max_batch_size` or the `max_wait_time`. The service will only benefit from this feature when traffic is high.
-- Check the [arguments doc](https://mosecorg.github.io/mosec/reference/arguments.html).
+  - If enabled, it will collect a batch either when the number of accumulated requests reaches `max_batch_size` or when `max_wait_time` has elapsed. The service will benefit from this feature when the traffic is high.
+- Check the [arguments doc](https://mosecorg.github.io/mosec/reference/arguments.html) for other configurations.
 
 ## Deployment
 
@@ -198,7 +206,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 ## Performance tuning
 
 - Find out the best `max_batch_size` and `max_wait_time` for your inference service. The metrics will show the histograms of the real batch size and batch duration. Those are the key information to adjust these two parameters.
-- Try to split the whole inference process into separate CPU and GPU stages (ref [DistilBERT](https://mosecorg.github.io/mosec/examples/pytorch.html#natural-language-processing)). Different stages will be run in a [data pipeline](https://en.wikipedia.org/wiki/Pipeline_(software)), which will keep the GPU busy. 
+- Try to split the whole inference process into separate CPU and GPU stages (ref [DistilBERT](https://mosecorg.github.io/mosec/examples/pytorch.html#natural-language-processing)). Different stages will be run in a [data pipeline](https://en.wikipedia.org/wiki/Pipeline_(software)), which will keep the GPU busy.
 - You can also adjust the number of workers in each stage. For example, if your pipeline consists of a CPU stage for preprocessing and a GPU stage for model inference, increasing the number of CPU-stage workers can help to produce more data to be batched for model inference at the GPU stage; increasing the GPU-stage workers can fully utilize the GPU memory and computation power. Both ways may contribute to higher GPU utilization, which consequently results in higher service throughput.
 - For multi-stage services, note that the data passing through different stages will be serialized/deserialized by the `serialize_ipc/deserialize_ipc` methods, so extremely large data might make the whole pipeline slow. The serialized data is passed to the next stage through rust by default, you could enable shared memory to potentially reduce the latency (ref [RedisShmIPCMixin](https://mosecorg.github.io/mosec/examples/ipc.html#redis-shm-ipc-py)).
 - You should choose appropriate `serialize/deserialize` methods, which are used to decode the user request and encode the response. By default, both are using JSON. However, images and embeddings are not well supported by JSON. You can choose msgpack which is faster and binary compatible (ref [Stable Diffusion](https://mosecorg.github.io/mosec/examples/stable_diffusion.html)).
