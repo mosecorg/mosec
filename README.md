@@ -59,8 +59,10 @@ pip install --upgrade diffusers[torch] transformers
 ```
 
 ### Write the server
+
 <details>
 <summary>Click me for server codes with explanations.</summary>
+
 Firstly, we import the libraries and set up a basic logger to better observe what happens.
 
 ```python
@@ -134,6 +136,7 @@ if __name__ == "__main__":
 
 <details>
 <summary>Click me to see how to run and query the server.</summary>
+
 The above snippets are merged in our example file. You may directly run at the project root level. We first have a look at the _command line arguments_ (explanations [here](https://mosecorg.github.io/mosec/reference/arguments.html)):
 
 ```shell
