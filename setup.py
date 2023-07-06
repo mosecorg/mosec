@@ -93,5 +93,5 @@ setup(
     },
     zip_safe=False,
     ext_modules=ext_modules,  # type: ignore
-    cmdclass={"build_ext": RustBuildExt},
+    cmdclass={"build_ext": RustBuildExt},  # type: ignore
 )

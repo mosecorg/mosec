@@ -13,7 +13,7 @@ dev:
 	cargo build
 	@mkdir -p mosec/bin
 	@cp ./target/debug/mosec mosec/bin/
-	pip install -e .
+	pip install -e .[dev,doc,mixin]
 
 test: dev
 	echo "Running tests for the main logic"
