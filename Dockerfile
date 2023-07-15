@@ -4,16 +4,12 @@ FROM ${base}
 
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
-ARG MOSEC_PORT=8000
-ENV MOSEC_PORT=${MOSEC_PORT}
-
 ARG CONDA_VERSION=py310_23.3.1-0
 
 RUN apt update && \
     apt install -y --no-install-recommends \
         wget \
         git \
-        build-essential \
         ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
@@ -45,9 +41,7 @@ RUN set -x && \
     find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
     /opt/conda/bin/conda clean -afy
 
-RUN /opt/conda/bin/conda create -n mosec python=3.10
-
-ENV PYTHON_PREFIX=/opt/conda/envs/mosec/bin
+ENV PYTHON_PREFIX=/opt/conda/bin
 
 RUN update-alternatives --install /usr/bin/python python ${PYTHON_PREFIX}/python 1 && \
     update-alternatives --install /usr/bin/python3 python3 ${PYTHON_PREFIX}/python3 1 && \
