@@ -25,7 +25,7 @@ prometheus-client = "0.21.1"
 argh = "0.1"
 axum = "0.6.18"
 async-stream = "0.3.5"
-utoipa = "3.3.0"
+utoipa = "3.4.0"
 serde_json = "1.0.96"
 serde = "1.0.163"
 utoipa-swagger-ui = { version = "3", features = ["axum"] }
