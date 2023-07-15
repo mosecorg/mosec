@@ -62,7 +62,10 @@ def build_arguments_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--path",
-        help="Unix Domain Socket address for internal Inter-Process Communication",
+        help=(
+            "Unix Domain Socket address for internal Inter-Process Communication."
+            "If not set, a random path will be created under the temporary dir."
+        ),
         type=str,
         default=os.path.join(
             tempfile.gettempdir(), f"mosec_{random.randrange(2**32):x}"

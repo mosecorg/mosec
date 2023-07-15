@@ -22,7 +22,7 @@ from multiprocessing.process import BaseProcess
 from multiprocessing.synchronize import Event
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 
 import pkg_resources
 
@@ -84,10 +84,12 @@ class Runtime:
         self.env = env
         self.ipc_wrapper = ipc_wrapper
 
-        self._pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
+        # adding the stage id in case the worker class is added to multiple stages
+        self.name = f"{self.worker.__name__}_{self.stage_id}"
+        self.pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
 
     @staticmethod
-    def _process_healthy(process: Union[BaseProcess, None]) -> bool:
+    def process_healthy(process: Union[BaseProcess, None]) -> bool:
         """Check if the child process is healthy.
 
         ref: https://docs.python.org/3/library/multiprocessing.html
@@ -96,10 +98,11 @@ class Runtime:
         """
         return process is not None and process.exitcode is None
 
-    def _healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
-        return method(self._pool)
+    def healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
+        """Check if all/any of the child processes are healthy."""
+        return method(self.pool)
 
-    def _start_process(
+    def start_process(
         self,
         worker_id: int,
         stage_label: str,
@@ -107,6 +110,7 @@ class Runtime:
         shutdown: Event,
         shutdown_notify: Event,
     ):
+        """Start a worker process in the context."""
         context = mp.get_context(self.start_method)
         context = cast(Union[SpawnContext, ForkContext], context)
         coordinator_process = context.Process(
@@ -129,7 +133,7 @@ class Runtime:
         with env_var_context(self.env, worker_id):
             coordinator_process.start()
 
-        self._pool[worker_id] = coordinator_process
+        self.pool[worker_id] = coordinator_process
 
     def check(
         self,
@@ -152,20 +156,20 @@ class Runtime:
             Whether the worker is started successfully
         """
         # for every sequential stage
-        self._pool = [p if self._process_healthy(p) else None for p in self._pool]
-        if self._healthy(all):
+        self.pool = [p if self.process_healthy(p) else None for p in self.pool]
+        if self.healthy(all):
             # this stage is healthy
             return True
-        if not first and not self._healthy(any):
+        if not first and not self.healthy(any):
             # this stage might contain bugs
             return False
 
         need_start_id = [
-            worker_id for worker_id in range(self.num) if self._pool[worker_id] is None
+            worker_id for worker_id in range(self.num) if self.pool[worker_id] is None
         ]
         for worker_id in need_start_id:
             # for every worker in each stage
-            self._start_process(
+            self.start_process(
                 worker_id, stage_label, work_path, shutdown, shutdown_notify
             )
         return True
@@ -196,35 +200,36 @@ class PyRuntimeManager:
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
         """
-        self._runtimes: List[Runtime] = []
+        self.runtimes: List[Runtime] = []
 
         self._work_path = work_path
-        self._shutdown = shutdown
-        self._shutdown_notify = shutdown_notify
+        self.shutdown = shutdown
+        self.shutdown_notify = shutdown_notify
 
     def __iter__(self):
         """Iterate workers of manager."""
-        return self._runtimes.__iter__()
+        return self.runtimes.__iter__()
 
     @property
     def worker_count(self) -> int:
         """Get number of workers."""
-        return len(self._runtimes)
+        return len(self.runtimes)
 
     @property
     def workers(self) -> List[Type[Worker]]:
         """Get List of workers."""
-        return [r.worker for r in self._runtimes]
+        return [r.worker for r in self.runtimes]
 
     def egress_mime(self) -> str:
         """Return mime of egress worker."""
-        return self._runtimes[-1].worker.resp_mime_type
+        return self.runtimes[-1].worker.resp_mime_type
 
     def append(self, runtime: Runtime):
         """Sequentially appends workers to the workflow pipeline."""
-        self._runtimes.append(runtime)
+        self.runtimes.append(runtime)
 
-    def _label_stage(self, stage_id: int) -> str:
+    def label_stage(self, stage_id: int) -> str:
+        """Get the label of the stage (ingress/egress or not)."""
         stage = ""
         if stage_id == 0:
             stage += STAGE_INGRESS
@@ -238,10 +243,10 @@ class PyRuntimeManager:
         Args:
             first: whether the worker is tried to start at first time
         """
-        for stage_id, worker_runtime in enumerate(self._runtimes):
-            label = self._label_stage(stage_id)
+        for stage_id, worker_runtime in enumerate(self.runtimes):
+            label = self.label_stage(stage_id)
             success = worker_runtime.check(
-                first, label, self._work_path, self._shutdown, self._shutdown_notify
+                first, label, self._work_path, self.shutdown, self.shutdown_notify
             )
             if not success:
                 return worker_runtime
@@ -251,34 +256,28 @@ class PyRuntimeManager:
 class RsRuntimeManager:
     """The manager to control Mosec process."""
 
-    def __init__(
-        self, py_manager: PyRuntimeManager, endpoint: str, configs: Dict[str, Any]
-    ):
+    def __init__(self, timeout: int):
         """Initialize a Mosec manager.
 
         Args:
-            manager: manager of python coordinator
-            endpoint: event of server shutdown
-            configs: config
+            timeout: service timeout in milliseconds
         """
-        self._process: Optional[subprocess.Popen] = None
+        self.process: Optional[subprocess.Popen] = None
 
-        self._py_manager: PyRuntimeManager = py_manager
-        self._endpoint = endpoint
-        self._server_path = Path(
+        self.server_path = Path(
             pkg_resources.resource_filename("mosec", "bin"), "mosec"
         )
-        self._configs: Dict[str, Any] = configs
+        self.timeout = timeout
 
     def halt(self):
         """Graceful shutdown."""
         # terminate controller first and wait for a graceful period
-        if self._process is None:
+        if self.process is None:
             return
-        self._process.terminate()
-        graceful_period = monotonic() + self._configs["timeout"] / 1000
+        self.process.terminate()
+        graceful_period = monotonic() + self.timeout / 1000
         while monotonic() < graceful_period:
-            ctr_exitcode = self._process.poll()
+            ctr_exitcode = self.process.poll()
             if ctr_exitcode is None:
                 sleep(0.1)
                 continue
@@ -291,24 +290,14 @@ class RsRuntimeManager:
 
         if monotonic() > graceful_period:
             logger.error("failed to terminate mosec service, will try to kill it")
-            self._process.kill()
+            self.process.kill()
 
-    def start(self) -> subprocess.Popen:
-        """Start the Mosec process."""
+    def start(self, config_path: Path) -> subprocess.Popen:
+        """Start the Mosec process.
+
+        Args:
+            config_path: configuration path of mosec
+        """
         # pylint: disable=consider-using-with
-        self._process = subprocess.Popen([self._server_path] + self._controller_args())
-        return self._process
-
-    def _controller_args(self):
-        args = []
-        self._configs.pop("dry_run")
-        for key, value in self._configs.items():
-            args.extend([f"--{key.replace('_', '-')}", str(value).lower()])
-        for worker_runtime in self._py_manager:
-            args.extend(["--batches", str(worker_runtime.max_batch_size)])
-            args.extend(["--waits", str(worker_runtime.max_wait_time)])
-        mime_type = self._py_manager.egress_mime()
-        args.extend(["--mime", mime_type])
-        args.extend(["--endpoint", self._endpoint])
-        logger.info("mosec received arguments: %s", args)
-        return args
+        self.process = subprocess.Popen([self.server_path, config_path])
+        return self.process
