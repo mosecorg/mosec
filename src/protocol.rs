@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use async_channel::{Receiver, Sender};
+use async_channel::Receiver;
 use bytes::{BufMut, Bytes, BytesMut};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
@@ -45,16 +45,12 @@ pub(crate) async fn communicate(
     wait_time: Duration,
     stage_id: String,
     receiver: Receiver<u32>,
-    sender: Sender<u32>,
-    last_sender: Sender<u32>,
     barrier: Arc<Barrier>,
 ) {
     let listener = UnixListener::bind(&path).expect("failed to bind to the socket");
     let mut connection_id: u32 = 0;
     loop {
         connection_id += 1;
-        let sender_clone = sender.clone();
-        let last_sender_clone = last_sender.clone();
         let receiver_clone = receiver.clone();
         let stage_id_label = stage_id.clone();
         let connection_id_label = connection_id.to_string();
@@ -104,7 +100,7 @@ pub(crate) async fn communicate(
                                  back to see if other thread can handle it"
                             );
                             for id in &ids {
-                                last_sender_clone.send(*id).await.expect("sender is closed");
+                                task_manager.send_task(id).await;
                             }
                             break;
                         }
@@ -135,10 +131,7 @@ pub(crate) async fn communicate(
                         match code {
                             TaskCode::Normal => {
                                 for id in &ids {
-                                    sender_clone
-                                        .send(*id)
-                                        .await
-                                        .expect("next channel is closed");
+                                    task_manager.send_task(id).await;
                                 }
                                 // only the normal tasks will be recorded
                                 metrics

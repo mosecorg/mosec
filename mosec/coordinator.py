@@ -101,7 +101,7 @@ class Coordinator:
         shutdown: Event,
         shutdown_notify: Event,
         socket_prefix: str,
-        stage_id: int,
+        stage_name: str,
         worker_id: int,
         ipc_wrapper: Optional[Callable[..., IPCWrapper]],
         timeout: int,
@@ -109,17 +109,17 @@ class Coordinator:
         """Initialize the mosec coordinator.
 
         Args:
-            worker (Worker): subclass of `mosec.Worker` implemented by users.
-            max_batch_size (int): maximum batch size for this worker.
-            stage (str): identifier to distinguish the first and last stages.
-            shutdown (Event): `multiprocessing.synchronize.Event` object for shutdown
+            worker: subclass of `mosec.Worker` implemented by users.
+            max_batch_size: maximum batch size for this worker.
+            stage: identifier to distinguish the first and last stages.
+            shutdown: `multiprocessing.synchronize.Event` object for shutdown
                 IPC.
-            socket_prefix (str): prefix for the socket addresses.
-            stage_id (int): identification number for worker stages.
-            worker_id (int): identification number for worker processes at the same
+            socket_prefix: prefix for the socket addresses.
+            stage_name: identification name for this worker stages.
+            worker_id: identification number for worker processes at the same
                 stage.
-            ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
-            timeout (int): timeout for the `forward` function.
+            ipc_wrapper: IPC wrapper class to be initialized.
+            timeout: timeout for the `forward` function.
 
         Raises:
             TypeError: ipc_wrapper should inherit from `IPCWrapper`
@@ -129,13 +129,13 @@ class Coordinator:
         self.worker.max_batch_size = max_batch_size
         self.worker.stage = stage
         self.timeout = timeout
-        self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
+        self.name = f"<{stage_name}|{worker_id}>"
         self.current_ids: Sequence[bytes] = []
         self.semaphore = FakeSemaphore()  # type: ignore
 
         self.protocol = Protocol(
             name=self.name,
-            addr=os.path.join(socket_prefix, f"ipc_{stage_id}.socket"),
+            addr=os.path.join(socket_prefix, f"ipc_{stage_name}.socket"),
             timeout=PROTOCOL_TIMEOUT,
         )
 

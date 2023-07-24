@@ -122,7 +122,7 @@ class Runtime:
                 shutdown,
                 shutdown_notify,
                 work_path,
-                self.stage_id,
+                self.name,
                 worker_id + 1,
                 self.ipc_wrapper,
                 self.timeout,

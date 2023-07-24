@@ -3,6 +3,7 @@ ARG base=nvidia/cuda:11.6.2-cudnn8-runtime-ubuntu20.04
 FROM ${base}
 
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+ENV PATH /opt/conda/bin:$PATH
 
 ARG CONDA_VERSION=py310_23.3.1-0
 

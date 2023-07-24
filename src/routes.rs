@@ -15,7 +15,7 @@
 use std::time::Duration;
 
 use axum::body::BoxBody;
-use axum::extract::State;
+use axum::http::Uri;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
 use bytes::Bytes;
@@ -34,11 +34,7 @@ const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_V
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
-
-#[derive(Clone)]
-pub(crate) struct AppState {
-    pub mime: String,
-}
+const DEFAULT_RESPONSE_MIME: &str = "application/json";
 
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
     Response::builder()
@@ -103,8 +99,13 @@ pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
         (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
     ),
 )]
-pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>) -> Response<Body> {
+pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
+    let endpoint = uri.path();
+    let mime = match task_manager.get_mime_type(endpoint) {
+        Some(mime) => mime.as_str(),
+        None => DEFAULT_RESPONSE_MIME,
+    };
     let data = to_bytes(req.into_body()).await.unwrap();
 
     if task_manager.is_shutdown() {
@@ -121,7 +122,7 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
     let (status, content);
     let metrics = Metrics::global();
     metrics.remaining_task.inc();
-    match task_manager.submit_task(data).await {
+    match task_manager.submit_task(data, endpoint).await {
         Ok(task) => {
             content = task.data;
             status = match task.code {
@@ -164,7 +165,7 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
     let mut resp = build_response(status, content);
     if status == StatusCode::OK {
         resp.headers_mut()
-            .insert(CONTENT_TYPE, HeaderValue::from_str(&state.mime).unwrap());
+            .insert(CONTENT_TYPE, HeaderValue::from_str(mime).unwrap());
     }
     resp
 }
@@ -182,8 +183,9 @@ pub(crate) async fn inference(State(state): State<AppState>, req: Request<Body>)
         (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
     ),
 )]
-pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
+pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<BoxBody> {
     let task_manager = TaskManager::global();
+    let endpoint = uri.path();
     let data = to_bytes(req.into_body()).await.unwrap();
 
     if task_manager.is_shutdown() {
@@ -199,7 +201,7 @@ pub(crate) async fn sse_inference(req: Request<Body>) -> Response<BoxBody> {
     }
 
     let metrics = Metrics::global();
-    match task_manager.submit_sse_task(data).await {
+    match task_manager.submit_sse_task(data, endpoint).await {
         Ok(mut rx) => {
             let stream = async_stream::stream! {
                 while let Some((msg, code)) = rx.recv().await {

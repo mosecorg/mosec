@@ -90,7 +90,7 @@ def test_coordinator_worker_property():
         shutdown=mp.get_context(ctx).Event(),
         shutdown_notify=mp.get_context(ctx).Event(),
         socket_prefix="",
-        stage_id=2,
+        stage_name=EchoWorkerJSON.__name__,
         worker_id=3,
         ipc_wrapper=None,
         timeout=3,

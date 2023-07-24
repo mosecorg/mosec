@@ -149,6 +149,14 @@ def parse_arguments() -> argparse.Namespace:
             DeprecationWarning,
         )
 
+    if args.debug:
+        args.log_level = "debug"
+        warnings.warn(
+            "`--debug` is deprecated and will be removed in v1, please configure"
+            "`--log_level=debug`",
+            DeprecationWarning,
+        )
+
     if not is_port_available(args.address, args.port):
         raise RuntimeError(
             f"{args.address}:{args.port} is in use. "

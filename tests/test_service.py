@@ -184,7 +184,7 @@ def test_mixin_typed_service(mosec_service, http_client):
 def test_sse_service(mosec_service, http_client):
     count = 0
     with connect_sse(
-        http_client, "POST", "/sse_inference", json={"text": "mosec"}
+        http_client, "POST", "/inference", json={"text": "mosec"}
     ) as event_source:
         for sse in event_source.iter_sse():
             count += 1
@@ -194,7 +194,7 @@ def test_sse_service(mosec_service, http_client):
 
     count = 0
     with connect_sse(
-        http_client, "POST", "/sse_inference", json={"bad": "req"}
+        http_client, "POST", "/inference", json={"bad": "req"}
     ) as event_source:
         for sse in event_source.iter_sse():
             count += 1

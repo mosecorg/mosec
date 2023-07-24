@@ -51,13 +51,14 @@ from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
 from mosec.utils import ParseTarget
-from mosec.worker import MOSEC_REF_TEMPLATE, Worker
+from mosec.worker import MOSEC_REF_TEMPLATE, SSEWorker, Worker
 
 logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 1
-MOSEC_OPENAPI_PATH = "mosec_openapi.json"
+# MOSEC_OPENAPI_PATH = "mosec_openapi.json"
+MOSEC_RESERVED_ENDPOINTS = {"/", "/metrics", "/openapi"}
 
 
 class Server:
@@ -70,7 +71,7 @@ class Server:
     # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
-        ipc_wrapper: Optional[Union[IPCWrapper, partial]] = None,
+        ipc_wrapper: Optional[Union[Type[IPCWrapper], partial]] = None,
         endpoint: str = "/inference",
     ):
         """Initialize a MOSEC Server.
@@ -129,25 +130,25 @@ class Server:
 
         # dump the config to a JSON file
         config_path = pathlib.Path(self._configs["path"]) / "config.json"
-        configs = {"runtime": [], "route": []}
+        configs = {"runtimes": [], "routes": []}
         for key, value in self._configs.items():
-            if key == "dry_run":
+            if key in ("dry_run", "debug", "wait"):
                 continue
             configs[key] = value
         for runtime in self._py_runtime_manager.runtimes:
-            configs["runtime"].append(
+            configs["runtimes"].append(
                 {
                     "worker": runtime.name,
-                    "num": runtime.num,
                     "max_batch_size": runtime.max_batch_size,
                     "max_wait_time": runtime.max_wait_time,
                 }
             )
         for endpoint, pipeline in self._router.items():
-            configs["route"].append(
+            configs["routes"].append(
                 {
                     "endpoint": endpoint,
                     "workers": [runtime.name for runtime in pipeline],
+                    "is_sse": issubclass(pipeline[-1].worker, SSEWorker),
                     **generate_openapi([runtime.worker for runtime in pipeline]),
                 }
             )
@@ -243,20 +244,25 @@ class Server:
             timeout,
             start_method,
             env,
-            None,
+            self.ipc_wrapper,
         )
         runtime.validate()
+        self._register_route(runtime, route)
+        self._py_runtime_manager.append(runtime)
 
-        # register route
+    def _register_route(self, runtime: Runtime, route: Union[None, str, List[str]]):
+        """Register the route path for the worker."""
         if route is None:
             self._router[self._endpoint].append(runtime)
         elif isinstance(route, str):
+            if route in MOSEC_RESERVED_ENDPOINTS:
+                raise ValueError(f"'{route}' is reserved, try another one")
             self._router[route].append(runtime)
         elif isinstance(route, list):
             for endpoint in route:
+                if route in MOSEC_RESERVED_ENDPOINTS:
+                    raise ValueError(f"'{route}' is reserved, try another one")
                 self._router[endpoint].append(runtime)
-
-        self._py_runtime_manager.append(runtime)
 
     def run(self):
         """Start the mosec model server."""
@@ -289,7 +295,7 @@ def generate_openapi(workers: List[Type[Worker]]):
 
     def make_body(description, mime, schema):
         if not schema:
-            return {}
+            return None
         return {"description": description, "content": {mime: {"schema": schema}}}
 
     return {
@@ -298,7 +304,7 @@ def generate_openapi(workers: List[Type[Worker]]):
             request_worker_cls.resp_mime_type,
             input_schema,
         ),
-        "response": {}
+        "responses": None
         if not return_schema
         else {
             "200": make_body(
@@ -307,5 +313,6 @@ def generate_openapi(workers: List[Type[Worker]]):
                 return_schema,
             )
         },
-        "schema": {**input_components, **return_components},
+        "schemas": {**input_components, **return_components},
+        "mime": response_worker_cls.resp_mime_type,
     }

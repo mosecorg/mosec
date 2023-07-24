@@ -31,14 +31,6 @@ pub(crate) struct PythonAPIDoc {
     schemas: Option<BTreeMap<String, RefOr<Schema>>>,
 }
 
-impl FromStr for PythonAPIDoc {
-    type Err = serde_json::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str::<PythonAPIDoc>(s)
-    }
-}
-
 #[derive(Default, Clone)]
 pub(crate) struct MosecOpenAPI {
     pub api: OpenApi,
