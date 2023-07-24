@@ -280,7 +280,7 @@ def assert_empty_queue(http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_openapi_service(mosec_service, http_client, args):
-    spec = http_client.get("/api/openapi.json").json()
+    spec = http_client.get("/openapi/metadata.json").json()
     input_cls, return_cls = args.split("/")
     path_item = spec["paths"]["/v1/inference"]["post"]
 

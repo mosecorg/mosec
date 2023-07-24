@@ -57,7 +57,6 @@ logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 1
-# MOSEC_OPENAPI_PATH = "mosec_openapi.json"
 MOSEC_RESERVED_ENDPOINTS = {"/", "/metrics", "/openapi"}
 
 

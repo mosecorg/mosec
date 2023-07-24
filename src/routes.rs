@@ -88,7 +88,7 @@ pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
 
 #[utoipa::path(
     post,
-    path = "/inference",
+    path = "/openapi/reserved/inference",
     responses(
         (status = StatusCode::OK, description = "Inference"),
         (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
@@ -172,7 +172,7 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
 
 #[utoipa::path(
     post,
-    path = "/sse_inference",
+    path = "/openapi/reserved/inference_sse",
     responses(
         (status = StatusCode::OK, description = "Inference"),
         (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),

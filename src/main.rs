@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// mod apidoc;
-mod args;
+mod apidoc;
 mod config;
-// mod coordinator;
 mod errors;
 mod metrics;
 mod protocol;
@@ -36,9 +34,8 @@ use tracing_subscriber::{filter, Layer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-// use crate::apidoc::MosecOpenAPI;
+use crate::apidoc::MosecOpenAPI;
 use crate::config::Config;
-// use crate::coordinator::Coordinator;
 use crate::metrics::{Metrics, METRICS};
 use crate::routes::{index, inference, metrics, sse_inference, RustAPIDoc};
 use crate::tasks::{TaskManager, TASK_MANAGER};
@@ -66,13 +63,13 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn run(conf: &Config) {
-    // let python_api =
-    //     read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
-    // let mut doc = MosecOpenAPI {
-    //     api: RustAPIDoc::openapi(),
-    // };
-    // doc.merge("/inference", python_api.parse().unwrap_or_default())
-    //     .replace_path_item("/inference", &opts.endpoint);
+    let mut doc = MosecOpenAPI {
+        api: RustAPIDoc::openapi(),
+    };
+    for route in &conf.routes {
+        doc.merge_route(route);
+    }
+    doc.clean();
 
     let metrics_instance = Metrics::init_with_namespace(&conf.namespace, conf.timeout);
     METRICS.set(metrics_instance).unwrap();
@@ -81,7 +78,7 @@ async fn run(conf: &Config) {
     TASK_MANAGER.set(task_manager).unwrap();
 
     let mut router = Router::new()
-        // .merge(SwaggerUi::new("/api/swagger").url("/api/openapi.json", doc.api))
+        .merge(SwaggerUi::new("/openapi/swagger").url("/openapi/metadata.json", doc.api))
         .route("/", get(index))
         .route("/metrics", get(metrics));
 
