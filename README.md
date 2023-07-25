@@ -9,6 +9,9 @@
   <a href="https://pypi.org/project/mosec/">
     <img src="https://badge.fury.io/py/mosec.svg" alt="PyPI version" height="20">
   </a>
+  <a href="https://anaconda.org/conda-forge/mosec">
+    <img src="https://anaconda.org/conda-forge/mosec/badges/version.svg" alt="conda-forge">
+  </a>
   <a href="https://pypi.org/project/mosec">
     <img src="https://img.shields.io/pypi/pyversions/mosec" alt="Python Version" />
   </a>
