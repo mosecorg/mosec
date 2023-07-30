@@ -71,11 +71,11 @@ def test_square_service(mosec_service, http_client):
     resp = http_client.get("/metrics")
     assert resp.status_code == HTTPStatus.OK
 
-    resp = http_client.post("/v1/inference", json={"msg": 2})
+    resp = http_client.post("/inference", json={"msg": 2})
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert resp.text == "request validation error: 'x'"
 
-    resp = http_client.post("/v1/inference", content=b"bad-binary-request")
+    resp = http_client.post("/inference", content=b"bad-binary-request")
     assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
@@ -229,7 +229,7 @@ def test_square_service_mp(mosec_service, http_client):
 
 
 def validate_square_service(http_client, num):
-    resp = http_client.post("/v1/inference", json={"x": num})
+    resp = http_client.post("/inference", json={"x": num})
     assert resp.status_code == HTTPStatus.OK
     assert resp.json()["x"] == num**2
 

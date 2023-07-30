@@ -28,6 +28,7 @@ use crate::tasks::{TaskCode, TaskManager};
 
 const FLAG_U8_SIZE: usize = 2;
 const NUM_U8_SIZE: usize = 2;
+const STATE_U8_SIZE: usize = 2;
 const TASK_ID_U8_SIZE: usize = 4;
 const LENGTH_U8_SIZE: usize = 4;
 
@@ -62,6 +63,7 @@ pub(crate) async fn communicate(
                     let mut code: TaskCode = TaskCode::InternalError;
                     let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
                     let mut data: Vec<Bytes> = Vec::with_capacity(batch_size);
+                    let mut states: Vec<u16> = Vec::with_capacity(batch_size);
                     let task_manager = TaskManager::global();
                     let metrics = Metrics::global();
                     let metric_label = StageConnectionLabel {
@@ -82,7 +84,7 @@ pub(crate) async fn communicate(
                         // start record the duration metrics here because receiving the first task
                         // depends on when the request comes in.
                         let start_timer = Instant::now();
-                        task_manager.get_multi_tasks_data(&mut ids, &mut data);
+                        task_manager.get_multi_tasks_data(&mut ids, &mut data, &mut states);
                         if data.is_empty() {
                             continue;
                         }
@@ -93,7 +95,7 @@ pub(crate) async fn communicate(
                                 .get_or_create(&metric_label)
                                 .observe(data.len() as f64);
                         }
-                        if let Err(err) = send_message(&mut stream, &ids, &data).await {
+                        if let Err(err) = send_message(&mut stream, &ids, &data, &states).await {
                             error!(%err, %stage_id_label, %connection_id, "socket send message error");
                             info!(
                                 "service failed to write data to stream, will try to send task \
@@ -108,8 +110,10 @@ pub(crate) async fn communicate(
 
                         ids.clear();
                         data.clear();
+                        states.clear();
                         if let Err(err) =
-                            read_message(&mut stream, &mut code, &mut ids, &mut data).await
+                            read_message(&mut stream, &mut code, &mut ids, &mut data, &mut states)
+                                .await
                         {
                             error!(%err, %stage_id_label, %connection_id, "socket receive message error");
                             break;
@@ -119,8 +123,15 @@ pub(crate) async fn communicate(
                             send_stream_event(&ids, &data).await;
                             ids.clear();
                             data.clear();
-                            if let Err(err) =
-                                read_message(&mut stream, &mut code, &mut ids, &mut data).await
+                            states.clear();
+                            if let Err(err) = read_message(
+                                &mut stream,
+                                &mut code,
+                                &mut ids,
+                                &mut data,
+                                &mut states,
+                            )
+                            .await
                             {
                                 error!(%err, %stage_id_label, %connection_id, "socket receive message error");
                                 break;
@@ -186,6 +197,7 @@ async fn read_message(
     code: &mut TaskCode,
     ids: &mut Vec<u32>,
     data: &mut Vec<Bytes>,
+    states: &mut Vec<u16>,
 ) -> Result<(), io::Error> {
     stream.readable().await?;
     let mut flag_buf = [0u8; FLAG_U8_SIZE];
@@ -212,14 +224,18 @@ async fn read_message(
 
     let mut id_buf = [0u8; TASK_ID_U8_SIZE];
     let mut length_buf = [0u8; LENGTH_U8_SIZE];
+    let mut state_buf = [0u8; STATE_U8_SIZE];
     for _ in 0..num {
         stream.read_exact(&mut id_buf).await?;
+        stream.read_exact(&mut state_buf).await?;
         stream.read_exact(&mut length_buf).await?;
         let id = u32::from_be_bytes(id_buf);
+        let state = u16::from_be_bytes(state_buf);
         let length = u32::from_be_bytes(length_buf);
         let mut data_buf = vec![0u8; length as usize];
         stream.read_exact(&mut data_buf).await?;
         ids.push(id);
+        states.push(state);
         data.push(data_buf.into());
     }
     let byte_size = data.iter().fold(0, |acc, x| acc + x.len());
@@ -272,6 +288,7 @@ async fn send_message(
     stream: &mut UnixStream,
     ids: &[u32],
     data: &[Bytes],
+    states: &[u16],
 ) -> Result<(), io::Error> {
     stream.writable().await?;
     let mut buffer = BytesMut::new();
@@ -279,6 +296,7 @@ async fn send_message(
     buffer.put_u16(ids.len() as u16);
     for i in 0..ids.len() {
         buffer.put_u32(ids[i]);
+        buffer.put_u16(states[i]);
         buffer.put_u32(data[i].len() as u32);
         buffer.put(data[i].clone());
     }
@@ -338,13 +356,15 @@ mod tests {
         let listener = UnixListener::bind(&path).expect("bind error");
         let ids = vec![0u32, 1];
         let data = vec![Bytes::from_static(b"hello"), Bytes::from_static(b"world")];
+        let states = vec![1u16, 2];
 
         // setup the server in another tokio thread
         let ids_clone = ids.clone();
         let data_clone = data.clone();
+        let states_clone = states.clone();
         tokio::spawn(async move {
             let (mut stream, _addr) = listener.accept().await.unwrap();
-            send_message(&mut stream, &ids_clone, &data_clone)
+            send_message(&mut stream, &ids_clone, &data_clone, &states_clone)
                 .await
                 .expect("send message error");
             tokio::time::sleep(Duration::from_millis(1)).await;
@@ -352,13 +372,22 @@ mod tests {
 
         let mut stream = UnixStream::connect(&path).await.unwrap();
         let mut recv_ids = Vec::new();
+        let mut recv_states = Vec::new();
         let mut recv_data = Vec::new();
         let mut code = TaskCode::InternalError;
-        read_message(&mut stream, &mut code, &mut recv_ids, &mut recv_data)
-            .await
-            .expect("read message error");
+        read_message(
+            &mut stream,
+            &mut code,
+            &mut recv_ids,
+            &mut recv_data,
+            &mut recv_states,
+        )
+        .await
+        .expect("read message error");
 
         assert_eq!(recv_ids, ids);
         assert_eq!(recv_data, data);
+        assert_eq!(recv_states, states);
+        std::fs::remove_file(&path).expect("failed to remove the test socket file");
     }
 }

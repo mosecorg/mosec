@@ -40,14 +40,12 @@ import signal
 import subprocess
 import traceback
 from collections import defaultdict
-from functools import partial
 from multiprocessing.synchronize import Event
 from time import sleep
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Type, Union
 
 from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
-from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
 from mosec.utils import ParseTarget
@@ -68,20 +66,8 @@ class Server:
     """
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(
-        self,
-        ipc_wrapper: Optional[Union[Type[IPCWrapper], partial]] = None,
-        endpoint: str = "/inference",
-    ):
-        """Initialize a MOSEC Server.
-
-        Args:
-            ipc_wrapper: (deprecated) wrapper function (before and after) IPC
-            endpoint: path to route inference
-        """
-        self.ipc_wrapper = ipc_wrapper
-        self._endpoint = endpoint
-
+    def __init__(self):
+        """Initialize a MOSEC Server."""
         self._shutdown: Event = mp.get_context("spawn").Event()
         self._shutdown_notify: Event = mp.get_context("spawn").Event()
         self._configs: dict = vars(parse_arguments())
@@ -210,7 +196,7 @@ class Server:
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
         timeout: int = 0,
-        route: Union[None, str, List[str]] = None,
+        route: Union[str, List[str]] = "/inference",
     ):
         """Sequentially appends workers to the workflow pipeline.
 
@@ -243,24 +229,21 @@ class Server:
             timeout,
             start_method,
             env,
-            self.ipc_wrapper,
         )
         runtime.validate()
         self._register_route(runtime, route)
         self._py_runtime_manager.append(runtime)
 
-    def _register_route(self, runtime: Runtime, route: Union[None, str, List[str]]):
+    def _register_route(self, runtime: Runtime, route: Union[str, List[str]]):
         """Register the route path for the worker."""
-        if route is None:
-            self._router[self._endpoint].append(runtime)
-        elif isinstance(route, str):
+        if isinstance(route, str):
             if route in MOSEC_RESERVED_ENDPOINTS:
                 raise ValueError(f"'{route}' is reserved, try another one")
             self._router[route].append(runtime)
         elif isinstance(route, list):
             for endpoint in route:
-                if route in MOSEC_RESERVED_ENDPOINTS:
-                    raise ValueError(f"'{route}' is reserved, try another one")
+                if endpoint in MOSEC_RESERVED_ENDPOINTS:
+                    raise ValueError(f"'{endpoint}' is reserved, try another one")
                 self._router[endpoint].append(runtime)
 
     def run(self):

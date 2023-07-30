@@ -22,17 +22,18 @@ from typing import List
 
 import pytest
 
+from mosec.coordinator import STATE_EGRESS, STATE_INGRESS
 from mosec.protocol import Protocol
 from tests.mock_socket import Socket
 from tests.utils import imitate_controller_send
 
 
-def echo(protocol: Protocol, datum: List[bytes]):
-    sent_status = random.choice([1, 2, 4, 8])
+def echo(protocol: Protocol, data: List[bytes]):
+    sent_flag = random.choice([1, 2, 4, 8])
 
-    sent_ids, sent_payloads = imitate_controller_send(protocol.socket, datum)
+    sent_ids, sent_payloads = imitate_controller_send(protocol.socket, data)
 
-    _, got_ids, got_payloads = protocol.receive()  # client recv
+    _, got_ids, got_states, got_payloads = protocol.receive()  # client recv
     assert len(protocol.socket.buffer) == 0  # type: ignore
     assert got_ids == sent_ids
     assert all(
@@ -40,12 +41,13 @@ def echo(protocol: Protocol, datum: List[bytes]):
     )
     got_payload_bytes = [bytes(x) for x in got_payloads]
     # client echo
-    protocol.send(sent_status, got_ids, got_payload_bytes)
+    protocol.send(sent_flag, got_ids, got_states, got_payload_bytes)
     # server recv (symmetric protocol)
-    got_status, got_ids, got_payloads = protocol.receive()
+    got_flag, got_ids, got_states, got_payloads = protocol.receive()
 
     assert len(protocol.socket.buffer) == 0  # type: ignore
-    assert struct.unpack("!H", got_status)[0] == sent_status
+    assert struct.unpack("!H", got_flag)[0] == sent_flag
+    assert got_states == [STATE_INGRESS | STATE_EGRESS] * len(sent_ids)
     assert got_ids == sent_ids
     assert all(
         bytes(got_payloads[i]) == sent_payloads[i] for i in range(len(sent_payloads))

@@ -72,6 +72,17 @@ impl Task {
         self.data = data.clone();
         self.stage += 1;
     }
+
+    /// Encode the current state of the task into a 16-bit integer.
+    /// 0000 0000 0000 00yx
+    /// x: is ingress
+    /// y: is egress
+    fn encode_state(&self, total: usize) -> u16 {
+        let mut state = 0;
+        state |= (self.stage == 0) as u16;
+        state |= ((total - 1 == self.stage) as u16) << 1;
+        state
+    }
 }
 
 #[derive(Debug)]
@@ -311,12 +322,18 @@ impl TaskManager {
         }
     }
 
-    pub(crate) fn get_multi_tasks_data(&self, ids: &mut Vec<u32>, data: &mut Vec<Bytes>) {
+    pub(crate) fn get_multi_tasks_data(
+        &self,
+        ids: &mut Vec<u32>,
+        data: &mut Vec<Bytes>,
+        states: &mut Vec<u16>,
+    ) {
         let table = self.table.lock().unwrap();
         // delete the task_id if the task_id doesn't exist in the table
         ids.retain(|&id| match table.get(&id) {
             Some(task) => {
                 data.push(task.data.clone());
+                states.push(task.encode_state(self.senders[&task.route].len()));
                 true
             }
             None => false,
@@ -515,12 +532,14 @@ mod tests {
 
         let mut task_ids = vec![0, 1, 2];
         let mut data = Vec::new();
-        task_manager.get_multi_tasks_data(&mut task_ids, &mut data);
+        let mut states = Vec::new();
+        task_manager.get_multi_tasks_data(&mut task_ids, &mut data, &mut states);
         assert_eq!(task_ids, vec![0, 1]);
         assert_eq!(
             data,
             vec![Bytes::from_static(b"hello"), Bytes::from_static(b"world")]
         );
+        assert_eq!(states, vec![3 as u16, 3 as u16]);
 
         // update tasks
         data = vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")];
@@ -528,7 +547,7 @@ mod tests {
             .update_multi_tasks(TaskCode::Normal, &task_ids, &data)
             .await;
         let mut new_data = Vec::new();
-        task_manager.get_multi_tasks_data(&mut task_ids, &mut new_data);
+        task_manager.get_multi_tasks_data(&mut task_ids, &mut new_data, &mut states);
         assert_eq!(task_ids, vec![0, 1]);
         assert_eq!(
             new_data,

@@ -16,7 +16,6 @@
 
 import multiprocessing as mp
 import subprocess
-from functools import partial
 from multiprocessing.context import ForkContext, SpawnContext
 from multiprocessing.process import BaseProcess
 from multiprocessing.synchronize import Event
@@ -26,9 +25,8 @@ from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 
 import pkg_resources
 
-from mosec.coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.coordinator import Coordinator
 from mosec.env import env_var_context, validate_env, validate_int_ge
-from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.worker import Worker
 
@@ -52,7 +50,6 @@ class Runtime:
         timeout: int,
         start_method: str,
         env: Union[None, List[Dict[str, str]]],
-        ipc_wrapper: Optional[Union[Type[IPCWrapper], partial]],
     ):
         """Initialize the mosec coordinator.
 
@@ -69,10 +66,6 @@ class Runtime:
             timeout (int): timeout for the `forward` function.
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
-            ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
-
-        Raises:
-            TypeError: ipc_wrapper should inherit from `IPCWrapper`
         """
         self.worker = worker
         self.num = num
@@ -82,7 +75,6 @@ class Runtime:
         self.timeout = timeout
         self.start_method = start_method
         self.env = env
-        self.ipc_wrapper = ipc_wrapper
 
         # adding the stage id in case the worker class is added to multiple stages
         self.name = f"{self.worker.__name__}_{self.stage_id}"
@@ -105,7 +97,6 @@ class Runtime:
     def start_process(
         self,
         worker_id: int,
-        stage_label: str,
         work_path: str,
         shutdown: Event,
         shutdown_notify: Event,
@@ -118,13 +109,11 @@ class Runtime:
             args=(
                 self.worker,
                 self.max_batch_size,
-                stage_label,
                 shutdown,
                 shutdown_notify,
                 work_path,
                 self.name,
                 worker_id + 1,
-                self.ipc_wrapper,
                 self.timeout,
             ),
             daemon=True,
@@ -138,7 +127,6 @@ class Runtime:
     def check(
         self,
         first: bool,
-        stage_label: str,
         work_path: str,
         shutdown: Event,
         shutdown_notify: Event,
@@ -147,7 +135,6 @@ class Runtime:
 
         Args:
             first: whether the worker is tried to start at first time
-            stage_label: label of worker ingress and egress
             work_path: path of working directory
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
@@ -169,9 +156,7 @@ class Runtime:
         ]
         for worker_id in need_start_id:
             # for every worker in each stage
-            self.start_process(
-                worker_id, stage_label, work_path, shutdown, shutdown_notify
-            )
+            self.start_process(worker_id, work_path, shutdown, shutdown_notify)
         return True
 
     def validate(self):
@@ -228,25 +213,15 @@ class PyRuntimeManager:
         """Sequentially appends workers to the workflow pipeline."""
         self.runtimes.append(runtime)
 
-    def label_stage(self, stage_id: int) -> str:
-        """Get the label of the stage (ingress/egress or not)."""
-        stage = ""
-        if stage_id == 0:
-            stage += STAGE_INGRESS
-        if stage_id == self.worker_count - 1:
-            stage += STAGE_EGRESS
-        return stage
-
     def check_and_start(self, first: bool) -> Union[Runtime, None]:
         """Check all worker processes and try to start failed ones.
 
         Args:
             first: whether the worker is tried to start at first time
         """
-        for stage_id, worker_runtime in enumerate(self.runtimes):
-            label = self.label_stage(stage_id)
+        for worker_runtime in self.runtimes:
             success = worker_runtime.check(
-                first, label, self._work_path, self.shutdown, self.shutdown_notify
+                first, self._work_path, self.shutdown, self.shutdown_notify
             )
             if not success:
                 return worker_runtime

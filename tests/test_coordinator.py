@@ -32,14 +32,13 @@ from typing import Union, cast
 import msgpack  # type: ignore
 import pytest
 
-from mosec.coordinator import PROTOCOL_TIMEOUT, STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.coordinator import PROTOCOL_TIMEOUT, STATE_EGRESS, STATE_INGRESS, Coordinator
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
 from tests.utils import imitate_controller_send
 
 SOCKET_PREFIX = join(tempfile.gettempdir(), "test-mosec")
-STAGE = STAGE_INGRESS + STAGE_EGRESS
 
 
 logger = logging.getLogger()
@@ -81,21 +80,21 @@ def base_test_config():
     }
 
 
-def test_coordinator_worker_property():
+def test_coordinator_worker_property(mocker):
+    mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
+    mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
     ctx = "spawn"
     coordinator = Coordinator(
         EchoWorkerJSON,
         max_batch_size=16,
-        stage=STAGE_EGRESS,
         shutdown=mp.get_context(ctx).Event(),
         shutdown_notify=mp.get_context(ctx).Event(),
-        socket_prefix="",
+        socket_prefix=SOCKET_PREFIX,
         stage_name=EchoWorkerJSON.__name__,
         worker_id=3,
-        ipc_wrapper=None,
         timeout=3,
     )
-    assert coordinator.worker.stage == STAGE_EGRESS
+    assert coordinator.worker.stage == EchoWorkerJSON.__name__
     assert coordinator.worker.worker_id == 3
     assert coordinator.worker.max_batch_size == 16
 
@@ -103,15 +102,13 @@ def test_coordinator_worker_property():
 def make_coordinator(w_cls, shutdown, shutdown_notify, config):
     return Coordinator(
         w_cls,
-        config["max_batch_size"],
-        STAGE,
-        shutdown,
-        shutdown_notify,
-        SOCKET_PREFIX,
-        config["stage_id"],
-        config["worker_id"],
-        None,
-        config["timeout"],
+        max_batch_size=config["max_batch_size"],
+        shutdown=shutdown,
+        shutdown_notify=shutdown_notify,
+        socket_prefix=SOCKET_PREFIX,
+        stage_name=f"{w_cls.__name__}_{config['stage_id']}",
+        worker_id=config["worker_id"],
+        timeout=config["timeout"],
     )
 
 
@@ -146,7 +143,7 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
     mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
 
-    sock_addr = join(SOCKET_PREFIX, f"ipc_{base_test_config.get('stage_id')}.socket")
+    sock_addr = join(SOCKET_PREFIX, f"ipc_{EchoWorkerJSON.__name__}_1.socket")
     c_ctx = base_test_config.pop("c_ctx")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
@@ -170,7 +167,6 @@ def test_incorrect_socket_file(mocker, base_test_config, caplog):
         sock.bind(sock_addr)
 
         with caplog.at_level(logging.ERROR):
-            # with pytest.raises(RuntimeError, match=r".*Connection refused.*"):
             _ = make_coordinator(
                 EchoWorkerJSON, shutdown, shutdown_notify, base_test_config
             )
@@ -216,7 +212,7 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
     # knows this stage enables batching
     base_test_config["max_batch_size"] = 8
 
-    sock_addr = join(SOCKET_PREFIX, f"ipc_{base_test_config.get('stage_id')}.socket")
+    sock_addr = join(SOCKET_PREFIX, f"ipc_{worker.__name__}_1.socket")
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
@@ -246,14 +242,17 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
             got_flag = struct.unpack("!H", conn.recv(2))[0]
             got_batch_size = struct.unpack("!H", conn.recv(2))[0]
             got_ids = []
+            got_states = []
             got_payloads = []
             while got_batch_size > 0:
                 got_batch_size -= 1
                 got_ids.append(conn.recv(4))
+                got_states.append(struct.unpack("!H", conn.recv(2))[0])
                 got_length = struct.unpack("!I", conn.recv(4))[0]
                 got_payloads.append(_recv_all(conn, got_length))
             assert got_flag == HTTPStautsCode.OK
             assert got_ids == sent_ids
+            assert got_states == [STATE_EGRESS | STATE_INGRESS] * len(sent_ids)
             assert all(
                 deserializer(x) == deserializer(y)
                 for x, y in zip(got_payloads, sent_payloads)
