@@ -111,7 +111,7 @@ class Coordinator:
             shutdown: `multiprocessing.synchronize.Event` object for shutdown
                 IPC.
             socket_prefix: prefix for the socket addresses.
-            stage_name: identification name for this worker stages.
+            stage_name: identification name for this worker stage.
             worker_id: identification number for worker processes at the same
                 stage.
             timeout: timeout for the `forward` function.

@@ -214,7 +214,7 @@ class Server:
             timeout: the timeout (second) for each worker forward processing (>=1)
             route: the route path for this worker. If not configured, will use the
                 default route path `/inference`. If a list is provided, different
-                route path will share the same worker.
+                route paths will share the same worker.
         """
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
