@@ -25,7 +25,7 @@ Dynamic Batching
     :py:meth:`append_worker(max_batch_size) <Server.append_worker>`.
 
 Multiprocessing
-------------
+---------------
 
     The user may spawn multiple processes for any stage when the
     corresponding worker is appended, by setting the
