@@ -32,6 +32,9 @@ test_all: dev
 	pytest tests -vv -s
 	RUST_BACKTRACE=1 cargo test -vv
 
+test_chaos: dev
+	@python -m tests.bad_req
+
 doc:
 	@cd docs && make html && cd ../
 	@python -m http.server -d docs/build/html 7291 -b 127.0.0.1

@@ -44,7 +44,7 @@ pub(crate) async fn communicate(
     path: PathBuf,
     batch_size: usize,
     wait_time: Duration,
-    stage_id: String,
+    stage_name: String,
     receiver: Receiver<u32>,
     barrier: Arc<Barrier>,
 ) {
@@ -53,7 +53,7 @@ pub(crate) async fn communicate(
     loop {
         connection_id += 1;
         let receiver_clone = receiver.clone();
-        let stage_id_label = stage_id.clone();
+        let stage_name_label = stage_name.clone();
         let connection_id_label = connection_id.to_string();
         info!(?path, "begin listening to socket");
         match listener.accept().await {
@@ -67,7 +67,7 @@ pub(crate) async fn communicate(
                     let task_manager = TaskManager::global();
                     let metrics = Metrics::global();
                     let metric_label = StageConnectionLabel {
-                        stage: stage_id_label.clone(),
+                        stage: stage_name_label.clone(),
                         connection: connection_id_label,
                     };
                     loop {
@@ -97,7 +97,7 @@ pub(crate) async fn communicate(
                                 .observe(data.len() as f64);
                         }
                         if let Err(err) = send_message(&mut stream, &ids, &data, &states).await {
-                            error!(%err, %stage_id_label, %connection_id, "socket send message error");
+                            error!(%err, %stage_name_label, %connection_id, "socket send message error");
                             info!(
                                 "service failed to write data to stream, will try to send task \
                                  back to see if other thread can handle it"
@@ -107,7 +107,7 @@ pub(crate) async fn communicate(
                             }
                             break;
                         }
-                        debug!(%stage_id_label, %connection_id, "socket finished to send message");
+                        debug!(%stage_name_label, %connection_id, "socket finished to send message");
 
                         ids.clear();
                         data.clear();
@@ -116,10 +116,10 @@ pub(crate) async fn communicate(
                             read_message(&mut stream, &mut code, &mut ids, &mut data, &mut states)
                                 .await
                         {
-                            error!(%err, %stage_id_label, %connection_id, "socket receive message error");
+                            error!(%err, %stage_name_label, %connection_id, "socket receive message error");
                             break;
                         }
-                        debug!(%stage_id_label, %connection_id, "socket finished to read message");
+                        debug!(%stage_name_label, %connection_id, "socket finished to read message");
                         while code == TaskCode::StreamEvent {
                             send_stream_event(&ids, &data).await;
                             ids.clear();
@@ -134,10 +134,10 @@ pub(crate) async fn communicate(
                             )
                             .await
                             {
-                                error!(%err, %stage_id_label, %connection_id, "socket receive message error");
+                                error!(%err, %stage_name_label, %connection_id, "socket receive message error");
                                 break;
                             }
-                            debug!(%stage_id_label, %connection_id, "socket finished to read message");
+                            debug!(%stage_name_label, %connection_id, "socket finished to read message");
                         }
                         task_manager.update_multi_tasks(code, &ids, &data).await;
                         match code {
@@ -155,7 +155,7 @@ pub(crate) async fn communicate(
                                 warn!(
                                     ?ids,
                                     ?code,
-                                    ?stage_id_label,
+                                    ?stage_name_label,
                                     ?connection_id,
                                     "abnormal tasks, check Python log for more details"
                                 );
@@ -169,7 +169,7 @@ pub(crate) async fn communicate(
                 }
             }
             Err(err) => {
-                error!(%err, %stage_id, %connection_id, "socket failed to accept the connection");
+                error!(%err, %stage_name, %connection_id, "socket failed to accept the connection");
                 break;
             }
         }

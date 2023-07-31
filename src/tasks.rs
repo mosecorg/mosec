@@ -158,26 +158,26 @@ impl TaskManager {
     }
 
     pub(crate) async fn send_task(&self, id: &u32) {
-        let sender: async_channel::Sender<u32>;
+        let stage: usize;
+        let route: &Vec<async_channel::Sender<u32>>;
         {
             let table = self.table.lock().unwrap();
             match table.get(id) {
                 Some(task) => {
-                    // check if the current task is done
-                    if task.stage >= self.senders[&task.route].len() {
-                        self.notify_task_done(id);
-                        return;
-                    }
-                    sender = self.senders[&task.route][task.stage].clone();
+                    stage = task.stage;
+                    route = &self.senders[&task.route];
                 }
                 None => {
                     warn!(%id, "failed to get the task when trying to send it");
                     return;
                 }
-            }
+            };
         }
-
-        if sender.send(*id).await.is_err() {
+        if stage >= route.len() {
+            self.notify_task_done(id);
+            return;
+        }
+        if route[stage].send(*id).await.is_err() {
             warn!(%id, "failed to send this task, the sender might be closed");
         }
     }
@@ -309,8 +309,7 @@ impl TaskManager {
                 warn!(%id, "the task notifier is already closed, will delete it \
                     (this is usually because the client side has closed the connection)");
                 {
-                    let mut table: std::sync::MutexGuard<'_, HashMap<u32, Task>> =
-                        self.table.lock().unwrap();
+                    let mut table = self.table.lock().unwrap();
                     table.remove(id);
                 }
                 let metrics = Metrics::global();
@@ -351,11 +350,8 @@ impl TaskManager {
                 match task {
                     Some(task) => {
                         task.update(code, &data[i]);
-                        match code {
-                            TaskCode::Normal => {}
-                            _ => {
-                                abnormal_tasks.push(ids[i]);
-                            }
+                        if code != TaskCode::Normal {
+                            abnormal_tasks.push(ids[i]);
                         }
                     }
                     None => {

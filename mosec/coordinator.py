@@ -231,7 +231,6 @@ class Coordinator:
 
     def decode(self, payload: bytes, state: int) -> Any:
         """Decode the payload with the state."""
-        logger.warning("task state %d with %s", state, payload)
         return (
             self.worker.deserialize(payload)
             if state & STATE_INGRESS
