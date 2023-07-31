@@ -23,7 +23,7 @@ typed_req = {
     "name": "type check",
 }
 
-# typed request with msgpack
+print(">> requesting for the typed route with msgpack serde")
 resp = httpx.post(
     "http://127.0.0.1:8000/v1/inference", content=msgpack.packb(typed_req)
 )
@@ -32,10 +32,9 @@ if resp.status_code == HTTPStatus.OK:
 else:
     print(f"err[{resp.status_code}] {resp.text}")
 
-# untyped request with json
+print(">> requesting for the untyped route with json serde")
 resp = httpx.post("http://127.0.0.1:8000/inference", content=b"hello mosec")
 if resp.status_code == HTTPStatus.OK:
-    print(resp.headers, resp.content)
     print(f"OK: {json.loads(resp.content)}")
 else:
     print(f"err[{resp.status_code}] {resp.text}")

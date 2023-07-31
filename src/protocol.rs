@@ -73,6 +73,7 @@ pub(crate) async fn communicate(
                     loop {
                         ids.clear();
                         data.clear();
+                        states.clear();
                         let batch_timer =
                             get_batch(&receiver_clone, batch_size, &mut ids, wait_time).await;
                         if let Some(timer) = batch_timer {

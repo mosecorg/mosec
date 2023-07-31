@@ -149,17 +149,16 @@ class Server:
         self._server_shutdown = True
 
     def _manage_py_runtime(self):
-        first = True
+        init = True
         while not self._server_shutdown:
-            failed_worker = self._py_runtime_manager.check_and_start(first)
-            if failed_worker is not None:
+            failed_runtime = self._py_runtime_manager.check_and_start(init)
+            if failed_runtime is not None:
                 self._terminate(
                     1,
-                    f"all the {failed_worker.worker.__name__} workers"
-                    f" at stage {failed_worker.stage_id} exited;"
+                    f"all the {failed_runtime.name} workers exited;"
                     " please check for bugs or socket connection issues",
                 )
-            first = False
+            init = False
             self._check_daemon()
             sleep(GUARD_CHECK_INTERVAL)
 
@@ -219,20 +218,31 @@ class Server:
         """
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
-        stage_id = self._py_runtime_manager.worker_count + 1
         runtime = Runtime(
             worker,
             num,
             max_batch_size,
             max_wait_time,
-            stage_id,
             timeout,
             start_method,
             env,
         )
-        runtime.validate()
         self._register_route(runtime, route)
         self._py_runtime_manager.append(runtime)
+
+    def register_runtime(self, routes: Dict[str, List[Runtime]]):
+        """Register the runtime to the routes."""
+        if self._py_runtime_manager.worker_count > 0:
+            raise RuntimeError(
+                "`register_runtime` can only be registered to an empty mosec server"
+            )
+        unique_runtimes = set()
+        for endpoint, runtimes in routes.items():
+            for runtime in runtimes:
+                self._register_route(runtime, endpoint)
+                unique_runtimes.add(runtime)
+        for runtime in unique_runtimes:
+            self._py_runtime_manager.append(runtime)
 
     def _register_route(self, runtime: Runtime, route: Union[str, List[str]]):
         """Register the route path for the worker."""
@@ -250,7 +260,7 @@ class Server:
         """Start the mosec model server."""
         self._validate_server()
         if self._configs["dry_run"]:
-            DryRunner(self._py_runtime_manager).run()
+            DryRunner(self._router).run()
             return
 
         self._handle_signal()

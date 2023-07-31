@@ -16,7 +16,7 @@ from typing import Any
 
 from msgspec import Struct
 
-from mosec import Server, Worker
+from mosec import Runtime, Server, Worker
 from mosec.mixin import TypedMsgPackMixin
 
 
@@ -64,10 +64,14 @@ class TypedPostprocess(TypedMsgPackMixin, Worker):
 
 if __name__ == "__main__":
     server = Server()
-    server.append_worker(TypedPreprocess, route="/v1/inference")
-    server.append_worker(Preprocess, route="/inference")
-    server.append_worker(
-        Inference, max_batch_size=16, route=["/v1/inference", "/inference"]
+    typed_pre = Runtime(TypedPreprocess)
+    pre = Runtime(Preprocess)
+    inf = Runtime(Inference, max_batch_size=16)
+    typed_post = Runtime(TypedPostprocess)
+    server.register_runtime(
+        {
+            "/v1/inference": [typed_pre, inf, typed_post],
+            "/inference": [pre, inf],
+        }
     )
-    server.append_worker(TypedPostprocess, route="/v1/inference")
     server.run()

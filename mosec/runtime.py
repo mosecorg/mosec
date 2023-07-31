@@ -37,19 +37,22 @@ NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-arguments
+# pylint: disable=too-few-public-methods
 class Runtime:
     """The wrapper with one worker and its arguments."""
+
+    # count how many runtime instances have been created
+    _stage_id: int = 0
 
     def __init__(
         self,
         worker: Type[Worker],
-        num: int,
-        max_batch_size: int,
-        max_wait_time: int,
-        stage_id: int,
-        timeout: int,
-        start_method: str,
-        env: Union[None, List[Dict[str, str]]],
+        num: int = 1,
+        max_batch_size: int = 1,
+        max_wait_time: int = 10,
+        timeout: int = 3,
+        start_method: str = "spawn",
+        env: Union[None, List[Dict[str, str]]] = None,
     ):
         """Initialize the mosec coordinator.
 
@@ -62,8 +65,7 @@ class Runtime:
                 for dynamic batching, needs to be used with `max_batch_size`
                 to enable the feature. If not configure, will use the CLI
                 argument `--wait` (default=10ms)
-            stage_id (int): identification number for worker stages.
-            timeout (int): timeout for the `forward` function.
+            timeout (int): timeout (second) for the `forward` function.
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
         """
@@ -71,17 +73,19 @@ class Runtime:
         self.num = num
         self.max_batch_size = max_batch_size
         self.max_wait_time = max_wait_time
-        self.stage_id = stage_id
         self.timeout = timeout
         self.start_method = start_method
         self.env = env
 
+        Runtime._stage_id += 1
         # adding the stage id in case the worker class is added to multiple stages
-        self.name = f"{self.worker.__name__}_{self.stage_id}"
-        self.pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
+        self.name = f"{self.worker.__name__}_{self._stage_id}"
+        self._pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
+
+        self._validate()
 
     @staticmethod
-    def process_healthy(process: Union[BaseProcess, None]) -> bool:
+    def _process_healthy(process: Union[BaseProcess, None]) -> bool:
         """Check if the child process is healthy.
 
         ref: https://docs.python.org/3/library/multiprocessing.html
@@ -90,11 +94,11 @@ class Runtime:
         """
         return process is not None and process.exitcode is None
 
-    def healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
+    def _healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
         """Check if all/any of the child processes are healthy."""
-        return method(self.pool)
+        return method(self._pool)
 
-    def start_process(
+    def _start_process(
         self,
         worker_id: int,
         work_path: str,
@@ -122,44 +126,44 @@ class Runtime:
         with env_var_context(self.env, worker_id):
             coordinator_process.start()
 
-        self.pool[worker_id] = coordinator_process
+        self._pool[worker_id] = coordinator_process
 
-    def check(
+    def _check(
         self,
-        first: bool,
         work_path: str,
         shutdown: Event,
         shutdown_notify: Event,
+        init: bool,
     ) -> bool:
         """Check and start the worker process if it has not started yet.
 
         Args:
-            first: whether the worker is tried to start at first time
             work_path: path of working directory
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
+            init: whether the worker is tried to start at the first time
 
         Returns:
             Whether the worker is started successfully
         """
         # for every sequential stage
-        self.pool = [p if self.process_healthy(p) else None for p in self.pool]
-        if self.healthy(all):
+        self._pool = [p if self._process_healthy(p) else None for p in self._pool]
+        if self._healthy(all):
             # this stage is healthy
             return True
-        if not first and not self.healthy(any):
+        if not init and not self._healthy(any):
             # this stage might contain bugs
             return False
 
         need_start_id = [
-            worker_id for worker_id in range(self.num) if self.pool[worker_id] is None
+            worker_id for worker_id in range(self.num) if self._pool[worker_id] is None
         ]
         for worker_id in need_start_id:
             # for every worker in each stage
-            self.start_process(worker_id, work_path, shutdown, shutdown_notify)
+            self._start_process(worker_id, work_path, shutdown, shutdown_notify)
         return True
 
-    def validate(self):
+    def _validate(self):
         """Validate arguments of worker runtime."""
         validate_env(self.env, self.num)
         assert issubclass(
@@ -191,10 +195,6 @@ class PyRuntimeManager:
         self.shutdown = shutdown
         self.shutdown_notify = shutdown_notify
 
-    def __iter__(self):
-        """Iterate workers of manager."""
-        return self.runtimes.__iter__()
-
     @property
     def worker_count(self) -> int:
         """Get number of workers."""
@@ -205,25 +205,20 @@ class PyRuntimeManager:
         """Get List of workers."""
         return [r.worker for r in self.runtimes]
 
-    def egress_mime(self) -> str:
-        """Return mime of egress worker."""
-        return self.runtimes[-1].worker.resp_mime_type
-
     def append(self, runtime: Runtime):
         """Sequentially appends workers to the workflow pipeline."""
         self.runtimes.append(runtime)
 
-    def check_and_start(self, first: bool) -> Union[Runtime, None]:
+    def check_and_start(self, init: bool) -> Union[Runtime, None]:
         """Check all worker processes and try to start failed ones.
 
         Args:
-            first: whether the worker is tried to start at first time
+            init: whether the worker is tried to start at the first time
         """
         for worker_runtime in self.runtimes:
-            success = worker_runtime.check(
-                first, self._work_path, self.shutdown, self.shutdown_notify
-            )
-            if not success:
+            if not worker_runtime._check(  # pylint: disable=protected-access
+                self._work_path, self.shutdown, self.shutdown_notify, init
+            ):
                 return worker_runtime
         return None
 
