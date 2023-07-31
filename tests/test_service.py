@@ -298,3 +298,30 @@ def test_openapi_service(mosec_service, http_client, args):
         assert path_item["responses"]["200"]["content"] == want
     else:
         assert "content" not in path_item["responses"]["200"]
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("multi_route_service", "", id="multi-route"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_multi_route_service(mosec_service, http_client):
+    data = b"mosec"
+    req = {
+        "name": "mosec-test",
+        "bin": data,
+    }
+
+    # test /inference
+    resp = http_client.post("/inference", content=data)
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.headers["content-type"] == "application/json"
+    assert resp.json() == {"length": len(data)}
+
+    # test /v1/inference
+    resp = http_client.post("/v1/inference", content=msgpack.packb(req))
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.headers["content-type"] == "application/msgpack"
+    assert msgpack.unpackb(resp.content) == {"length": len(data)}
