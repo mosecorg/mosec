@@ -26,7 +26,7 @@ from http import HTTPStatus
 from io import BytesIO
 from typing import TYPE_CHECKING, List, Tuple, Union
 
-from mosec.coordinator import STATE_EGRESS, STATE_INGRESS
+from mosec.coordinator import State
 
 if TYPE_CHECKING:
     from tests.mock_socket import Socket as mock_socket
@@ -48,7 +48,7 @@ def imitate_controller_send(
         sent_payloads.append(datum)
         length = struct.pack("!I", len(datum))
         buf.write(tid)
-        buf.write(struct.pack("!H", STATE_EGRESS | STATE_INGRESS))  # task state
+        buf.write(struct.pack("!H", State.INGRESS | State.EGRESS))  # task state
         buf.write(length)
         buf.write(datum)
 

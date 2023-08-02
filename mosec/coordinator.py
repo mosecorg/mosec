@@ -14,6 +14,7 @@
 
 """The Coordinator is used to control the data flow between `Worker` and `Server`."""
 
+import enum
 import os
 import queue
 import signal
@@ -37,8 +38,13 @@ logger = get_internal_logger()
 CONN_MAX_RETRY = 10
 CONN_CHECK_INTERVAL = 1
 
-STATE_INGRESS = 0b1
-STATE_EGRESS = 0b10
+
+class State(enum.IntFlag):
+    """Task state."""
+
+    INGRESS = 0b1
+    EGRESS = 0b10
+
 
 PROTOCOL_TIMEOUT = 2.0
 
@@ -233,7 +239,7 @@ class Coordinator:
         """Decode the payload with the state."""
         return (
             self.worker.deserialize(payload)
-            if state & STATE_INGRESS
+            if state & State.INGRESS
             else self.worker.deserialize_ipc(payload)
         )
 
@@ -241,7 +247,7 @@ class Coordinator:
         """Encode the data with the state."""
         return (
             self.worker.serialize(data)
-            if state & STATE_EGRESS
+            if state & State.EGRESS
             else self.worker.serialize_ipc(data)
         )
 

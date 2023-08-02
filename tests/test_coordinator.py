@@ -32,7 +32,7 @@ from typing import Union, cast
 import msgpack  # type: ignore
 import pytest
 
-from mosec.coordinator import PROTOCOL_TIMEOUT, STATE_EGRESS, STATE_INGRESS, Coordinator
+from mosec.coordinator import PROTOCOL_TIMEOUT, Coordinator, State
 from mosec.mixin import MsgpackMixin
 from mosec.protocol import HTTPStautsCode, _recv_all
 from mosec.worker import Worker
@@ -252,7 +252,7 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
                 got_payloads.append(_recv_all(conn, got_length))
             assert got_flag == HTTPStautsCode.OK
             assert got_ids == sent_ids
-            assert got_states == [STATE_EGRESS | STATE_INGRESS] * len(sent_ids)
+            assert got_states == [State.INGRESS | State.EGRESS] * len(sent_ids)
             assert all(
                 deserializer(x) == deserializer(y)
                 for x, y in zip(got_payloads, sent_payloads)
