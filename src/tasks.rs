@@ -121,7 +121,8 @@ impl TaskManager {
     pub(crate) async fn submit_task(&self, data: Bytes) -> Result<Task, ServiceError> {
         let (id, rx) = self.add_new_task(data)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
-            warn!(%id, %err, "task was not completed in the expected time");
+            warn!(%id, %err, "task was not completed in the expected time, if this happens a lot, \
+                you might want to increase the service timeout");
             self.delete_task(id, false);
             return Err(ServiceError::Timeout);
         }

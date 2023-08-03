@@ -149,7 +149,7 @@ python examples/stable_diffusion/server.py --help
 Then let's start the server with debug logs:
 
 ```shell
-python examples/stable_diffusion/server.py --log-level debug
+python examples/stable_diffusion/server.py --log-level debug --timeout 30000
 ```
 
 And in another terminal, test it:

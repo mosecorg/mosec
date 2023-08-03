@@ -15,6 +15,10 @@ docker run --rm --gpus all -p 8000:8000 sd:serving
 :code: python
 ```
 
+```shell
+python server.py --timeout 30000
+```
+
 ## Client
 
 ```shell
