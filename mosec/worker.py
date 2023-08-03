@@ -234,6 +234,7 @@ class SSEWorker(Worker):
 
     _stream_queue: SimpleQueue
     _stream_semaphore: Semaphore
+    resp_mime_type = "text/event-stream"
 
     def send_stream_event(self, text: str, index: int = 0):
         """Send a stream event to the client.

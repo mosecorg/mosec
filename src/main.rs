@@ -13,22 +13,21 @@
 // limitations under the License.
 
 mod apidoc;
-mod args;
-mod coordinator;
+mod config;
 mod errors;
 mod metrics;
 mod protocol;
 mod routes;
 mod tasks;
 
+use std::env;
 use std::fs::read_to_string;
 use std::net::SocketAddr;
-use std::path::Path;
 
 use axum::routing::{get, post};
 use axum::Router;
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{filter, Layer};
@@ -36,12 +35,10 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::apidoc::MosecOpenAPI;
-use crate::args::Opts;
-use crate::coordinator::Coordinator;
-use crate::routes::{index, inference, metrics, sse_inference, AppState, RustAPIDoc};
-use crate::tasks::TaskManager;
-
-const MOSEC_OPENAPI_PATH: &str = "mosec_openapi.json";
+use crate::config::Config;
+use crate::metrics::{Metrics, METRICS};
+use crate::routes::{index, inference, metrics, sse_inference, RustAPIDoc};
+use crate::tasks::{TaskManager, TASK_MANAGER};
 
 async fn shutdown_signal() {
     let mut interrupt = signal(SignalKind::interrupt()).unwrap();
@@ -65,44 +62,61 @@ async fn shutdown_signal() {
 }
 
 #[tokio::main]
-async fn run(opts: &Opts) {
-    let python_api =
-        read_to_string(Path::new(&opts.path).join(MOSEC_OPENAPI_PATH)).unwrap_or_default();
+async fn run(conf: &Config) {
     let mut doc = MosecOpenAPI {
         api: RustAPIDoc::openapi(),
     };
-    doc.merge("/inference", python_api.parse().unwrap_or_default())
-        .replace_path_item("/inference", &opts.endpoint);
+    for route in &conf.routes {
+        doc.merge_route(route);
+    }
+    doc.clean();
 
-    let state = AppState {
-        mime: opts.mime.clone(),
-    };
-    let coordinator = Coordinator::init_from_opts(opts);
-    let barrier = coordinator.run();
-    barrier.wait().await;
-    let app = Router::new()
-        .merge(SwaggerUi::new("/api/swagger").url("/api/openapi.json", doc.api))
+    let metrics_instance = Metrics::init_with_namespace(&conf.namespace, conf.timeout);
+    METRICS.set(metrics_instance).unwrap();
+    let mut task_manager = TaskManager::new(conf.timeout);
+    let barrier = task_manager.init_from_config(conf);
+    TASK_MANAGER.set(task_manager).unwrap();
+
+    let mut router = Router::new()
+        .merge(SwaggerUi::new("/openapi/swagger").url("/openapi/metadata.json", doc.api))
         .route("/", get(index))
-        .route("/metrics", get(metrics))
-        .route(&opts.endpoint, post(inference))
-        .route("/sse_inference", post(sse_inference))
-        .with_state(state);
+        .route("/metrics", get(metrics));
 
-    let addr: SocketAddr = format!("{}:{}", opts.address, opts.port).parse().unwrap();
+    for route in &conf.routes {
+        if route.is_sse {
+            router = router.route(&route.endpoint, post(sse_inference));
+        } else {
+            router = router.route(&route.endpoint, post(inference));
+        }
+    }
+
+    // wait until each stage has at least one worker alive
+    barrier.wait().await;
+    let addr: SocketAddr = format!("{}:{}", conf.address, conf.port).parse().unwrap();
     info!(?addr, "http service is running");
     axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+        .serve(router.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
 }
 
 fn main() {
-    let opts: Opts = argh::from_env();
+    // let opts: Opts = argh::from_env();
+    let cmd_args: Vec<String> = env::args().collect();
+    if cmd_args.len() != 2 {
+        println!(
+            "expect one argument as the config path but got {:?}",
+            cmd_args
+        );
+        return;
+    }
+    let config_str = read_to_string(&cmd_args[1]).expect("read config file failure");
+    let conf: Config = serde_json::from_str(&config_str).expect("parse config failure");
 
     // this has to be defined before tokio multi-threads
     let timer = OffsetTime::local_rfc_3339().expect("local time offset");
-    if opts.debug || opts.log_level == "debug" {
+    if conf.log_level == "debug" {
         // use colorful log for debug
         let output = tracing_subscriber::fmt::layer().compact().with_timer(timer);
         tracing_subscriber::registry()
@@ -116,7 +130,7 @@ fn main() {
             .init();
     } else {
         // use JSON format for production
-        let level = match opts.log_level.as_str() {
+        let level = match conf.log_level.as_str() {
             "error" => tracing::Level::ERROR,
             "warning" => tracing::Level::WARN,
             _ => tracing::Level::INFO,
@@ -128,6 +142,6 @@ fn main() {
             .init();
     }
 
-    info!(?opts, "parse service arguments");
-    run(&opts);
+    debug!(?conf, "parse service arguments");
+    run(&conf);
 }

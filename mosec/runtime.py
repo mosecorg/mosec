@@ -16,19 +16,17 @@
 
 import multiprocessing as mp
 import subprocess
-from functools import partial
 from multiprocessing.context import ForkContext, SpawnContext
 from multiprocessing.process import BaseProcess
 from multiprocessing.synchronize import Event
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 
 import pkg_resources
 
-from mosec.coordinator import STAGE_EGRESS, STAGE_INGRESS, Coordinator
+from mosec.coordinator import Coordinator
 from mosec.env import env_var_context, validate_env, validate_int_ge
-from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.worker import Worker
 
@@ -39,20 +37,22 @@ NEW_PROCESS_METHOD = {"spawn", "fork"}
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-arguments
+# pylint: disable=too-few-public-methods
 class Runtime:
     """The wrapper with one worker and its arguments."""
+
+    # count how many runtime instances have been created
+    _stage_id: int = 0
 
     def __init__(
         self,
         worker: Type[Worker],
-        num: int,
-        max_batch_size: int,
-        max_wait_time: int,
-        stage_id: int,
-        timeout: int,
-        start_method: str,
-        env: Union[None, List[Dict[str, str]]],
-        ipc_wrapper: Optional[Union[Type[IPCWrapper], partial]],
+        num: int = 1,
+        max_batch_size: int = 1,
+        max_wait_time: int = 10,
+        timeout: int = 3,
+        start_method: str = "spawn",
+        env: Union[None, List[Dict[str, str]]] = None,
     ):
         """Initialize the mosec coordinator.
 
@@ -65,26 +65,24 @@ class Runtime:
                 for dynamic batching, needs to be used with `max_batch_size`
                 to enable the feature. If not configure, will use the CLI
                 argument `--wait` (default=10ms)
-            stage_id (int): identification number for worker stages.
-            timeout (int): timeout for the `forward` function.
+            timeout (int): timeout (second) for the `forward` function.
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
-            ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
-
-        Raises:
-            TypeError: ipc_wrapper should inherit from `IPCWrapper`
         """
         self.worker = worker
         self.num = num
         self.max_batch_size = max_batch_size
         self.max_wait_time = max_wait_time
-        self.stage_id = stage_id
         self.timeout = timeout
         self.start_method = start_method
         self.env = env
-        self.ipc_wrapper = ipc_wrapper
 
+        Runtime._stage_id += 1
+        # adding the stage id in case the worker class is added to multiple stages
+        self.name = f"{self.worker.__name__}_{self._stage_id}"
         self._pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
+
+        self._validate()
 
     @staticmethod
     def _process_healthy(process: Union[BaseProcess, None]) -> bool:
@@ -97,16 +95,17 @@ class Runtime:
         return process is not None and process.exitcode is None
 
     def _healthy(self, method: Callable[[Iterable[object]], bool]) -> bool:
+        """Check if all/any of the child processes are healthy."""
         return method(self._pool)
 
     def _start_process(
         self,
         worker_id: int,
-        stage_label: str,
         work_path: str,
         shutdown: Event,
         shutdown_notify: Event,
     ):
+        """Start a worker process in the context."""
         context = mp.get_context(self.start_method)
         context = cast(Union[SpawnContext, ForkContext], context)
         coordinator_process = context.Process(
@@ -114,13 +113,11 @@ class Runtime:
             args=(
                 self.worker,
                 self.max_batch_size,
-                stage_label,
                 shutdown,
                 shutdown_notify,
                 work_path,
-                self.stage_id,
+                self.name,
                 worker_id + 1,
-                self.ipc_wrapper,
                 self.timeout,
             ),
             daemon=True,
@@ -131,22 +128,20 @@ class Runtime:
 
         self._pool[worker_id] = coordinator_process
 
-    def check(
+    def _check(
         self,
-        first: bool,
-        stage_label: str,
         work_path: str,
         shutdown: Event,
         shutdown_notify: Event,
+        init: bool,
     ) -> bool:
         """Check and start the worker process if it has not started yet.
 
         Args:
-            first: whether the worker is tried to start at first time
-            stage_label: label of worker ingress and egress
             work_path: path of working directory
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
+            init: whether the worker is tried to start at the first time
 
         Returns:
             Whether the worker is started successfully
@@ -156,7 +151,7 @@ class Runtime:
         if self._healthy(all):
             # this stage is healthy
             return True
-        if not first and not self._healthy(any):
+        if not init and not self._healthy(any):
             # this stage might contain bugs
             return False
 
@@ -165,12 +160,10 @@ class Runtime:
         ]
         for worker_id in need_start_id:
             # for every worker in each stage
-            self._start_process(
-                worker_id, stage_label, work_path, shutdown, shutdown_notify
-            )
+            self._start_process(worker_id, work_path, shutdown, shutdown_notify)
         return True
 
-    def validate(self):
+    def _validate(self):
         """Validate arguments of worker runtime."""
         validate_env(self.env, self.num)
         assert issubclass(
@@ -196,54 +189,36 @@ class PyRuntimeManager:
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
         """
-        self._runtimes: List[Runtime] = []
+        self.runtimes: List[Runtime] = []
 
         self._work_path = work_path
-        self._shutdown = shutdown
-        self._shutdown_notify = shutdown_notify
-
-    def __iter__(self):
-        """Iterate workers of manager."""
-        return self._runtimes.__iter__()
+        self.shutdown = shutdown
+        self.shutdown_notify = shutdown_notify
 
     @property
     def worker_count(self) -> int:
         """Get number of workers."""
-        return len(self._runtimes)
+        return len(self.runtimes)
 
     @property
     def workers(self) -> List[Type[Worker]]:
         """Get List of workers."""
-        return [r.worker for r in self._runtimes]
-
-    def egress_mime(self) -> str:
-        """Return mime of egress worker."""
-        return self._runtimes[-1].worker.resp_mime_type
+        return [r.worker for r in self.runtimes]
 
     def append(self, runtime: Runtime):
         """Sequentially appends workers to the workflow pipeline."""
-        self._runtimes.append(runtime)
+        self.runtimes.append(runtime)
 
-    def _label_stage(self, stage_id: int) -> str:
-        stage = ""
-        if stage_id == 0:
-            stage += STAGE_INGRESS
-        if stage_id == self.worker_count - 1:
-            stage += STAGE_EGRESS
-        return stage
-
-    def check_and_start(self, first: bool) -> Union[Runtime, None]:
+    def check_and_start(self, init: bool) -> Union[Runtime, None]:
         """Check all worker processes and try to start failed ones.
 
         Args:
-            first: whether the worker is tried to start at first time
+            init: whether the worker is tried to start at the first time
         """
-        for stage_id, worker_runtime in enumerate(self._runtimes):
-            label = self._label_stage(stage_id)
-            success = worker_runtime.check(
-                first, label, self._work_path, self._shutdown, self._shutdown_notify
-            )
-            if not success:
+        for worker_runtime in self.runtimes:
+            if not worker_runtime._check(  # pylint: disable=protected-access
+                self._work_path, self.shutdown, self.shutdown_notify, init
+            ):
                 return worker_runtime
         return None
 
@@ -251,34 +226,28 @@ class PyRuntimeManager:
 class RsRuntimeManager:
     """The manager to control Mosec process."""
 
-    def __init__(
-        self, py_manager: PyRuntimeManager, endpoint: str, configs: Dict[str, Any]
-    ):
+    def __init__(self, timeout: int):
         """Initialize a Mosec manager.
 
         Args:
-            manager: manager of python coordinator
-            endpoint: event of server shutdown
-            configs: config
+            timeout: service timeout in milliseconds
         """
-        self._process: Optional[subprocess.Popen] = None
+        self.process: Optional[subprocess.Popen] = None
 
-        self._py_manager: PyRuntimeManager = py_manager
-        self._endpoint = endpoint
-        self._server_path = Path(
+        self.server_path = Path(
             pkg_resources.resource_filename("mosec", "bin"), "mosec"
         )
-        self._configs: Dict[str, Any] = configs
+        self.timeout = timeout
 
     def halt(self):
         """Graceful shutdown."""
         # terminate controller first and wait for a graceful period
-        if self._process is None:
+        if self.process is None:
             return
-        self._process.terminate()
-        graceful_period = monotonic() + self._configs["timeout"] / 1000
+        self.process.terminate()
+        graceful_period = monotonic() + self.timeout / 1000
         while monotonic() < graceful_period:
-            ctr_exitcode = self._process.poll()
+            ctr_exitcode = self.process.poll()
             if ctr_exitcode is None:
                 sleep(0.1)
                 continue
@@ -291,24 +260,14 @@ class RsRuntimeManager:
 
         if monotonic() > graceful_period:
             logger.error("failed to terminate mosec service, will try to kill it")
-            self._process.kill()
+            self.process.kill()
 
-    def start(self) -> subprocess.Popen:
-        """Start the Mosec process."""
+    def start(self, config_path: Path) -> subprocess.Popen:
+        """Start the Mosec process.
+
+        Args:
+            config_path: configuration path of mosec
+        """
         # pylint: disable=consider-using-with
-        self._process = subprocess.Popen([self._server_path] + self._controller_args())
-        return self._process
-
-    def _controller_args(self):
-        args = []
-        self._configs.pop("dry_run")
-        for key, value in self._configs.items():
-            args.extend([f"--{key.replace('_', '-')}", str(value).lower()])
-        for worker_runtime in self._py_manager:
-            args.extend(["--batches", str(worker_runtime.max_batch_size)])
-            args.extend(["--waits", str(worker_runtime.max_wait_time)])
-        mime_type = self._py_manager.egress_mime()
-        args.extend(["--mime", mime_type])
-        args.extend(["--endpoint", self._endpoint])
-        logger.info("mosec received arguments: %s", args)
-        return args
+        self.process = subprocess.Popen([self.server_path, config_path])
+        return self.process

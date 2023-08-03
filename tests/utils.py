@@ -22,29 +22,37 @@ import random
 import socket
 import struct
 import time
+from http import HTTPStatus
+from io import BytesIO
 from typing import TYPE_CHECKING, List, Tuple, Union
+
+from mosec.coordinator import State
 
 if TYPE_CHECKING:
     from tests.mock_socket import Socket as mock_socket
 
 
 def imitate_controller_send(
-    sock: Union[mock_socket, socket.socket], l_data: List[bytes]
+    sock: Union[mock_socket, socket.socket], data: List[bytes]
 ) -> Tuple[List[bytes], List[bytes]]:
     # explicit byte format here for sanity check
     # placeholder flag, should be discarded by receiver
-    header = struct.pack("!H", 0) + struct.pack("!H", len(l_data))
-    body = b""
+    header = struct.pack("!HH", HTTPStatus.OK, len(data))
+    buf = BytesIO()
+    buf.write(header)
     sent_ids = []
     sent_payloads = []
-    for data in l_data:
+    for datum in data:
         tid = struct.pack("!I", random.randint(1, 100))
         sent_ids.append(tid)
-        sent_payloads.append(data)
-        length = struct.pack("!I", len(data))
-        body += tid + length + data
+        sent_payloads.append(datum)
+        length = struct.pack("!I", len(datum))
+        buf.write(tid)
+        buf.write(struct.pack("!H", State.INGRESS | State.EGRESS))  # task state
+        buf.write(length)
+        buf.write(datum)
 
-    sock.sendall(header + body)  # type: ignore
+    sock.sendall(buf.getbuffer())  # type: ignore
     return sent_ids, sent_payloads
 
 

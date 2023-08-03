@@ -4,13 +4,15 @@ There are a few terms used in `mosec`.
 
 - `worker`: a Python process that executes the `forward` method (inherit from [`mosec.Worker`](mosec.worker.Worker))
 - `stage`: one processing unit in the pipeline, each stage contains several `worker` replicas
+  - also known as [`Runtime`](mosec.runtime.Runtime) in the code
   - each stage retrieves the data from the previous stage and passes the result to the next stage
   - retrieved data will be deserialized by the [`Worker.deserialize_ipc`](mosec.worker.Worker.deserialize_ipc) method
   - data to be passed will be serialized by the [`Worker.serialize_ipc`](mosec.worker.Worker.serialize_ipc) method
 - `ingress/egress`: the first/last stage in the pipeline
   - ingress gets data from the client, while egress sends data to the client
   - data will be deserialized by the ingress [`Worker.serialize`](mosec.worker.Worker.serialize) method and serialized by the egress [`Worker.deserialize`](mosec.worker.Worker.deserialize) method
-- `pipeline`: a chain of processing stages
+- `pipeline`: a chain of processing stages, will be registered to an endpoint (default: `/inference`)
+  - a server can have multiple pipelines, check the [multi-route](../examples/multi_route.md) example
 - `dynamic batching`: batch requests until either the max batch size or the max wait time is reached
 - `controller`: a Rust tokio thread that works on:
   - read from the previous queue to get new tasks

@@ -13,6 +13,7 @@ metric
 pytorch
 stable_diffusion
 validate
+multi_route
 ```
 
 We provide examples across different ML frameworks and for various tasks in this section.

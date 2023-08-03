@@ -22,6 +22,7 @@ from mosec.errors import (
     ValidationError,
 )
 from mosec.log import get_logger
+from mosec.runtime import Runtime
 from mosec.server import Server
 from mosec.worker import SSEWorker, Worker
 
@@ -36,6 +37,7 @@ __all__ = [
     "Server",
     "Worker",
     "SSEWorker",
+    "Runtime",
     "ServerError",
     "ClientError",
     "ValidationError",

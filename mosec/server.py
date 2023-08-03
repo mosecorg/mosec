@@ -24,8 +24,8 @@ Dynamic Batching
     corresponding worker is appended, by setting the
     :py:meth:`append_worker(max_batch_size) <Server.append_worker>`.
 
-Multiprocess
-------------
+Multiprocessing
+---------------
 
     The user may spawn multiple processes for any stage when the
     corresponding worker is appended, by setting the
@@ -34,30 +34,28 @@ Multiprocess
 
 import json
 import multiprocessing as mp
-import os
 import pathlib
 import shutil
 import signal
 import subprocess
 import traceback
-from functools import partial
+from collections import defaultdict
 from multiprocessing.synchronize import Event
 from time import sleep
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Type, Union
 
 from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
-from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
 from mosec.utils import ParseTarget
-from mosec.worker import MOSEC_REF_TEMPLATE, Worker
+from mosec.worker import MOSEC_REF_TEMPLATE, SSEWorker, Worker
 
 logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 1
-MOSEC_OPENAPI_PATH = "mosec_openapi.json"
+MOSEC_RESERVED_ENDPOINTS = {"/", "/metrics", "/openapi"}
 
 
 class Server:
@@ -68,30 +66,17 @@ class Server:
     """
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(
-        self,
-        ipc_wrapper: Optional[Union[IPCWrapper, partial]] = None,
-        endpoint: str = "/inference",
-    ):
-        """Initialize a MOSEC Server.
-
-        Args:
-            ipc_wrapper: (deprecated) wrapper function (before and after) IPC
-            endpoint: path to route inference
-        """
-        self.ipc_wrapper = ipc_wrapper
-        self.endpoint = endpoint
-
+    def __init__(self):
+        """Initialize a MOSEC Server."""
         self._shutdown: Event = mp.get_context("spawn").Event()
         self._shutdown_notify: Event = mp.get_context("spawn").Event()
         self._configs: dict = vars(parse_arguments())
 
-        self.py_runtime_manager: PyRuntimeManager = PyRuntimeManager(
+        self._py_runtime_manager: PyRuntimeManager = PyRuntimeManager(
             self._configs["path"], self._shutdown, self._shutdown_notify
         )
-        self.rs_runtime_manager = RsRuntimeManager(
-            self.py_runtime_manager, endpoint, self._configs
-        )
+        self._rs_runtime_manager = RsRuntimeManager(self._configs["timeout"])
+        self._router: Dict[str, List[Runtime]] = defaultdict(list)
 
         self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
 
@@ -102,7 +87,7 @@ class Server:
         signal.signal(signal.SIGINT, self._terminate)
 
     def _validate_server(self):
-        assert self.py_runtime_manager.worker_count > 0, (
+        assert self._py_runtime_manager.worker_count > 0, (
             "no worker registered\n"
             "help: use `.append_worker(...)` to register at least one worker"
         )
@@ -127,7 +112,36 @@ class Server:
         """Subprocess to start the rust runtime manager program."""
         if self._server_shutdown:
             return
-        process = self.rs_runtime_manager.start()
+
+        # dump the config to a JSON file
+        config_path = pathlib.Path(self._configs["path"]) / "config.json"
+        configs = {"runtimes": [], "routes": []}
+        for key, value in self._configs.items():
+            if key in ("dry_run", "debug", "wait"):
+                continue
+            configs[key] = value
+        for runtime in self._py_runtime_manager.runtimes:
+            configs["runtimes"].append(
+                {
+                    "worker": runtime.name,
+                    "max_batch_size": runtime.max_batch_size,
+                    "max_wait_time": runtime.max_wait_time,
+                }
+            )
+        for endpoint, pipeline in self._router.items():
+            configs["routes"].append(
+                {
+                    "endpoint": endpoint,
+                    "workers": [runtime.name for runtime in pipeline],
+                    "is_sse": issubclass(pipeline[-1].worker, SSEWorker),
+                    **generate_openapi([runtime.worker for runtime in pipeline]),
+                }
+            )
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_path, "w", encoding="utf-8") as file:
+            json.dump(configs, file, indent=2)
+
+        process = self._rs_runtime_manager.start(config_path)
         self.register_daemon("rs_runtime", process)
 
     def _terminate(self, signum, framestack):
@@ -135,17 +149,16 @@ class Server:
         self._server_shutdown = True
 
     def _manage_py_runtime(self):
-        first = True
+        init = True
         while not self._server_shutdown:
-            failed_worker = self.py_runtime_manager.check_and_start(first)
-            if failed_worker is not None:
+            failed_runtime = self._py_runtime_manager.check_and_start(init)
+            if failed_runtime is not None:
                 self._terminate(
                     1,
-                    f"all the {failed_worker.worker.__name__} workers"
-                    f" at stage {failed_worker.stage_id} exited;"
+                    f"all the {failed_runtime.name} workers exited;"
                     " please check for bugs or socket connection issues",
                 )
-            first = False
+            init = False
             self._check_daemon()
             sleep(GUARD_CHECK_INTERVAL)
 
@@ -153,7 +166,7 @@ class Server:
         """Graceful shutdown."""
         # notify the rs runtime to shutdown
         self._shutdown_notify.set()
-        self.rs_runtime_manager.halt()
+        self._rs_runtime_manager.halt()
         # shutdown py runtime manager
         self._shutdown.set()
         shutil.rmtree(self._configs["path"], ignore_errors=True)
@@ -182,6 +195,7 @@ class Server:
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
         timeout: int = 0,
+        route: Union[str, List[str]] = "/inference",
     ):
         """Sequentially appends workers to the workflow pipeline.
 
@@ -198,73 +212,58 @@ class Server:
                 change this unless you understand the difference between them)
             env: the environment variables to set before starting the process
             timeout: the timeout (second) for each worker forward processing (>=1)
+            route: the route path for this worker. If not configured, will use the
+                default route path `/inference`. If a list is provided, different
+                route paths will share the same worker.
         """
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
-        stage_id = self.py_runtime_manager.worker_count
         runtime = Runtime(
             worker,
             num,
             max_batch_size,
             max_wait_time,
-            stage_id + 1,
             timeout,
             start_method,
             env,
-            None,
         )
-        runtime.validate()
-        self.py_runtime_manager.append(runtime)
+        self._register_route(runtime, route)
+        self._py_runtime_manager.append(runtime)
 
-    def _generate_openapi(self):
-        """Generate the OpenAPI specification."""
-        if self.py_runtime_manager.worker_count <= 0:
-            return
-        workers = self.py_runtime_manager.workers
-        request_worker_cls, response_worker_cls = workers[0], workers[-1]
-        input_schema, input_components = request_worker_cls.get_forward_json_schema(
-            ParseTarget.INPUT, MOSEC_REF_TEMPLATE
-        )
-        return_schema, return_components = response_worker_cls.get_forward_json_schema(
-            ParseTarget.RETURN, MOSEC_REF_TEMPLATE
-        )
+    def register_runtime(self, routes: Dict[str, List[Runtime]]):
+        """Register the runtime to the routes."""
+        if self._py_runtime_manager.worker_count > 0:
+            raise RuntimeError(
+                "`register_runtime` can only be registered to an empty mosec server"
+            )
+        unique_runtimes = set()
+        for endpoint, runtimes in routes.items():
+            for runtime in runtimes:
+                self._register_route(runtime, endpoint)
+                unique_runtimes.add(runtime)
+        for runtime in unique_runtimes:
+            self._py_runtime_manager.append(runtime)
 
-        def make_body(description, mime, schema):
-            if not schema:
-                return None
-            return {"description": description, "content": {mime: {"schema": schema}}}
-
-        schema = {
-            "request_body": make_body(
-                "Mosec Inference Request Body",
-                request_worker_cls.resp_mime_type,
-                input_schema,
-            ),
-            "responses": None
-            if not return_schema
-            else {
-                200: make_body(
-                    "Mosec Inference Result",
-                    response_worker_cls.resp_mime_type,
-                    return_schema,
-                )
-            },
-            "schemas": {**input_components, **return_components},
-        }
-        tmp_path = pathlib.Path(os.path.join(self._configs["path"], MOSEC_OPENAPI_PATH))
-        tmp_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(tmp_path, "w", encoding="utf-8") as file:
-            json.dump(schema, file)
+    def _register_route(self, runtime: Runtime, route: Union[str, List[str]]):
+        """Register the route path for the worker."""
+        if isinstance(route, str):
+            if route in MOSEC_RESERVED_ENDPOINTS:
+                raise ValueError(f"'{route}' is reserved, try another one")
+            self._router[route].append(runtime)
+        elif isinstance(route, list):
+            for endpoint in route:
+                if endpoint in MOSEC_RESERVED_ENDPOINTS:
+                    raise ValueError(f"'{endpoint}' is reserved, try another one")
+                self._router[endpoint].append(runtime)
 
     def run(self):
         """Start the mosec model server."""
         self._validate_server()
         if self._configs["dry_run"]:
-            DryRunner(self.py_runtime_manager).run()
+            DryRunner(self._router).run()
             return
 
         self._handle_signal()
-        self._generate_openapi()
         self._start_rs_runtime()
         try:
             self._manage_py_runtime()
@@ -272,3 +271,40 @@ class Server:
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
+
+
+def generate_openapi(workers: List[Type[Worker]]):
+    """Generate the OpenAPI specification for one pipeline."""
+    if not workers:
+        return {}
+    request_worker_cls, response_worker_cls = workers[0], workers[-1]
+    input_schema, input_components = request_worker_cls.get_forward_json_schema(
+        ParseTarget.INPUT, MOSEC_REF_TEMPLATE
+    )
+    return_schema, return_components = response_worker_cls.get_forward_json_schema(
+        ParseTarget.RETURN, MOSEC_REF_TEMPLATE
+    )
+
+    def make_body(description, mime, schema):
+        if not schema:
+            return None
+        return {"description": description, "content": {mime: {"schema": schema}}}
+
+    return {
+        "request_body": make_body(
+            "Mosec Inference Request Body",
+            request_worker_cls.resp_mime_type,
+            input_schema,
+        ),
+        "responses": None
+        if not return_schema
+        else {
+            "200": make_body(
+                "Mosec Inference Result",
+                response_worker_cls.resp_mime_type,
+                return_schema,
+            )
+        },
+        "schemas": {**input_components, **return_components},
+        "mime": response_worker_cls.resp_mime_type,
+    }

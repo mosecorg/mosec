@@ -71,11 +71,11 @@ def test_square_service(mosec_service, http_client):
     resp = http_client.get("/metrics")
     assert resp.status_code == HTTPStatus.OK
 
-    resp = http_client.post("/v1/inference", json={"msg": 2})
+    resp = http_client.post("/inference", json={"msg": 2})
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert resp.text == "request validation error: 'x'"
 
-    resp = http_client.post("/v1/inference", content=b"bad-binary-request")
+    resp = http_client.post("/inference", content=b"bad-binary-request")
     assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     validate_square_service(http_client, 2)
@@ -184,7 +184,7 @@ def test_mixin_typed_service(mosec_service, http_client):
 def test_sse_service(mosec_service, http_client):
     count = 0
     with connect_sse(
-        http_client, "POST", "/sse_inference", json={"text": "mosec"}
+        http_client, "POST", "/inference", json={"text": "mosec"}
     ) as event_source:
         for sse in event_source.iter_sse():
             count += 1
@@ -194,7 +194,7 @@ def test_sse_service(mosec_service, http_client):
 
     count = 0
     with connect_sse(
-        http_client, "POST", "/sse_inference", json={"bad": "req"}
+        http_client, "POST", "/inference", json={"bad": "req"}
     ) as event_source:
         for sse in event_source.iter_sse():
             count += 1
@@ -229,7 +229,7 @@ def test_square_service_mp(mosec_service, http_client):
 
 
 def validate_square_service(http_client, num):
-    resp = http_client.post("/v1/inference", json={"x": num})
+    resp = http_client.post("/inference", json={"x": num})
     assert resp.status_code == HTTPStatus.OK
     assert resp.json()["x"] == num**2
 
@@ -280,7 +280,7 @@ def assert_empty_queue(http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_openapi_service(mosec_service, http_client, args):
-    spec = http_client.get("/api/openapi.json").json()
+    spec = http_client.get("/openapi/metadata.json").json()
     input_cls, return_cls = args.split("/")
     path_item = spec["paths"]["/v1/inference"]["post"]
 
@@ -298,3 +298,30 @@ def test_openapi_service(mosec_service, http_client, args):
         assert path_item["responses"]["200"]["content"] == want
     else:
         assert "content" not in path_item["responses"]["200"]
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("multi_route_service", "", id="multi-route"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_multi_route_service(mosec_service, http_client):
+    data = b"mosec"
+    req = {
+        "name": "mosec-test",
+        "bin": data,
+    }
+
+    # test /inference
+    resp = http_client.post("/inference", content=data)
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.headers["content-type"] == "application/json"
+    assert resp.json() == {"length": len(data)}
+
+    # test /v1/inference
+    resp = http_client.post("/v1/inference", content=msgpack.packb(req))
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.headers["content-type"] == "application/msgpack"
+    assert msgpack.unpackb(resp.content) == {"length": len(data)}

@@ -152,6 +152,8 @@ Then let's start the server with debug logs:
 python examples/stable_diffusion/server.py --log-level debug --timeout 30000
 ```
 
+Open `http://127.0.0.1:8000/openapi/swagger/` in your browser to get the OpenAPI doc.
+
 And in another terminal, test it:
 
 ```shell
@@ -173,8 +175,9 @@ That's it! You have just hosted your **_stable-diffusion model_** as a service! 
 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/examples/index.html) section. It includes:
 
-- [Multi-stage workflow demo](https://mosecorg.github.io/mosec/examples/echo.html): a simple echo demo even without any ML model.
+- [Pipeline](https://mosecorg.github.io/mosec/examples/echo.html): a simple echo demo even without any ML model.
 - [Request validation](https://mosecorg.github.io/mosec/examples/validate.html): validate the request with type annotation.
+- [Multiple route](https://mosecorg.github.io/mosec/examples/multi_route.html): serve multiple models in one service
 - [Shared memory IPC](https://mosecorg.github.io/mosec/examples/ipc.html): inter-process communication with shared memory.
 - [Customized GPU allocation](https://mosecorg.github.io/mosec/examples/env.html): deploy multiple replicas, each using different GPUs.
 - [Customized metrics](https://mosecorg.github.io/mosec/examples/metric.html): record your own metrics for monitoring.

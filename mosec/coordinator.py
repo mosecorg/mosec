@@ -14,6 +14,7 @@
 
 """The Coordinator is used to control the data flow between `Worker` and `Server`."""
 
+import enum
 import os
 import queue
 import signal
@@ -24,10 +25,9 @@ import time
 import traceback
 from contextlib import contextmanager
 from multiprocessing.synchronize import Event
-from typing import Any, Callable, Optional, Sequence, Tuple, Type
+from typing import Any, Optional, Sequence, Type
 
 from mosec.errors import MosecError, MosecTimeoutError
-from mosec.ipc import IPCWrapper
 from mosec.log import get_internal_logger
 from mosec.protocol import HTTPStautsCode, Protocol
 from mosec.worker import SSEWorker, Worker
@@ -38,8 +38,13 @@ logger = get_internal_logger()
 CONN_MAX_RETRY = 10
 CONN_CHECK_INTERVAL = 1
 
-STAGE_INGRESS = "ingress"
-STAGE_EGRESS = "egress"
+
+class State(enum.IntFlag):
+    """Task state."""
+
+    INGRESS = 0b1
+    EGRESS = 0b10
+
 
 PROTOCOL_TIMEOUT = 2.0
 
@@ -97,56 +102,41 @@ class Coordinator:
         self,
         worker: Type[Worker],
         max_batch_size: int,
-        stage: str,
         shutdown: Event,
         shutdown_notify: Event,
         socket_prefix: str,
-        stage_id: int,
+        stage_name: str,
         worker_id: int,
-        ipc_wrapper: Optional[Callable[..., IPCWrapper]],
         timeout: int,
     ):
         """Initialize the mosec coordinator.
 
         Args:
-            worker (Worker): subclass of `mosec.Worker` implemented by users.
-            max_batch_size (int): maximum batch size for this worker.
-            stage (str): identifier to distinguish the first and last stages.
-            shutdown (Event): `multiprocessing.synchronize.Event` object for shutdown
+            worker: subclass of `mosec.Worker` implemented by users.
+            max_batch_size: maximum batch size for this worker.
+            shutdown: `multiprocessing.synchronize.Event` object for shutdown
                 IPC.
-            socket_prefix (str): prefix for the socket addresses.
-            stage_id (int): identification number for worker stages.
-            worker_id (int): identification number for worker processes at the same
+            socket_prefix: prefix for the socket addresses.
+            stage_name: identification name for this worker stage.
+            worker_id: identification number for worker processes at the same
                 stage.
-            ipc_wrapper (IPCWrapper): IPC wrapper class to be initialized.
-            timeout (int): timeout for the `forward` function.
-
-        Raises:
-            TypeError: ipc_wrapper should inherit from `IPCWrapper`
+            timeout: timeout for the `forward` function.
         """
-        self.worker = worker()
-        self.worker.worker_id = worker_id
-        self.worker.max_batch_size = max_batch_size
-        self.worker.stage = stage
+        self.name = f"<{stage_name}|{worker_id}>"
         self.timeout = timeout
-        self.name = f"<{stage_id}|{worker.__name__}|{worker_id}>"
         self.current_ids: Sequence[bytes] = []
         self.semaphore = FakeSemaphore()  # type: ignore
 
+        self.worker = worker()
+        self.worker.worker_id = worker_id
+        self.worker.max_batch_size = max_batch_size
+        self.worker.stage = stage_name
+
         self.protocol = Protocol(
             name=self.name,
-            addr=os.path.join(socket_prefix, f"ipc_{stage_id}.socket"),
+            addr=os.path.join(socket_prefix, f"ipc_{stage_name}.socket"),
             timeout=PROTOCOL_TIMEOUT,
         )
-
-        # optional plugin features - ipc wrapper
-        self.ipc_wrapper: Optional[IPCWrapper] = None
-        if ipc_wrapper is not None:
-            self.ipc_wrapper = ipc_wrapper()
-            if not issubclass(type(self.ipc_wrapper), IPCWrapper):
-                raise TypeError(
-                    "ipc_wrapper must be the subclass of mosec.plugins.IPCWrapper"
-                )
 
         # ignore termination & interruption signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -197,7 +187,9 @@ class Coordinator:
                 # encode the text with UTF-8
                 payloads = (text.encode(),)
                 ids = (self.current_ids[index],)
-                self.protocol.send(HTTPStautsCode.STREAM_EVENT, ids, payloads)
+                self.protocol.send(
+                    HTTPStautsCode.STREAM_EVENT, ids, (0,) * len(ids), payloads
+                )
                 self.semaphore.release()
             except queue.Empty:
                 continue
@@ -243,71 +235,28 @@ class Coordinator:
 
             self.coordinate()
 
-    def get_decoder(self) -> Callable[[bytes], Any]:
-        """Get the decoder function for this stage.
+    def decode(self, payload: bytes, state: int) -> Any:
+        """Decode the payload with the state."""
+        return (
+            self.worker.deserialize(payload)
+            if state & State.INGRESS
+            else self.worker.deserialize_ipc(payload)
+        )
 
-        The first stage will use the worker's deserialize function.
-        """
-        if STAGE_INGRESS in self.worker.stage:
-            return self.worker.deserialize
-        return self.worker.deserialize_ipc
-
-    def get_encoder(self) -> Callable[[Any], bytes]:
-        """Get the encoder function for this stage.
-
-        The last stage will use the worker's serialize function.
-        """
-        if STAGE_EGRESS in self.worker.stage:
-            return self.worker.serialize
-        return self.worker.serialize_ipc
-
-    def get_protocol_recv(
-        self,
-    ) -> Callable[[], Tuple[bytes, Sequence[bytes], Sequence[bytes]]]:
-        """Get the protocol receive function for this stage.
-
-        IPC wrapper will be used if it's provided and the stage is not the first one.
-        """
-        if STAGE_INGRESS in self.worker.stage or self.ipc_wrapper is None:
-            return self.protocol.receive
-
-        # TODO(kemingy) find a better way
-        def wrapped_recv() -> Tuple[bytes, Sequence[bytes], Sequence[bytes]]:
-            flag, ids, payloads = self.protocol.receive()
-            payloads = self.ipc_wrapper.get(  # type: ignore
-                [bytes(x) for x in payloads]
-            )
-            return flag, ids, payloads
-
-        return wrapped_recv
-
-    def get_protocol_send(
-        self,
-    ) -> Callable[[int, Sequence[bytes], Sequence[bytes]], None]:
-        """Get the protocol send function for this stage.
-
-        IPC wrapper will be used if it's provided and the stage is not the last one.
-        """
-        if STAGE_EGRESS in self.worker.stage or self.ipc_wrapper is None:
-            return self.protocol.send
-
-        # TODO(kemingy) find a better way
-        def wrapped_send(flag: int, ids: Sequence[bytes], payloads: Sequence[bytes]):
-            if flag == HTTPStautsCode.OK:
-                payloads = self.ipc_wrapper.put(payloads)  # type: ignore
-            return self.protocol.send(flag, ids, payloads)
-
-        return wrapped_send
+    def encode(self, data: Any, state: int) -> bytes:
+        """Encode the data with the state."""
+        return (
+            self.worker.serialize(data)
+            if state & State.EGRESS
+            else self.worker.serialize_ipc(data)
+        )
 
     def coordinate(self):
         """Start coordinating the protocol's communication and worker's forward pass."""
-        decoder = self.get_decoder()
-        encoder = self.get_encoder()
-        protocol_recv = self.get_protocol_recv()
-        protocol_send = self.get_protocol_send()
         while not self.shutdown.is_set():
             try:
-                _, ids, payloads = protocol_recv()
+                # flag received from the server is not used
+                _, ids, states, payloads = self.protocol.receive()
                 # expose here to be used by stream event
                 self.current_ids = ids
             except socket.timeout:
@@ -320,7 +269,10 @@ class Coordinator:
             # pylint: disable=broad-except
             length = len(payloads)
             try:
-                data = [decoder(item) for item in payloads]
+                data = [
+                    self.decode(payload, state)
+                    for (payload, state) in zip(payloads, states)
+                ]
                 with set_mosec_timeout(self.timeout):
                     data = (
                         self.worker.forward(data)
@@ -333,7 +285,9 @@ class Coordinator:
                         f"input({length})!=output({len(data)})"
                     )
                 status = HTTPStautsCode.OK
-                payloads = [encoder(item) for item in data]
+                payloads = [
+                    self.encode(datum, state) for (datum, state) in zip(data, states)
+                ]
             except (MosecError, MosecTimeoutError) as err:
                 err_msg = str(err).replace("\n", " - ")
                 err_msg = err_msg if err_msg else err.msg
@@ -348,7 +302,7 @@ class Coordinator:
             try:
                 # pylint: disable=consider-using-with
                 self.semaphore.acquire(timeout=self.timeout)
-                protocol_send(status, ids, payloads)
+                self.protocol.send(status, ids, states, payloads)
             except OSError as err:
                 logger.error("%s failed to send to socket: %s", self.name, err)
                 break

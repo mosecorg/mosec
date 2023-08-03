@@ -79,7 +79,7 @@ jobs:
       - name: Test
         run: |
           make semantic_lint test
-      - name: Test pyarrow in Linux
+      - name: Test shm in Linux
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
           sudo apt update && sudo apt install redis

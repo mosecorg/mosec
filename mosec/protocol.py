@@ -54,11 +54,13 @@ class Protocol:
     FORMAT_BATCH = "!H"
     FORMAT_ID = "!I"
     FORMAT_LENGTH = "!I"
+    FORMAT_STATE = "!H"
 
     # lengths
     LENGTH_TASK_FLAG = 2
     LENGTH_TASK_BATCH = 2
     LENGTH_TASK_ID = 4
+    LENGTH_TASK_STATE = 2
     LENGTH_TASK_BODY_LEN = 4
 
     def __init__(
@@ -82,21 +84,23 @@ class Protocol:
         self.name = name
         self.addr = addr
 
-    def receive(self) -> Tuple[bytes, Sequence[bytes], Sequence[bytes]]:
+    def receive(self) -> Tuple[bytes, Sequence[bytes], Sequence[int], Sequence[bytes]]:
         """Receive tasks from the server."""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)
         batch_size = struct.unpack(self.FORMAT_BATCH, batch_size_bytes)[0]
-        ids, payloads = [], []
+        ids, states, payloads = [], [], []
         total_bytes = 0
 
         while batch_size > 0:
             batch_size -= 1
             id_bytes = self.socket.recv(self.LENGTH_TASK_ID)
+            state_bytes = self.socket.recv(self.LENGTH_TASK_STATE)
             length_bytes = self.socket.recv(self.LENGTH_TASK_BODY_LEN)
             length = struct.unpack(self.FORMAT_LENGTH, length_bytes)[0]
             payload = _recv_all(self.socket, length)
             ids.append(id_bytes)
+            states.append(struct.unpack(self.FORMAT_STATE, state_bytes)[0])
             payloads.append(payload)
             total_bytes += length
 
@@ -114,9 +118,15 @@ class Protocol:
                 "which may affect performance",
                 RuntimeWarning,
             )
-        return flag, ids, payloads
+        return flag, ids, states, payloads
 
-    def send(self, flag: int, ids: Sequence[bytes], payloads: Sequence[bytes]):
+    def send(
+        self,
+        flag: int,
+        ids: Sequence[bytes],
+        states: Sequence[int],
+        payloads: Sequence[bytes],
+    ):
         """Send results to the server."""
         data = BytesIO()
         data.write(struct.pack(self.FORMAT_FLAG, flag))
@@ -125,10 +135,10 @@ class Protocol:
         batch_size = len(ids)
         data.write(struct.pack(self.FORMAT_BATCH, batch_size))
         if batch_size > 0:
-            for task_id, payload in zip(ids, payloads):
-                length = struct.pack(self.FORMAT_LENGTH, len(payload))
+            for task_id, state, payload in zip(ids, states, payloads):
                 data.write(task_id)
-                data.write(length)
+                data.write(struct.pack(self.FORMAT_STATE, state))
+                data.write(struct.pack(self.FORMAT_LENGTH, len(payload)))
                 data.write(payload)
         self.socket.sendall(data.getbuffer())
         if logger.isEnabledFor(logging.DEBUG):

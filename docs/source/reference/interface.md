@@ -14,6 +14,13 @@
     :members:
 ```
 
+## Runtime
+
+```{eval-rst}
+.. automodule:: mosec.runtime
+    :members: Runtime
+```
+
 ## Errors
 
 ```{eval-rst}
@@ -26,19 +33,6 @@
 
 ```{eval-rst}
 .. automodule:: mosec.mixin
-    :members:
-    :show-inheritance:
-```
-
-## Plugins
-
-```{eval-rst}
-.. automodule:: mosec.ipc
-    :members:
-```
-
-```{eval-rst}
-.. automodule:: mosec.plugins
     :members:
     :show-inheritance:
 ```
