@@ -80,7 +80,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: mosecorg/mosec:${{ github.ref }}
+          tags: mosecorg/mosec:${{ github.event.ref }}
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
