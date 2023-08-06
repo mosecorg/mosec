@@ -47,11 +47,19 @@ Mosec is a high-performance and flexible model serving framework for building ML
 
 ## Installation
 
-Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://pypi.org/project/mosec/) with:
+Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://pypi.org/project/mosec/) for Linux x86_64 or macOS x86_64 with:
 
 ```shell
 pip install -U mosec
 ```
+
+To build from the source code, install [Rust](https://www.rust-lang.org/) and run the following command:
+
+```shell
+make package
+```
+
+You will get a mosec wheel in the `/dist` folder.
 
 ## Usage
 
