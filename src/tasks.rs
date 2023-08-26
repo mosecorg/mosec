@@ -236,7 +236,7 @@ impl TaskManager {
         }
         let metrics = Metrics::global();
         metrics.remaining_task.inc();
-        tokio::spawn(wait_sse_finish(id, self.timeout, rx));
+        tokio::spawn(wait_sse_finish(id, key.to_string(), self.timeout, rx));
 
         Ok(receiver)
     }
@@ -379,7 +379,12 @@ impl TaskManager {
     }
 }
 
-async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver<()>) {
+async fn wait_sse_finish(
+    id: u32,
+    endpoint: String,
+    timeout: Duration,
+    notifier: oneshot::Receiver<()>,
+) {
     let task_manager = TaskManager::global();
     if let Err(err) = time::timeout(timeout, notifier).await {
         warn!(%err, "task was not completed in the expected time");
@@ -398,6 +403,7 @@ async fn wait_sse_finish(id: u32, timeout: Duration, notifier: oneshot::Receiver
         .throughput
         .get_or_create(&CodeLabel {
             code: StatusCode::OK.as_u16(),
+            endpoint,
         })
         .inc();
 }

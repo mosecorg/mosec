@@ -159,6 +159,7 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         .throughput
         .get_or_create(&CodeLabel {
             code: status.as_u16(),
+            endpoint: endpoint.to_string(),
         })
         .inc();
 
@@ -237,6 +238,7 @@ pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<BoxB
                 .throughput
                 .get_or_create(&CodeLabel {
                     code: status.as_u16(),
+                    endpoint: endpoint.to_string(),
                 })
                 .inc();
             (status, content).into_response()

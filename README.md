@@ -16,7 +16,7 @@
     <img src="https://img.shields.io/pypi/pyversions/mosec" alt="Python Version" />
   </a>
   <a href="https://pepy.tech/project/mosec">
-    <img src="https://pepy.tech/badge/mosec/month" alt="PyPi Downloads" height="20">
+    <img src="https://static.pepy.tech/badge/mosec/month" alt="PyPi monthly Downloads" height="20">
   </a>
   <a href="https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)">
     <img src="https://img.shields.io/github/license/mosecorg/mosec" alt="License" height="20">
@@ -59,7 +59,7 @@ To build from the source code, install [Rust](https://www.rust-lang.org/) and ru
 make package
 ```
 
-You will get a mosec wheel in the `/dist` folder.
+You will get a mosec wheel file in the `dist` folder.
 
 ## Usage
 
