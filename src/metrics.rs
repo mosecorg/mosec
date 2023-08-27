@@ -23,6 +23,7 @@ use prometheus_client::registry::Registry;
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct CodeLabel {
     pub code: u16,
+    pub endpoint: String,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
