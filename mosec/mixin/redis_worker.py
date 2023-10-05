@@ -55,7 +55,7 @@ class RedisShmIPCMixin(Worker):
         """Set the redis service url."""
         environ[_REDIS_URL_ENV] = url
 
-    def _get_client(self):
+    def _get_client(self) -> Any:
         """Get the redis client. This will create a new one if not exist."""
         if self._redis_client is None:
             url = environ.get(_REDIS_URL_ENV)
