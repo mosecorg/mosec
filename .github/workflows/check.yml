@@ -39,7 +39,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: "3.11"
       - name: Install dependencies
         run: make install
       - name: install node for pyright
@@ -47,7 +47,6 @@ jobs:
         with:
           node-version: 18
       - name: install pyright
-        # due to https://github.com/microsoft/pyright/issues/5126
         run: npm install -g pyright
       - name: Lint
         run: make lint

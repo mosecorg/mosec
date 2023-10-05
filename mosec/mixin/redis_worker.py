@@ -25,7 +25,7 @@ sent via the original way.
 """
 import warnings
 from os import environ
-from typing import Any
+from typing import Any, Optional
 
 try:
     import redis  # type: ignore
@@ -57,7 +57,7 @@ class RedisShmIPCMixin(Worker):
 
     def _get_client(self):
         """Get the redis client. This will create a new one if not exist."""
-        if not self._redis_client:
+        if self._redis_client is None:
             url = environ.get(_REDIS_URL_ENV)
             if not url:
                 raise RuntimeError(
