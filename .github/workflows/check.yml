@@ -80,7 +80,7 @@ jobs:
           make semantic_lint test
       - name: Test shm in Linux
         # ignore the shm test for Python 3.12 since pyarrow doesn't have py3.12 wheel with version < 12
-        if: ${{ startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, "3.12") }}
+        if: ${{ startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, '3.12') }}
         run: |
           sudo apt update && sudo apt install redis
           make test_shm
