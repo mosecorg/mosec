@@ -25,7 +25,7 @@ sent via the original way.
 """
 import warnings
 from os import environ
-from typing import Any, Optional
+from typing import Any
 
 try:
     import redis  # type: ignore
