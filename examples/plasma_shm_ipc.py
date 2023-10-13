@@ -32,6 +32,7 @@ class DataProducer(PlasmaShmIPCMixin, Worker):
     """Sample Data Producer."""
 
     def forward(self, data: dict) -> np.ndarray:
+        # pylint: disable=duplicate-code
         try:
             nums = np.random.rand(int(data["size"]))
         except KeyError as err:

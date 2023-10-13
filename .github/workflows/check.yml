@@ -47,7 +47,6 @@ jobs:
         with:
           node-version: 18
       - name: install pyright
-        # due to https://github.com/microsoft/pyright/issues/5126
         run: npm install -g pyright
       - name: Lint
         run: make lint
@@ -59,7 +58,7 @@ jobs:
     strategy:
       max-parallel: 10
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         os: [ubuntu-latest , macos-latest]
 
     steps:
@@ -80,7 +79,8 @@ jobs:
         run: |
           make semantic_lint test
       - name: Test shm in Linux
-        if: ${{ startsWith(matrix.os, 'ubuntu') }}
+        # ignore the shm test for Python 3.12 since pyarrow doesn't have py3.12 wheel with version < 12
+        if: ${{ startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, '3.12') }}
         run: |
           sudo apt update && sudo apt install redis
           make test_shm
