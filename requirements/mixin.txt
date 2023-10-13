@@ -1,5 +1,5 @@
 msgpack>=1.0.2
 msgspec>=0.15.0
 numbin>=0.4.0
-pyarrow>=0.6.1,<12
+pyarrow>=0.6.1,<12; python_version < "3.12"
 redis>=4.0.0
