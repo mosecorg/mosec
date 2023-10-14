@@ -1,16 +1,7 @@
 [
   {
-    "name": "argh",
-    "version": "0.1.10",
-    "authors": "Taylor Cramer <cramertj@google.com>|Benjamin Brittain <bwb@google.com>|Erick Tryzelaar <etryzelaar@google.com>",
-    "repository": "https://github.com/google/argh",
-    "license": "BSD-3-Clause",
-    "license_file": null,
-    "description": "Derive-based argument parser optimized for code size"
-  },
-  {
     "name": "async-channel",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "authors": "Stjepan Glavina <stjepang@gmail.com>",
     "repository": "https://github.com/smol-rs/async-channel",
     "license": "Apache-2.0 OR MIT",
@@ -18,8 +9,17 @@
     "description": "Async multi-producer multi-consumer channel"
   },
   {
+    "name": "async-stream",
+    "version": "0.3.5",
+    "authors": "Carl Lerche <me@carllerche.com>",
+    "repository": "https://github.com/tokio-rs/async-stream",
+    "license": "MIT",
+    "license_file": null,
+    "description": "Asynchronous streams using async & await notation"
+  },
+  {
     "name": "axum",
-    "version": "0.6.18",
+    "version": "0.6.20",
     "authors": null,
     "repository": "https://github.com/tokio-rs/axum",
     "license": "MIT",
@@ -28,7 +28,7 @@
   },
   {
     "name": "bytes",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "authors": "Carl Lerche <me@carllerche.com>|Sean McArthur <sean@seanmonstar.com>",
     "repository": "https://github.com/tokio-rs/bytes",
     "license": "MIT",
@@ -46,7 +46,7 @@
   },
   {
     "name": "hyper",
-    "version": "0.14.26",
+    "version": "0.14.27",
     "authors": "Sean McArthur <sean@seanmonstar.com>",
     "repository": "https://github.com/hyperium/hyper",
     "license": "MIT",
@@ -55,7 +55,7 @@
   },
   {
     "name": "mosec",
-    "version": "0.7.1",
+    "version": "0.8.1",
     "authors": "Keming <kemingy94@gmail.com>|Zichen <lkevinzc@gmail.com>",
     "repository": "https://github.com/mosecorg/mosec",
     "license": "Apache-2.0",
@@ -64,7 +64,7 @@
   },
   {
     "name": "once_cell",
-    "version": "1.17.2",
+    "version": "1.18.0",
     "authors": "Aleksey Kladov <aleksey.kladov@gmail.com>",
     "repository": "https://github.com/matklad/once_cell",
     "license": "Apache-2.0 OR MIT",
@@ -73,7 +73,7 @@
   },
   {
     "name": "prometheus-client",
-    "version": "0.21.1",
+    "version": "0.21.2",
     "authors": "Max Inden <mail@max-inden.de>",
     "repository": "https://github.com/prometheus/client_rust",
     "license": "Apache-2.0 OR MIT",
@@ -81,8 +81,26 @@
     "description": "Open Metrics client library allowing users to natively instrument applications."
   },
   {
+    "name": "serde",
+    "version": "1.0.188",
+    "authors": "Erick Tryzelaar <erick.tryzelaar@gmail.com>|David Tolnay <dtolnay@gmail.com>",
+    "repository": "https://github.com/serde-rs/serde",
+    "license": "Apache-2.0 OR MIT",
+    "license_file": null,
+    "description": "A generic serialization/deserialization framework"
+  },
+  {
+    "name": "serde_json",
+    "version": "1.0.107",
+    "authors": "Erick Tryzelaar <erick.tryzelaar@gmail.com>|David Tolnay <dtolnay@gmail.com>",
+    "repository": "https://github.com/serde-rs/json",
+    "license": "Apache-2.0 OR MIT",
+    "license_file": null,
+    "description": "A JSON serialization file format"
+  },
+  {
     "name": "tokio",
-    "version": "1.28.2",
+    "version": "1.33.0",
     "authors": "Tokio Contributors <team@tokio.rs>",
     "repository": "https://github.com/tokio-rs/tokio",
     "license": "MIT",
@@ -91,7 +109,7 @@
   },
   {
     "name": "tracing",
-    "version": "0.1.37",
+    "version": "0.1.39",
     "authors": "Eliza Weisman <eliza@buoyant.io>|Tokio Contributors <team@tokio.rs>",
     "repository": "https://github.com/tokio-rs/tracing",
     "license": "MIT",
@@ -106,5 +124,23 @@
     "license": "MIT",
     "license_file": null,
     "description": "Utilities for implementing and composing `tracing` subscribers."
+  },
+  {
+    "name": "utoipa",
+    "version": "4.0.0",
+    "authors": "Juha Kukkonen <juha7kukkonen@gmail.com>",
+    "repository": "https://github.com/juhaku/utoipa",
+    "license": "Apache-2.0 OR MIT",
+    "license_file": null,
+    "description": "Compile time generated OpenAPI documentation for Rust"
+  },
+  {
+    "name": "utoipa-swagger-ui",
+    "version": "4.0.0",
+    "authors": "Juha Kukkonen <juha7kukkonen@gmail.com>",
+    "repository": "https://github.com/juhaku/utoipa",
+    "license": "Apache-2.0 OR MIT",
+    "license_file": null,
+    "description": "Swagger UI for utoipa"
   }
 ]
