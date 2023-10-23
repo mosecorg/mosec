@@ -7,13 +7,13 @@ We use a single layer neural network for this minimal example. You could also ex
 ## Server
 
 ```shell
-USE_JIT=true python jax_single_layer.py
+USE_JIT=true python examples/jax_single_layer/server.py
 ```
 
 <details>
 <summary>jax_single_layer.py</summary>
 
-```{include} ../../../examples/jax_single_layer.py
+```{include} ../../../examples/jax_single_layer/server.py
 :code: python
 ```
 
@@ -22,13 +22,13 @@ USE_JIT=true python jax_single_layer.py
 ## Client
 
 ```shell
-python jax_single_layer_cli.py
+python examples/jax_single_layer/client.py
 ```
 
 <details>
 <summary>jax_single_layer_cli.py</summary>
 
-```{include} ../../../examples/jax_single_layer_cli.py
+```{include} ../../../examples/jax_single_layer/client.py
 :code: python
 ```
 

@@ -52,13 +52,13 @@ We also demonstrate how to customized **validation** on the data content through
 #### Server
 
 ```shell
-python resnet50_server_msgpack.py
+python examples/resnet50_msgpack/server.py
 ```
 
 <details>
 <summary>resnet50_server_msgpack.py</summary>
 
-```{include} ../../../examples/resnet50_server_msgpack.py
+```{include} ../../../examples/resnet50_msgpack/server.py
 :code: python
 ```
 
@@ -67,13 +67,13 @@ python resnet50_server_msgpack.py
 #### Client
 
 ```shell
-python resnet50_client_msgpack.py
+python examples/resnet50_msgpack/client.py
 ```
 
 <details>
 <summary>resnet50_client_msgpack.py</summary>
 
-```{include} ../../../examples/resnet50_client_msgpack.py
+```{include} ../../../examples/resnet50_msgpack/client.py
 :code: python
 ```
 

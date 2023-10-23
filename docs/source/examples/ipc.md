@@ -12,27 +12,27 @@ By default, we serialize the data and directly transfer the bytes over the socke
 
 The additional subprocess can be registered as a daemon thus it will be checked by mosec regularly and trigger graceful shutdown when the daemon exits.
 
-## **`plasma_shm_ipc.py`**
+## **`plasma_legacy.py`**
 
-```{include} ../../../examples/plasma_shm_ipc.py
+```{include} ../../../examples/shm_ipc/plasma_legacy.py
 :code: python
 ```
-## **`redis_shm_ipc.py`**
+## **`redis.py`**
 
-```{include} ../../../examples/redis_shm_ipc.py
+```{include} ../../../examples/shm_ipc/redis.py
 :code: python
 ```
 
 ## Start
 
 ```shell
-python plasma_shm_ipc.py
+python examples/shm_ipc/plasma_legacy.py
 ```
 
 or
 
 ```shell
-python redis_shm_ipc.py
+python examples/shm_ipc/redis.py
 ```
 ## Test
 
