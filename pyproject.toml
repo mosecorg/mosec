@@ -58,10 +58,20 @@ warn_redundant_casts = true
 warn_unreachable = true
 pretty = true
 
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "transformers",
+    "llmspec",
+    "openai",
+]
+ignore_missing_imports = true
+
 [tool.pyright]
-pythonPlatform = "All"
+pythonPlatform = ["Linux", "Darwin"]
 pythonVersion = "3.8"
 include = ["mosec", "tests", "examples"]
+reportMissingImports = "warning"
 
 [tool.isort]
 profile = "black"
