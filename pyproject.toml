@@ -59,9 +59,10 @@ warn_unreachable = true
 pretty = true
 
 [tool.pyright]
-pythonPlatform = "All"
+pythonPlatform = ["Linux", "Darwin"]
 pythonVersion = "3.8"
 include = ["mosec", "tests", "examples"]
+reportMissingImports = "warning"
 
 [tool.isort]
 profile = "black"
