@@ -19,9 +19,9 @@ import os
 from typing import List, Union
 
 import numpy as np
-import torch  # type: ignore
-import torch.nn.functional as F  # type: ignore
-import transformers  # type: ignore
+import torch
+import torch.nn.functional as F
+import transformers
 from llmspec import EmbeddingData, EmbeddingRequest, EmbeddingResponse, TokenUsage
 
 from mosec import ClientError, Runtime, Server, Worker
