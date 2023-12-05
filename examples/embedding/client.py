@@ -16,16 +16,13 @@
 
 import os
 
-import openai
-
-openai.api_key = ""
-openai.api_base = "http://127.0.0.1:8000/"
+from openai import Client
 
 DEFAULT_MODEL = "thenlper/gte-base"
 
-
-emb = openai.Embedding.create(
+client = Client(api_key="fake", base_url="http://127.0.0.1:8000/")
+emb = client.embeddings.create(
     model=os.environ.get("EMB_MODEL", DEFAULT_MODEL),
     input="Hello world!",
 )
-print(emb["data"][0]["embedding"])  # type: ignore
+print(emb.data[0].embedding)  # type: ignore
