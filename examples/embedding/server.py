@@ -41,7 +41,9 @@ class Embedding(Worker):
         self.model = self.model.to(self.device)
         self.model.eval()
 
-    def get_embedding_with_token_count(self, sentences: Union[str, List[str]]):
+    def get_embedding_with_token_count(
+        self, sentences: Union[str, List[Union[str, List[int]]]]
+    ):
         # Mean Pooling - Take attention mask into account for correct averaging
         def mean_pooling(model_output, attention_mask):
             # First element of model_output contains all token embeddings
@@ -54,6 +56,7 @@ class Embedding(Worker):
             )
 
         # Tokenize sentences
+        # TODO: support `List[List[int]]` input
         encoded_input = self.tokenizer(
             sentences, padding=True, truncation=True, return_tensors="pt"
         )

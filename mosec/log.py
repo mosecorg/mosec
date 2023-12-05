@@ -36,11 +36,13 @@ class MosecFormat(logging.Formatter):
     This class uses `datetime` instead of `localtime` to get accurate milliseconds.
     """
 
-    default_time_format = "%Y-%m-%dT%H:%M:%S.%f%z"
+    # `%z` will be empty string if the object is naive, so we use `Z` to make it
+    # compatible with rfc3339
+    default_time_format = "%Y-%m-%dT%H:%M:%S.%fZ "
 
     def formatTime(self, record: logging.LogRecord, datefmt=None) -> str:
         """Convert to datetime with timezone."""
-        time = datetime.fromtimestamp(record.created).astimezone()
+        time = datetime.fromtimestamp(record.created).utcnow()
         return datetime.strftime(time, datefmt if datefmt else self.default_time_format)
 
 

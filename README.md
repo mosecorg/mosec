@@ -120,7 +120,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         return images
 ```
 
-> **Note**
+> [!NOTE]
 >
 > (a) In this example we return an image in the binary format, which JSON does not support (unless encoded with base64 that makes the payload larger). Hence, msgpack suits our need better. If we do not inherit `MsgpackMixin`, JSON will be used by default. In other words, the protocol of the service request/response can be either msgpack, JSON, or any other format (check our [mixins](https://mosecorg.github.io/mosec/reference/interface.html#module-mosec.mixin)).
 >

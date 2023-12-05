@@ -28,7 +28,7 @@ use axum::routing::{get, post};
 use axum::Router;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{debug, info};
-use tracing_subscriber::fmt::time::OffsetTime;
+use tracing_subscriber::fmt::time::UtcTime;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{filter, Layer};
 use utoipa::OpenApi;
@@ -115,7 +115,7 @@ fn main() {
     let conf: Config = serde_json::from_str(&config_str).expect("parse config failure");
 
     // this has to be defined before tokio multi-threads
-    let timer = OffsetTime::local_rfc_3339().expect("local time offset");
+    let timer = UtcTime::rfc_3339();
     if conf.log_level == "debug" {
         // use colorful log for debug
         let output = tracing_subscriber::fmt::layer().compact().with_timer(timer);
