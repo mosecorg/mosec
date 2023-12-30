@@ -65,7 +65,9 @@ class TypedMsgPackMixin(Worker):
         schema, comp_schema = {}, {}
         typ = parse_func_type(cls.forward, target)
         try:
-            (schema,), comp_schema = msgspec.json.schema_components([typ], ref_template)
+            (schema,), comp_schema = msgspec.json.schema_components(
+                [typ], ref_template=ref_template
+            )
         except TypeError as err:
             logger.warning(
                 "Failed to generate JSON schema for %s: %s", cls.__name__, err
