@@ -21,15 +21,10 @@ Features:
 """
 
 
-import warnings
+from importlib import import_module
 from typing import Any
 
 from mosec.errors import DecodingError, EncodingError
-
-try:
-    import msgpack  # type: ignore
-except ImportError:
-    warnings.warn("msgpack is required for MsgpackMixin", ImportWarning)
 
 
 class MsgpackMixin:
@@ -38,6 +33,7 @@ class MsgpackMixin:
     # pylint: disable=no-self-use
 
     resp_mime_type = "application/msgpack"
+    msgpack = import_module("msgpack")
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with msgpack for the last stage (egress).
@@ -53,7 +49,7 @@ class MsgpackMixin:
             EncodingError: if the data cannot be serialized with msgpack
         """
         try:
-            data_bytes = msgpack.packb(data)
+            data_bytes = self.msgpack.packb(data)
         except Exception as err:
             raise EncodingError from err
         return data_bytes  # type: ignore
@@ -72,7 +68,7 @@ class MsgpackMixin:
             DecodingError: if the data cannot be deserialized with msgpack
         """
         try:
-            data_msg = msgpack.unpackb(data, use_list=False)
+            data_msg = self.msgpack.unpackb(data, use_list=False)
         except Exception as err:
             raise DecodingError from err
         return data_msg

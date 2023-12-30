@@ -23,17 +23,10 @@ sent via the original way.
     benefits: more stable P99 latency
 
 """
-import warnings
+
+from importlib import import_module
 from os import environ
 from typing import Any
-
-try:
-    import redis  # type: ignore
-except ImportError:
-    warnings.warn(
-        "redis is not installed. RedisShmIPCMixin is not available.", ImportWarning
-    )
-
 
 from mosec.worker import Worker
 
@@ -44,8 +37,7 @@ _DEFAULT_KEY = "REDIS_SHM_IPC_KEY"
 class RedisShmIPCMixin(Worker):
     """Redis shared memory worker mixin interface."""
 
-    # pylint: disable=no-self-use
-
+    redis = import_module("redis")
     _redis_client = None
     _redis_key = _DEFAULT_KEY
     _next_id = None
@@ -64,7 +56,7 @@ class RedisShmIPCMixin(Worker):
                     "please set the redis url with "
                     "`RedisShmIPCMixin.set_redis_url()`"
                 )
-            self._redis_client = redis.from_url(url)
+            self._redis_client = self.redis.from_url(url)
         return self._redis_client
 
     def _prepare_next_id(self) -> None:

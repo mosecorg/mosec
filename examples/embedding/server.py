@@ -19,9 +19,9 @@ import os
 from typing import List, Union
 
 import numpy as np
-import torch
-import torch.nn.functional as F
-import transformers
+import torch  # type: ignore
+import torch.nn.functional as F  # type: ignore
+import transformers  # type: ignore
 from llmspec import EmbeddingData, EmbeddingRequest, EmbeddingResponse, TokenUsage
 
 from mosec import ClientError, Runtime, Server, Worker
@@ -71,24 +71,24 @@ class Embedding(Worker):
 
         return token_count, sentence_embeddings
 
-    def deserialize(self, req: bytes) -> EmbeddingRequest:
-        return EmbeddingRequest.from_bytes(req)
+    def deserialize(self, data: bytes) -> EmbeddingRequest:
+        return EmbeddingRequest.from_bytes(data)
 
-    def serialize(self, resp: EmbeddingResponse) -> bytes:
-        return resp.to_json()
+    def serialize(self, data: EmbeddingResponse) -> bytes:
+        return data.to_json()
 
-    def forward(self, req: EmbeddingRequest) -> EmbeddingResponse:
-        if req.model != self.model_name:
+    def forward(self, data: EmbeddingRequest) -> EmbeddingResponse:
+        if data.model != self.model_name:
             raise ClientError(
-                f"the requested model {req.model} is not supported by "
+                f"the requested model {data.model} is not supported by "
                 f"this worker {self.model_name}"
             )
-        token_count, embeddings = self.get_embedding_with_token_count(req.input)
+        token_count, embeddings = self.get_embedding_with_token_count(data.input)
         embeddings = embeddings.detach()
         if self.device != "cpu":
             embeddings = embeddings.cpu()
         embeddings = embeddings.numpy()
-        if req.encoding_format == "base64":
+        if data.encoding_format == "base64":
             embeddings = [
                 base64.b64encode(emb.astype(np.float32).tobytes()).decode("utf-8")
                 for emb in embeddings

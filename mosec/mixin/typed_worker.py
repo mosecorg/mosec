@@ -14,18 +14,13 @@
 
 """MOSEC type validation mixin."""
 
-import warnings
+from importlib import import_module
 from typing import Any, Dict, Optional, Tuple
 
 from mosec import get_logger
 from mosec.errors import ValidationError
 from mosec.utils import ParseTarget, parse_func_type
 from mosec.worker import Worker
-
-try:
-    import msgspec  # type: ignore
-except ImportError:
-    warnings.warn("msgpack is required for TypedMsgPackMixin", ImportWarning)
 
 logger = get_logger()
 
@@ -37,23 +32,24 @@ class TypedMsgPackMixin(Worker):
 
     resp_mime_type = "application/msgpack"
     _input_typ: Optional[type] = None
+    msgspec = import_module("msgspec")
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
         if not self._input_typ:
             self._input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
-        if not issubclass(self._input_typ, msgspec.Struct):
+        if not issubclass(self._input_typ, self.msgspec.Struct):
             # skip other annotation type
             return super().deserialize(data)
 
         try:
-            return msgspec.msgpack.decode(data, type=self._input_typ)
-        except msgspec.ValidationError as err:
-            raise ValidationError(err)  # pylint: disable=raise-missing-from
+            return self.msgspec.msgpack.decode(data, type=self._input_typ)
+        except self.msgspec.ValidationError as err:
+            raise ValidationError(err) from err
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with `msgpack`."""
-        return msgspec.msgpack.encode(data)
+        return self.msgspec.msgpack.encode(data)
 
     @classmethod
     def get_forward_json_schema(
@@ -65,7 +61,7 @@ class TypedMsgPackMixin(Worker):
         schema, comp_schema = {}, {}
         typ = parse_func_type(cls.forward, target)
         try:
-            (schema,), comp_schema = msgspec.json.schema_components(
+            (schema,), comp_schema = cls.msgspec.json.schema_components(
                 [typ], ref_template=ref_template
             )
         except TypeError as err:
