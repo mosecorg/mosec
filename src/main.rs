@@ -96,7 +96,7 @@ async fn run(conf: &Config) {
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     info!(?addr, "http service is running");
     axum::serve(listener, router.into_make_service())
-        // .with_graceful_shutdown(shutdown_signal())  // waiting for https://github.com/hyperium/hyper-util/pull/66
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
 }
