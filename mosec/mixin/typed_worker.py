@@ -14,7 +14,8 @@
 
 """MOSEC type validation mixin."""
 
-from importlib import import_module
+# pylint: disable=import-outside-toplevel
+
 from typing import Any, Dict, Optional, Tuple
 
 from mosec import get_logger
@@ -32,36 +33,41 @@ class TypedMsgPackMixin(Worker):
 
     resp_mime_type = "application/msgpack"
     _input_typ: Optional[type] = None
-    msgspec = import_module("msgspec")
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
+        import msgspec
+
         if not self._input_typ:
             self._input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
-        if not issubclass(self._input_typ, self.msgspec.Struct):
+        if not issubclass(self._input_typ, msgspec.Struct):
             # skip other annotation type
             return super().deserialize(data)
 
         try:
-            return self.msgspec.msgpack.decode(data, type=self._input_typ)
-        except self.msgspec.ValidationError as err:
+            return msgspec.msgpack.decode(data, type=self._input_typ)
+        except msgspec.ValidationError as err:
             raise ValidationError(err) from err
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with `msgpack`."""
-        return self.msgspec.msgpack.encode(data)
+        import msgspec
+
+        return msgspec.msgpack.encode(data)
 
     @classmethod
     def get_forward_json_schema(
         cls, target: ParseTarget, ref_template: str
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Get the JSON schema of the forward function."""
+        import msgspec
+
         schema: Dict[str, Any]
         comp_schema: Dict[str, Any]
         schema, comp_schema = {}, {}
         typ = parse_func_type(cls.forward, target)
         try:
-            (schema,), comp_schema = cls.msgspec.json.schema_components(
+            (schema,), comp_schema = msgspec.json.schema_components(
                 [typ], ref_template=ref_template
             )
         except TypeError as err:

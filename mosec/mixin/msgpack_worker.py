@@ -20,8 +20,8 @@ Features:
     * serialize response body with msgpack
 """
 
+# pylint: disable=import-outside-toplevel
 
-from importlib import import_module
 from typing import Any
 
 from mosec.errors import DecodingError, EncodingError
@@ -33,7 +33,6 @@ class MsgpackMixin:
     # pylint: disable=no-self-use
 
     resp_mime_type = "application/msgpack"
-    msgpack = import_module("msgpack")
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with msgpack for the last stage (egress).
@@ -48,8 +47,10 @@ class MsgpackMixin:
         Raises:
             EncodingError: if the data cannot be serialized with msgpack
         """
+        import msgpack  # type: ignore
+
         try:
-            data_bytes = self.msgpack.packb(data)
+            data_bytes = msgpack.packb(data)
         except Exception as err:
             raise EncodingError from err
         return data_bytes  # type: ignore
@@ -67,8 +68,10 @@ class MsgpackMixin:
         Raises:
             DecodingError: if the data cannot be deserialized with msgpack
         """
+        import msgpack
+
         try:
-            data_msg = self.msgpack.unpackb(data, use_list=False)
+            data_msg = msgpack.unpackb(data, use_list=False)
         except Exception as err:
             raise DecodingError from err
         return data_msg

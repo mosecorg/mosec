@@ -22,7 +22,8 @@ Features:
 Attention: numbin only supports NumPy ndarray types.
 """
 
-from importlib import import_module
+# pylint: disable=import-outside-toplevel
+
 from typing import Any
 
 from mosec.errors import DecodingError, EncodingError
@@ -31,20 +32,24 @@ from mosec.errors import DecodingError, EncodingError
 class NumBinIPCMixin:
     """NumBin IPC worker mixin interface."""
 
-    nb = import_module("numbin")
+    # pylint: disable=no-self-use
 
     def serialize_ipc(self, data: Any) -> bytes:
         """Serialize with NumBin for the IPC."""
+        import numbin
+
         try:
-            data_bytes = self.nb.dumps(data)
+            data_bytes = numbin.dumps(data)
         except Exception as err:
             raise EncodingError from err
         return data_bytes
 
     def deserialize_ipc(self, data: bytes) -> Any:
         """Deserialize with NumBin for the IPC."""
+        import numbin
+
         try:
-            array = self.nb.loads(data)
+            array = numbin.loads(data)
         except Exception as err:
             raise DecodingError from err
         return array

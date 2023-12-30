@@ -24,7 +24,8 @@ sent via the original way.
 
 """
 
-from importlib import import_module
+# pylint: disable=import-outside-toplevel
+
 from os import environ
 from typing import Any
 
@@ -37,7 +38,6 @@ _DEFAULT_KEY = "REDIS_SHM_IPC_KEY"
 class RedisShmIPCMixin(Worker):
     """Redis shared memory worker mixin interface."""
 
-    redis = import_module("redis")
     _redis_client = None
     _redis_key = _DEFAULT_KEY
     _next_id = None
@@ -49,6 +49,8 @@ class RedisShmIPCMixin(Worker):
 
     def _get_client(self) -> Any:
         """Get the redis client. This will create a new one if not exist."""
+        import redis
+
         if self._redis_client is None:
             url = environ.get(_REDIS_URL_ENV)
             if not url:
@@ -56,7 +58,7 @@ class RedisShmIPCMixin(Worker):
                     "please set the redis url with "
                     "`RedisShmIPCMixin.set_redis_url()`"
                 )
-            self._redis_client = self.redis.from_url(url)
+            self._redis_client = redis.from_url(url)
         return self._redis_client
 
     def _prepare_next_id(self) -> None:
