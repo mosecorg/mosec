@@ -27,27 +27,18 @@ The plasma is deprecated in `pyarrow`. Please use Redis instead.
 ```
 """
 
-import warnings
+# pylint: disable=import-outside-toplevel
+
 from os import environ
 from typing import Any
 
 from mosec.worker import Worker
-
-try:
-    from pyarrow import plasma  # type: ignore
-except ImportError:
-    warnings.warn(
-        "pyarrow is not installed. PlasmaShmMixin is not available.", ImportWarning
-    )
-
 
 _PLASMA_PATH_ENV = "MOSEC_INTERNAL_PLASMA_PATH"
 
 
 class PlasmaShmIPCMixin(Worker):
     """Plasma shared memory worker mixin interface."""
-
-    # pylint: disable=no-self-use
 
     _plasma_client = None
 
@@ -58,6 +49,8 @@ class PlasmaShmIPCMixin(Worker):
 
     def _get_client(self):
         """Get the plasma client. This will create a new one if not exist."""
+        from pyarrow import plasma  # type: ignore
+
         if not self._plasma_client:
             path = environ.get(_PLASMA_PATH_ENV)
             if not path:
@@ -76,6 +69,8 @@ class PlasmaShmIPCMixin(Worker):
 
     def deserialize_ipc(self, data: bytes) -> Any:
         """Get the data from the plasma server and delete it."""
+        from pyarrow import plasma
+
         client = self._get_client()
         object_id = plasma.ObjectID(bytes(data))
         obj = super().deserialize_ipc(client.get(object_id))

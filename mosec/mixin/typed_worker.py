@@ -14,18 +14,14 @@
 
 """MOSEC type validation mixin."""
 
-import warnings
+# pylint: disable=import-outside-toplevel
+
 from typing import Any, Dict, Optional, Tuple
 
 from mosec import get_logger
 from mosec.errors import ValidationError
 from mosec.utils import ParseTarget, parse_func_type
 from mosec.worker import Worker
-
-try:
-    import msgspec  # type: ignore
-except ImportError:
-    warnings.warn("msgpack is required for TypedMsgPackMixin", ImportWarning)
 
 logger = get_logger()
 
@@ -40,6 +36,8 @@ class TypedMsgPackMixin(Worker):
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
+        import msgspec
+
         if not self._input_typ:
             self._input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
         if not issubclass(self._input_typ, msgspec.Struct):
@@ -49,10 +47,12 @@ class TypedMsgPackMixin(Worker):
         try:
             return msgspec.msgpack.decode(data, type=self._input_typ)
         except msgspec.ValidationError as err:
-            raise ValidationError(err)  # pylint: disable=raise-missing-from
+            raise ValidationError(err) from err
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with `msgpack`."""
+        import msgspec
+
         return msgspec.msgpack.encode(data)
 
     @classmethod
@@ -60,12 +60,16 @@ class TypedMsgPackMixin(Worker):
         cls, target: ParseTarget, ref_template: str
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Get the JSON schema of the forward function."""
+        import msgspec
+
         schema: Dict[str, Any]
         comp_schema: Dict[str, Any]
         schema, comp_schema = {}, {}
         typ = parse_func_type(cls.forward, target)
         try:
-            (schema,), comp_schema = msgspec.json.schema_components([typ], ref_template)
+            (schema,), comp_schema = msgspec.json.schema_components(
+                [typ], ref_template=ref_template
+            )
         except TypeError as err:
             logger.warning(
                 "Failed to generate JSON schema for %s: %s", cls.__name__, err

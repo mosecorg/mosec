@@ -29,7 +29,7 @@ class Inference(Worker):
         device = os.environ["CUDA_VISIBLE_DEVICES"]
         logger.info("initializing model on device=%s", device)
 
-    def forward(self, _: dict) -> dict:
+    def forward(self, data: dict) -> dict:
         device = os.environ["CUDA_VISIBLE_DEVICES"]
         # NOTE self.worker_id is 1-indexed
         logger.info("worker=%d on device=%s is processing...", self.worker_id, device)

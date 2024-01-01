@@ -23,17 +23,11 @@ sent via the original way.
     benefits: more stable P99 latency
 
 """
-import warnings
+
+# pylint: disable=import-outside-toplevel
+
 from os import environ
 from typing import Any
-
-try:
-    import redis  # type: ignore
-except ImportError:
-    warnings.warn(
-        "redis is not installed. RedisShmIPCMixin is not available.", ImportWarning
-    )
-
 
 from mosec.worker import Worker
 
@@ -43,8 +37,6 @@ _DEFAULT_KEY = "REDIS_SHM_IPC_KEY"
 
 class RedisShmIPCMixin(Worker):
     """Redis shared memory worker mixin interface."""
-
-    # pylint: disable=no-self-use
 
     _redis_client = None
     _redis_key = _DEFAULT_KEY
@@ -57,6 +49,8 @@ class RedisShmIPCMixin(Worker):
 
     def _get_client(self) -> Any:
         """Get the redis client. This will create a new one if not exist."""
+        import redis
+
         if self._redis_client is None:
             url = environ.get(_REDIS_URL_ENV)
             if not url:

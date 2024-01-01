@@ -14,14 +14,13 @@
 
 use std::time::Duration;
 
-use axum::body::BoxBody;
+use axum::body::{to_bytes, Body};
 use axum::http::Uri;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use hyper::body::to_bytes;
 use hyper::header::{HeaderValue, CONTENT_TYPE};
-use hyper::{Body, Request, Response, StatusCode};
+use hyper::{Request, Response, StatusCode};
 use prometheus_client::encoding::text::encode;
 use tracing::warn;
 use utoipa::OpenApi;
@@ -33,8 +32,10 @@ use crate::tasks::{TaskCode, TaskManager};
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
+const RESPONSE_TOO_LARGE: &[u8] = b"request body is too large";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 const DEFAULT_RESPONSE_MIME: &str = "application/json";
+const DEFAULT_MAX_REQUEST_SIZE: usize = 10 * 1024 * 1024; // 10MB
 
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
     Response::builder()
@@ -106,7 +107,6 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         Some(mime) => mime.as_str(),
         None => DEFAULT_RESPONSE_MIME,
     };
-    let data = to_bytes(req.into_body()).await.unwrap();
 
     if task_manager.is_shutdown() {
         return build_response(
@@ -115,6 +115,16 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         );
     }
 
+    let data = match to_bytes(req.into_body(), DEFAULT_MAX_REQUEST_SIZE).await {
+        Ok(data) => data,
+        Err(err) => {
+            warn!(?err, "failed to read request body (too large)");
+            return build_response(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                Bytes::from_static(RESPONSE_TOO_LARGE),
+            );
+        }
+    };
     if data.is_empty() {
         return build_response(StatusCode::OK, Bytes::from_static(RESPONSE_EMPTY));
     }
@@ -184,10 +194,9 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
     ),
 )]
-pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<BoxBody> {
+pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<Body> {
     let task_manager = TaskManager::global();
     let endpoint = uri.path();
-    let data = to_bytes(req.into_body()).await.unwrap();
 
     if task_manager.is_shutdown() {
         return (
@@ -197,6 +206,16 @@ pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<BoxB
             .into_response();
     }
 
+    let data = match to_bytes(req.into_body(), DEFAULT_MAX_REQUEST_SIZE).await {
+        Ok(data) => data,
+        Err(err) => {
+            warn!(?err, "failed to read request body (too large)");
+            return build_response(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                Bytes::from_static(RESPONSE_TOO_LARGE),
+            );
+        }
+    };
     if data.is_empty() {
         return (StatusCode::OK, Bytes::from_static(RESPONSE_EMPTY)).into_response();
     }

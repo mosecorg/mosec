@@ -27,10 +27,10 @@ class Request(Struct):
 
 
 class Demo(Worker):
-    def forward(self, _data: Request):
+    def forward(self, data: Request):
         pass
 
-    def batch_forward(self, _data: List[Request]):
+    def batch_forward(self, data: List[Request]):
         pass
 
 

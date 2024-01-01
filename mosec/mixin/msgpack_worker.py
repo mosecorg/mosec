@@ -20,16 +20,11 @@ Features:
     * serialize response body with msgpack
 """
 
+# pylint: disable=import-outside-toplevel
 
-import warnings
 from typing import Any
 
 from mosec.errors import DecodingError, EncodingError
-
-try:
-    import msgpack  # type: ignore
-except ImportError:
-    warnings.warn("msgpack is required for MsgpackMixin", ImportWarning)
 
 
 class MsgpackMixin:
@@ -52,6 +47,8 @@ class MsgpackMixin:
         Raises:
             EncodingError: if the data cannot be serialized with msgpack
         """
+        import msgpack  # type: ignore
+
         try:
             data_bytes = msgpack.packb(data)
         except Exception as err:
@@ -71,6 +68,8 @@ class MsgpackMixin:
         Raises:
             DecodingError: if the data cannot be deserialized with msgpack
         """
+        import msgpack
+
         try:
             data_msg = msgpack.unpackb(data, use_list=False)
         except Exception as err:
