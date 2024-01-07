@@ -51,6 +51,8 @@ Mosec requires Python 3.7 or above. Install the latest [PyPI package](https://py
 
 ```shell
 pip install -U mosec
+# or install with conda
+conda install conda-forge::mosec
 ```
 
 To build from the source code, install [Rust](https://www.rust-lang.org/) and run the following command:
