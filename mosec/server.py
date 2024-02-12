@@ -176,8 +176,10 @@ class Server:
         """Register a daemon to be monitored.
 
         Args:
+        ----
             name: the name of this daemon
             proc: the process handle of the daemon
+
         """
         assert isinstance(name, str), "daemon name should be a string"
         assert isinstance(
@@ -200,6 +202,7 @@ class Server:
         """Sequentially appends workers to the workflow pipeline.
 
         Args:
+        ----
             worker: the class you inherit from :class:`Worker<mosec.worker.Worker>`
                 which implements the :py:meth:`forward<mosec.worker.Worker.forward>`
             num: the number of processes for parallel computing (>=1)
@@ -215,6 +218,7 @@ class Server:
             route: the route path for this worker. If not configured, will use the
                 default route path `/inference`. If a list is provided, different
                 route paths will share the same worker.
+
         """
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
@@ -296,15 +300,17 @@ def generate_openapi(workers: List[Type[Worker]]):
             request_worker_cls.resp_mime_type,
             input_schema,
         ),
-        "responses": None
-        if not return_schema
-        else {
-            "200": make_body(
-                "Mosec Inference Result",
-                response_worker_cls.resp_mime_type,
-                return_schema,
-            )
-        },
+        "responses": (
+            None
+            if not return_schema
+            else {
+                "200": make_body(
+                    "Mosec Inference Result",
+                    response_worker_cls.resp_mime_type,
+                    return_schema,
+                )
+            }
+        ),
         "schemas": {**input_components, **return_components},
         "mime": response_worker_cls.resp_mime_type,
     }

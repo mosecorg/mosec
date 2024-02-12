@@ -68,6 +68,8 @@ def get_env_namespace(prefix: str = MOSEC_ENV_PREFIX) -> Namespace:
             warnings.warn(
                 f"failed to convert env {var}={value} to type {converter} {err}, "
                 "will skip this one",
+                RuntimeWarning,
+                stacklevel=2,
             )
         else:
             setattr(namespace, name, val)
@@ -97,8 +99,8 @@ def validate_env(env: Union[Any, List[Dict[str, str]]], num: int):
         return
     assert len(env) == num, "len(env) must equal to num"
     valid = True
-    if not isinstance(env, List):
-        valid = False
-    elif not all(isinstance(x, Dict) and validate_str_dict(x) for x in env):
+    if not isinstance(env, List) or not all(
+        isinstance(x, Dict) and validate_str_dict(x) for x in env
+    ):
         valid = False
     assert valid, "env must be a list of string dictionary"

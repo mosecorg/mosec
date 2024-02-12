@@ -41,7 +41,7 @@ doc:
 
 clean:
 	@cargo clean
-	@-rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache
+	@-rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache .ruff_cache
 	@-find . -name '*.pyc' -type f -exec rm -rf {} +
 	@-find . -name '__pycache__' -exec rm -rf {} +
 
@@ -55,23 +55,17 @@ publish: package
 	twine upload dist/*
 
 format:
-	@autoflake --in-place --recursive ${PY_SOURCE_FILES}
-	@isort --project=mosec ${PY_SOURCE_FILES}
-	@black ${PY_SOURCE_FILES}
+	@ruff check --fix ${PY_SOURCE_FILES}
+	@ruff format ${PY_SOURCE_FILES}
 	@cargo +nightly fmt --all
 
 lint:
 	@pip install -q -e .
-	isort --check --diff --project=mosec ${PY_SOURCE_FILES}
-	black --check --diff ${PY_SOURCE_FILES}
-	pylint -j 8 --recursive=y mosec setup.py
-	pylint -j 8 --recursive=y --disable=import-error examples --generated-members=numpy.*,torch.*,cv2.*,cv.*
-	pylint -j 8 --recursive=y tests --disable=unused-argument,missing-function-docstring,missing-class-docstring,redefined-outer-name,too-few-public-methods,consider-using-with
-	pydocstyle mosec
+	@ruff check ${PY_SOURCE_FILES}
 	@-rm mosec/_version.py
-	pyright --stats
-	mypy --non-interactive --install-types ${PY_SOURCE_FILES}
-	cargo +nightly fmt -- --check
+	@pyright --stats
+	@mypy --non-interactive --install-types ${PY_SOURCE_FILES}
+	@cargo +nightly fmt -- --check
 
 semantic_lint:
 	@cargo clippy -- -D warnings

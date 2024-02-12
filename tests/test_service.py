@@ -124,9 +124,10 @@ def test_timeout_service(mosec_service, http_client, status_code):
     indirect=["mosec_service", "http_client"],
 )
 def test_mixin_ipc_shm_service(mosec_service, http_client):
-    resp = http_client.post("/inference", json={"size": 8})
+    size = 8
+    resp = http_client.post("/inference", json={"size": size})
     assert resp.status_code == HTTPStatus.OK, resp
-    assert len(resp.json().get("x")) == 8
+    assert len(resp.json().get("x")) == size
     assert resp.headers["content-type"] == "application/json"
 
 
@@ -182,6 +183,7 @@ def test_mixin_typed_service(mosec_service, http_client):
     indirect=["mosec_service", "http_client"],
 )
 def test_sse_service(mosec_service, http_client):
+    epoch = 5
     count = 0
     with connect_sse(
         http_client, "POST", "/inference", json={"text": "mosec"}
@@ -190,7 +192,7 @@ def test_sse_service(mosec_service, http_client):
             count += 1
             assert sse.event == "message"
             assert sse.data == "mosec"
-    assert count == 5
+    assert count == epoch
 
     count = 0
     with connect_sse(

@@ -26,6 +26,7 @@ from typing import List
 from mosec import Server, ServerError, ValidationError, Worker, get_logger
 
 logger = get_logger()
+LUCKY_THRESHOLD = 0.5
 
 
 class Preprocess(Worker):
@@ -48,7 +49,7 @@ class Inference(Worker):
         if len(data) == 1 and data[0] == 0:
             return data
         # chaos
-        if random() < 0.5:
+        if random() < LUCKY_THRESHOLD:
             logger.info("bad luck, this batch will be drop")
             raise ServerError("no way")
         logger.info("sleeping for %s seconds", max(data))

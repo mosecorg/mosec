@@ -72,8 +72,10 @@ class Pool:
         """Initialize a process pool.
 
         Args:
+        ----
             process_context: server context of spawn process
             shutdown_notify: event of server will shutdown
+
         """
         self.process_context = process_context
         self.shutdown_notify = shutdown_notify
@@ -92,6 +94,7 @@ class Pool:
         """Start the worker process for dry run.
 
         Args:
+        ----
             worker_runtime: worker runtime to start
             init: whether the worker is tried to start at the first time
 
@@ -118,7 +121,8 @@ class Pool:
     def probe_worker_liveness(self) -> Tuple[Union[int, None], Union[int, None]]:
         """Check every worker is running/alive.
 
-        Returns:
+        Returns
+        -------
             index: index of the first failed worker
             exitcode: exitcode of the first failed worker
 
@@ -131,7 +135,8 @@ class Pool:
     def wait_all(self) -> Tuple[Union[int, None], Union[int, None]]:
         """Blocking until all worker to end or one failed.
 
-        Returns:
+        Returns
+        -------
             index: index of the first failed worker
             exitcode: exitcode of the first failed worker
 

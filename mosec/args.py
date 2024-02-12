@@ -147,6 +147,7 @@ def parse_arguments() -> argparse.Namespace:
             "`--wait` is deprecated and will be removed in v1, please configure"
             "the `max_wait_time` on `Server.append_worker`",
             DeprecationWarning,
+            stacklevel=2,
         )
 
     if args.debug:
@@ -155,6 +156,7 @@ def parse_arguments() -> argparse.Namespace:
             "`--debug` is deprecated and will be removed in v1, please configure"
             "`--log_level=debug`",
             DeprecationWarning,
+            stacklevel=2,
         )
 
     if not is_port_available(args.address, args.port):

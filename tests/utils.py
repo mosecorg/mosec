@@ -97,4 +97,4 @@ def env_context(**kwargs):
     old_env = os.environ.copy()
     os.environ.update(kwargs)
     yield
-    os.environ = old_env
+    os.environ.update(old_env)

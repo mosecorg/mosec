@@ -74,12 +74,15 @@ class Worker(abc.ABC):
 
         This method doesn't require the child class to override.
         """
+        super().__init__()
 
     def serialize_ipc(self, data: Any) -> bytes:
         """Define IPC serialization method.
 
         Args:
+        ----
             data: returned data from :py:meth:`forward`
+
         """
         return pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -87,7 +90,9 @@ class Worker(abc.ABC):
         """Define IPC deserialization method.
 
         Args:
+        ----
             data: input data for :py:meth:`forward`
+
         """
         return pickle.loads(data)
 
@@ -132,13 +137,17 @@ class Worker(abc.ABC):
         Check :py:mod:`mosec.mixin` for more information.
 
         Arguments:
+        ---------
             data: the same type as the output of the :py:meth:`forward`
 
         Returns:
+        -------
             the bytes you want to put into the response body
 
         Raises:
+        ------
             EncodingError: if the data cannot be serialized with JSON
+
         """
         try:
             data_bytes = json.dumps(data, indent=2).encode()
@@ -154,13 +163,17 @@ class Worker(abc.ABC):
         Check :py:mod:`mosec.mixin` for more information.
 
         Arguments:
+        ---------
             data: the raw bytes extracted from the request body
 
         Returns:
+        -------
             the same type as the input of the :py:meth:`forward`
 
         Raises:
+        ------
             DecodingError: if the data cannot be deserialized with JSON
+
         """
         try:
             data_json = json.loads(data) if data else {}
@@ -173,6 +186,7 @@ class Worker(abc.ABC):
         """Model inference, data processing or computation logic.
 
         Args:
+        ----
             data: input data to be processed
 
         **Must be overridden** by the subclass.
@@ -193,21 +207,26 @@ class Worker(abc.ABC):
 
             - for a multi-stage worker that is neither `ingress` not `egress`, data
                 will go through ``<deserialize_ipc> -> <forward> -> <serialize_ipc>``
+
         """
         raise NotImplementedError
 
     @classmethod
     def get_forward_json_schema(
-        cls, target: ParseTarget, ref_template: str  # pylint: disable=unused-argument
+        cls,
+        target: ParseTarget,
+        ref_template: str,  # pylint: disable=unused-argument
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Retrieve the JSON schema for the `forward` method of the class.
 
         Args:
+        ----
             cls : The class object.
             target : The target variable to parse the schema for.
             ref_template : A template to use when generating ``"$ref"`` fields.
 
         Returns:
+        -------
             A tuple containing the schema and the component schemas.
 
         The :py:meth:`get_forward_json_schema` method is a class method that returns the
@@ -225,6 +244,7 @@ class Worker(abc.ABC):
 
             The :py:const:`MOSEC_REF_TEMPLATE` constant should be used as a reference
             template according to openapi standards.
+
         """
         return {}, {}
 
@@ -240,10 +260,12 @@ class SSEWorker(Worker):
         """Send a stream event to the client.
 
         Args:
+        ----
             text: the text to be sent, needs to be UTF-8 compatible
             index: the index of the stream event. For the single request, this will
                 always be 0. For dynamic batch request, this should be the index of
                 the request in this batch.
+
         """
         if self._stream_queue is None or self._stream_semaphore is None:
             raise RuntimeError("the worker stream or semaphore is not initialized")

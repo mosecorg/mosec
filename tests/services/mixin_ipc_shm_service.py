@@ -92,7 +92,7 @@ def start_plasma_shm_mosec():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) <= 1:
         print("Please specify a shm storage service to run: plasma or redis")
         sys.exit(1)
 

@@ -73,27 +73,6 @@ pythonVersion = "3.8"
 include = ["mosec", "tests", "examples"]
 reportMissingImports = "warning"
 
-[tool.isort]
-profile = "black"
-
-[tool.pylint.master]
-load-plugins = "pylint.extensions.docparams,pylint.extensions.docstyle,pylint.extensions.no_self_use"
-default-docstring-type = "google"
-ignore-paths = ["mosec/_version.py"]
-
-[tool.pylint.format]
-max-line-length = 88
-
-[tool.pylint.reports]
-output-format = "colorized"
-reports = "no"
-score = "yes"
-max-args = 7
-max-attributes = 10
-
-[tool.pylint.messages_control]
-disable = []
-
 [pydocstyle]
 convention = "google"
 
@@ -104,7 +83,13 @@ markers = [
 
 [tool.ruff]
 target-version = "py38"
-line-length = 88
-select = ["E", "F", "B", "I", "SIM", "TID", "PL"]
-[tool.ruff.pylint]
-max-args = 11
+[tool.ruff.lint]
+select = ["E", "F", "G", "B", "I", "SIM", "TID", "PL", "RUF", "D"]
+ignore = ["E501", "D203", "D213"]
+[tool.ruff.lint.isort]
+known-first-party = ["mosec"]
+[tool.ruff.lint.pylint]
+max-args = 10
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"examples/*" = ["D"]

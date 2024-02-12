@@ -14,9 +14,11 @@
 
 """Test Server-Sent Event."""
 
+
 from mosec import Server, SSEWorker, ValidationError, Worker, get_logger
 
 logger = get_logger()
+EPOCH = 5
 
 
 class Preprocess(Worker):
@@ -29,8 +31,7 @@ class Preprocess(Worker):
 
 class Inference(SSEWorker):
     def forward(self, data):
-        epoch = 5
-        for _ in range(epoch):
+        for _ in range(EPOCH):
             # pylint: disable=consider-using-enumerate
             for j in range(len(data)):
                 self.send_stream_event(f"{data[j]}", index=j)
