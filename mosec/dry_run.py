@@ -74,6 +74,7 @@ class Pool:
         Args:
             process_context: server context of spawn process
             shutdown_notify: event of server will shutdown
+
         """
         self.process_context = process_context
         self.shutdown_notify = shutdown_notify

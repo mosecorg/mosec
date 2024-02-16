@@ -46,6 +46,7 @@ class MsgpackMixin:
 
         Raises:
             EncodingError: if the data cannot be serialized with msgpack
+
         """
         import msgpack  # type: ignore
 
@@ -67,6 +68,7 @@ class MsgpackMixin:
 
         Raises:
             DecodingError: if the data cannot be deserialized with msgpack
+
         """
         import msgpack
 

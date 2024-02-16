@@ -26,7 +26,7 @@ with open(os.path.join(here, "requirements/mixin.txt"), encoding="utf-8") as f:
 
 class RustExtension(Extension):
     # pylint: disable=too-few-public-methods
-    """Custom Extension class for rust"""
+    """Custom Extension class for rust."""
 
 
 ext_modules = []
@@ -36,13 +36,15 @@ if os.getenv("PRODUCTION_MODE"):
 
 
 class RustBuildExt(_build_ext):
-    """Custom build extension class for rust"""
+    """Custom build extension class for rust."""
 
     def run(self):
+        """Run the build command."""
         for ext in self.extensions:
             self.build_extension(ext)
 
     def build_extension(self, ext: Extension):
+        """Build the extension."""
         if not isinstance(ext, RustExtension):
             return super().build_extension(ext)
 

@@ -55,6 +55,7 @@ def set_mosec_timeout(duration: int):
 
     Args:
         duration (float): the duration in seconds before timing out
+
     """
 
     def handler(signum, frame):
@@ -114,13 +115,14 @@ class Coordinator:
         Args:
             worker: subclass of `mosec.Worker` implemented by users.
             max_batch_size: maximum batch size for this worker.
-            shutdown: `multiprocessing.synchronize.Event` object for shutdown
-                IPC.
+            shutdown: `multiprocessing.synchronize.Event` object for shutdown IPC.
+            shutdown_notify: shutdown notification event.
             socket_prefix: prefix for the socket addresses.
             stage_name: identification name for this worker stage.
             worker_id: identification number for worker processes at the same
                 stage.
             timeout: timeout for the `forward` function.
+
         """
         self.name = f"<{stage_name}|{worker_id}>"
         self.timeout = timeout

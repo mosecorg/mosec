@@ -36,6 +36,7 @@ URL = f"http://127.0.0.1:{PORT}/inference"
 REQ_NUM = int(os.getenv("CHAOS_REQUEST", "10000"))
 # set the thread number in case the CI server cannot get the real CPU number.
 THREAD = 8
+NORMAL_RATE = 0.3
 
 
 def random_req(params, timeout):
@@ -48,7 +49,7 @@ def main():
         futures = [
             executor.submit(
                 random_req,
-                {"time": 0.1} if random() > 0.3 else {"hey": 0},
+                {"time": 0.1} if random() > NORMAL_RATE else {"hey": 0},
                 random() / 3.0,
             )
             for _ in range(REQ_NUM)

@@ -75,6 +75,7 @@ class Protocol:
             name (str): name of its belonging coordinator.
             addr (str): Unix domain socket address in file system's namespace.
             timeout (float, optional): socket timeout. Defaults to 2.0 seconds.
+
         """
         self.socket = socket.socket(
             socket.AF_UNIX,
@@ -117,6 +118,7 @@ class Protocol:
                 f"IPC data ({total_bytes} bytes) is large, "
                 "which may affect performance",
                 RuntimeWarning,
+                stacklevel=2,
             )
         return flag, ids, states, payloads
 

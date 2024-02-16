@@ -27,7 +27,7 @@ class SleepyInference(Worker):
     """Sample Class."""
 
     def forward(self, data: Any) -> Any:
-        sleep_duration = float(os.environ["sleep_duration"])
+        sleep_duration = float(os.environ["SLEEP_DURATION"])
         logger.info("sleep_duration %s", sleep_duration)
         time.sleep(sleep_duration)
         return data
@@ -50,6 +50,6 @@ if __name__ == "__main__":
     server.append_worker(
         SleepyInference,
         timeout=worker_timeout,
-        env=[{"sleep_duration": str(sleep_duration)}],
+        env=[{"SLEEP_DURATION": str(sleep_duration)}],
     )
     server.run()

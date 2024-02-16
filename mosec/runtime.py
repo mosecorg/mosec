@@ -68,6 +68,7 @@ class Runtime:
             timeout (int): timeout (second) for the `forward` function.
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
+
         """
         self.worker = worker
         self.num = num
@@ -145,6 +146,7 @@ class Runtime:
 
         Returns:
             Whether the worker is started successfully
+
         """
         # for every sequential stage
         self._pool = [p if self._process_healthy(p) else None for p in self._pool]
@@ -188,6 +190,7 @@ class PyRuntimeManager:
             work_path: path of working directory
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
+
         """
         self.runtimes: List[Runtime] = []
 
@@ -214,6 +217,7 @@ class PyRuntimeManager:
 
         Args:
             init: whether the worker is tried to start at the first time
+
         """
         for worker_runtime in self.runtimes:
             if not worker_runtime._check(  # pylint: disable=protected-access
@@ -231,6 +235,7 @@ class RsRuntimeManager:
 
         Args:
             timeout: service timeout in milliseconds
+
         """
         self.process: Optional[subprocess.Popen] = None
 
@@ -267,6 +272,7 @@ class RsRuntimeManager:
 
         Args:
             config_path: configuration path of mosec
+
         """
         # pylint: disable=consider-using-with
         self.process = subprocess.Popen([self.server_path, config_path])

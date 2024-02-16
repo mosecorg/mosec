@@ -14,6 +14,7 @@
 """Example: Sample structures for using mosec server."""
 
 import time
+from types import MappingProxyType as ImmutableDict
 from typing import List
 
 from mosec import Server, ValidationError, Worker, get_logger
@@ -24,7 +25,7 @@ logger = get_logger()
 class Preprocess(Worker):
     """Sample Class."""
 
-    example = {"time": 0}
+    example = ImmutableDict({"time": 0})
 
     def forward(self, data: dict) -> float:
         logger.debug("pre received %s", data)
@@ -39,7 +40,7 @@ class Preprocess(Worker):
 class Inference(Worker):
     """Sample Class."""
 
-    example = [0, 1e-5, 2e-4]
+    example = (0, 1e-5, 2e-4)
 
     def forward(self, data: List[float]) -> List[float]:
         logger.info("sleeping for %s seconds", max(data))

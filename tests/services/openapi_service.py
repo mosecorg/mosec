@@ -65,7 +65,7 @@ class UntypedInference(TypedMsgPackMixin, Worker):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) <= 1:
         print("Please specify the worker mapping. e.g. TypedPreprocess/TypedInference")
         sys.exit(1)
 

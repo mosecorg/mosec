@@ -18,14 +18,12 @@ This module provides a way to define the service components for machine learning
 model serving.
 
 Dynamic Batching
-----------------
 
     The user may enable the dynamic batching feature for any stage when the
     corresponding worker is appended, by setting the
     :py:meth:`append_worker(max_batch_size) <Server.append_worker>`.
 
 Multiprocessing
----------------
 
     The user may spawn multiple processes for any stage when the
     corresponding worker is appended, by setting the
@@ -178,6 +176,7 @@ class Server:
         Args:
             name: the name of this daemon
             proc: the process handle of the daemon
+
         """
         assert isinstance(name, str), "daemon name should be a string"
         assert isinstance(
@@ -215,6 +214,7 @@ class Server:
             route: the route path for this worker. If not configured, will use the
                 default route path `/inference`. If a list is provided, different
                 route paths will share the same worker.
+
         """
         timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
@@ -296,15 +296,17 @@ def generate_openapi(workers: List[Type[Worker]]):
             request_worker_cls.resp_mime_type,
             input_schema,
         ),
-        "responses": None
-        if not return_schema
-        else {
-            "200": make_body(
-                "Mosec Inference Result",
-                response_worker_cls.resp_mime_type,
-                return_schema,
-            )
-        },
+        "responses": (
+            None
+            if not return_schema
+            else {
+                "200": make_body(
+                    "Mosec Inference Result",
+                    response_worker_cls.resp_mime_type,
+                    return_schema,
+                )
+            }
+        ),
         "schemas": {**input_components, **return_components},
         "mime": response_worker_cls.resp_mime_type,
     }

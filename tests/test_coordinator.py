@@ -84,19 +84,21 @@ def test_coordinator_worker_property(mocker):
     mocker.patch("mosec.coordinator.CONN_MAX_RETRY", 5)
     mocker.patch("mosec.coordinator.CONN_CHECK_INTERVAL", 0.01)
     ctx = "spawn"
+    max_batch_size = 16
+    worker_id = 3
     coordinator = Coordinator(
         EchoWorkerJSON,
-        max_batch_size=16,
+        max_batch_size=max_batch_size,
         shutdown=mp.get_context(ctx).Event(),
         shutdown_notify=mp.get_context(ctx).Event(),
         socket_prefix=SOCKET_PREFIX,
         stage_name=EchoWorkerJSON.__name__,
-        worker_id=3,
+        worker_id=worker_id,
         timeout=3,
     )
     assert coordinator.worker.stage == EchoWorkerJSON.__name__
-    assert coordinator.worker.worker_id == 3
-    assert coordinator.worker.max_batch_size == 16
+    assert coordinator.worker.worker_id == worker_id
+    assert coordinator.worker.max_batch_size == max_batch_size
 
 
 def make_coordinator(w_cls, shutdown, shutdown_notify, config):
@@ -130,13 +132,12 @@ def test_socket_file_not_found(mocker, base_test_config, caplog):
     shutdown = mp.get_context(c_ctx).Event()
     shutdown_notify = mp.get_context(c_ctx).Event()
 
-    with CleanDirContext():
-        with caplog.at_level(logging.ERROR):
-            _ = make_coordinator(
-                EchoWorkerJSON, shutdown, shutdown_notify, base_test_config
-            )
-            record = caplog.records[0]
-            assert "cannot find the socket file" in record.message
+    with CleanDirContext(), caplog.at_level(logging.ERROR):
+        _ = make_coordinator(
+            EchoWorkerJSON, shutdown, shutdown_notify, base_test_config
+        )
+        record = caplog.records[0]
+        assert "cannot find the socket file" in record.message
 
 
 def test_incorrect_socket_file(mocker, base_test_config, caplog):
