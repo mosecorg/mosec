@@ -67,7 +67,6 @@ class DebugFormat(MosecFormat):
         """Init with `%` style format.
 
         Args:
-        ----
             fmt (str): logging message format (% style)
             datefmt (str): datatime format
             prefix (str): prefix of target
@@ -108,7 +107,6 @@ class JSONFormat(MosecFormat):
         """Init with `%` style format.
 
         Args:
-        ----
             fmt (str): logging message format (% style)
             datefmt (str): datatime format
             prefix (str): prefix of target

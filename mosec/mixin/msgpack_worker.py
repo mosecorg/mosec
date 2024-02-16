@@ -38,16 +38,13 @@ class MsgpackMixin:
         """Serialize with msgpack for the last stage (egress).
 
         Arguments:
-        ---------
             data: the **same type** as returned by
                 :py:meth:`Worker.forward <mosec.worker.Worker.forward>`
 
         Returns:
-        -------
             the bytes you want to put into the response body
 
         Raises:
-        ------
             EncodingError: if the data cannot be serialized with msgpack
 
         """
@@ -63,16 +60,13 @@ class MsgpackMixin:
         """Deserialize method for the first stage (ingress).
 
         Arguments:
-        ---------
             data: the raw bytes extracted from the request body
 
         Returns:
-        -------
             the **same type** as the input of
             :py:meth:`Worker.forward <mosec.worker.Worker.forward>`
 
         Raises:
-        ------
             DecodingError: if the data cannot be deserialized with msgpack
 
         """

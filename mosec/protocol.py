@@ -72,7 +72,6 @@ class Protocol:
         """Initialize the protocol client.
 
         Args:
-        ----
             name (str): name of its belonging coordinator.
             addr (str): Unix domain socket address in file system's namespace.
             timeout (float, optional): socket timeout. Defaults to 2.0 seconds.

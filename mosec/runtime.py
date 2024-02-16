@@ -57,7 +57,6 @@ class Runtime:
         """Initialize the mosec coordinator.
 
         Args:
-        ----
             worker (Worker): subclass of `mosec.Worker` implemented by users.
             num (int): number of workers
             max_batch_size: the maximum batch size allowed (>=1), will enable the
@@ -140,14 +139,12 @@ class Runtime:
         """Check and start the worker process if it has not started yet.
 
         Args:
-        ----
             work_path: path of working directory
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
             init: whether the worker is tried to start at the first time
 
         Returns:
-        -------
             Whether the worker is started successfully
 
         """
@@ -190,7 +187,6 @@ class PyRuntimeManager:
         """Initialize a coordinator manager.
 
         Args:
-        ----
             work_path: path of working directory
             shutdown: Event of server shutdown
             shutdown_notify: Event of server will shutdown
@@ -220,7 +216,6 @@ class PyRuntimeManager:
         """Check all worker processes and try to start failed ones.
 
         Args:
-        ----
             init: whether the worker is tried to start at the first time
 
         """
@@ -239,7 +234,6 @@ class RsRuntimeManager:
         """Initialize a Mosec manager.
 
         Args:
-        ----
             timeout: service timeout in milliseconds
 
         """
@@ -277,7 +271,6 @@ class RsRuntimeManager:
         """Start the Mosec process.
 
         Args:
-        ----
             config_path: configuration path of mosec
 
         """

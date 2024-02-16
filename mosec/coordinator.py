@@ -54,7 +54,6 @@ def set_mosec_timeout(duration: int):
     """Context manager to set a timeout for a code block.
 
     Args:
-    ----
         duration (float): the duration in seconds before timing out
 
     """
@@ -114,7 +113,6 @@ class Coordinator:
         """Initialize the mosec coordinator.
 
         Args:
-        ----
             worker: subclass of `mosec.Worker` implemented by users.
             max_batch_size: maximum batch size for this worker.
             shutdown: `multiprocessing.synchronize.Event` object for shutdown IPC.

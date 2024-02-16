@@ -80,7 +80,6 @@ class Worker(abc.ABC):
         """Define IPC serialization method.
 
         Args:
-        ----
             data: returned data from :py:meth:`forward`
 
         """
@@ -90,7 +89,6 @@ class Worker(abc.ABC):
         """Define IPC deserialization method.
 
         Args:
-        ----
             data: input data for :py:meth:`forward`
 
         """
@@ -137,15 +135,12 @@ class Worker(abc.ABC):
         Check :py:mod:`mosec.mixin` for more information.
 
         Arguments:
-        ---------
             data: the same type as the output of the :py:meth:`forward`
 
         Returns:
-        -------
             the bytes you want to put into the response body
 
         Raises:
-        ------
             EncodingError: if the data cannot be serialized with JSON
 
         """
@@ -163,15 +158,12 @@ class Worker(abc.ABC):
         Check :py:mod:`mosec.mixin` for more information.
 
         Arguments:
-        ---------
             data: the raw bytes extracted from the request body
 
         Returns:
-        -------
             the same type as the input of the :py:meth:`forward`
 
         Raises:
-        ------
             DecodingError: if the data cannot be deserialized with JSON
 
         """
@@ -186,7 +178,6 @@ class Worker(abc.ABC):
         """Model inference, data processing or computation logic.
 
         Args:
-        ----
             data: input data to be processed
 
         **Must be overridden** by the subclass.
@@ -220,13 +211,11 @@ class Worker(abc.ABC):
         """Retrieve the JSON schema for the `forward` method of the class.
 
         Args:
-        ----
             cls : The class object.
             target : The target variable to parse the schema for.
             ref_template : A template to use when generating ``"$ref"`` fields.
 
         Returns:
-        -------
             A tuple containing the schema and the component schemas.
 
         The :py:meth:`get_forward_json_schema` method is a class method that returns the
@@ -260,7 +249,6 @@ class SSEWorker(Worker):
         """Send a stream event to the client.
 
         Args:
-        ----
             text: the text to be sent, needs to be UTF-8 compatible
             index: the index of the stream event. For the single request, this will
                 always be 0. For dynamic batch request, this should be the index of
