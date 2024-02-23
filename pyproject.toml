@@ -62,6 +62,7 @@ pretty = true
 module = [
     "torch.*",
     "transformers",
+    "sentence_transformers",
     "llmspec",
     "openai",
 ]

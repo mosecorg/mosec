@@ -189,6 +189,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 - [Request validation](https://mosecorg.github.io/mosec/examples/validate.html): validate the request with type annotation.
 - [Multiple route](https://mosecorg.github.io/mosec/examples/multi_route.html): serve multiple models in one service
 - [Embedding service](https://mosecorg.github.io/mosec/examples/embedding.html): OpenAI compatible embedding service
+- [Reranking service](https://mosecorg.github.io/mosec/examples/rerank.html): rerank a list of passages based on a query
 - [Shared memory IPC](https://mosecorg.github.io/mosec/examples/ipc.html): inter-process communication with shared memory.
 - [Customized GPU allocation](https://mosecorg.github.io/mosec/examples/env.html): deploy multiple replicas, each using different GPUs.
 - [Customized metrics](https://mosecorg.github.io/mosec/examples/metric.html): record your own metrics for monitoring.

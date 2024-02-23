@@ -1,4 +1,4 @@
-# Copyright 2023 MOSEC Authors
+# Copyright 2024 MOSEC Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,8 +18,12 @@ import httpx
 import msgspec
 
 req = {
-    "bin": b"hello mosec",
-    "name": "type check",
+    "query": "talk is cheap, show me the code",
+    "docs": [
+        "what a nice day",
+        "life is short, use python",
+        "early bird catches the worm",
+    ],
 }
 
 resp = httpx.post(
