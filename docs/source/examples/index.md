@@ -13,6 +13,7 @@ ipc
 metric
 multi_route
 pytorch
+rerank
 stable_diffusion
 validate
 ```
