@@ -22,8 +22,13 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/cache
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
       - name: Build
         run: |
+          python -m pip install pipx
           pipx run cibuildwheel
       - name: Upload wheels
         uses: actions/upload-artifact@v4
