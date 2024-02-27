@@ -75,6 +75,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
+      - name: Test if Cargo is installed
+        run: cargo --list
       - uses: ./.github/actions/cache
       - name: Install dependencies
         run: |
