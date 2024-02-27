@@ -53,13 +53,12 @@ jobs:
 
   test:
     runs-on: ${{ matrix.os }}
-    needs: [lint]
     timeout-minutes: 20
     strategy:
       max-parallel: 10
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        os: [ubuntu-latest , macos-latest]
+        os: [ubuntu-latest , macos-13, macos-14]
 
     steps:
       - uses: actions/checkout@v4
