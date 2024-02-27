@@ -22,6 +22,10 @@ runs:
         restore-keys: |
           ${{ runner.os }}-cargo-cache-
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
     - name: Get pip cache dir
       id: pip-cache-dir
       shell: bash
