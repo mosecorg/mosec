@@ -79,6 +79,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .[dev,mixin]
+          cargo component add clippy
           make dev
       - name: Test
         run: |
