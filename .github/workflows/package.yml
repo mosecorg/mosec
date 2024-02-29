@@ -68,10 +68,10 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
           CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
         run: |
-          cargo login $CRATES_TOKEN
-          cargo publish
           python setup.py sdist
           twine upload --skip-existing dist/*
+          cargo login $CRATES_TOKEN
+          cargo publish
 
   image:
     name: "Build Docker Image"

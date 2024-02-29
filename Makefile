@@ -12,7 +12,7 @@ install:
 dev:
 	cargo build
 	@mkdir -p mosec/bin
-	@cp ./target/debug/mosec mosec/bin/
+	@cp ./target/debug/mosec mosec/bin/mosec
 	pip install -e .
 
 test: dev
@@ -42,6 +42,7 @@ doc:
 clean:
 	@cargo clean
 	@-rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache .ruff_cache
+	@-rm -rf mosec/bin/
 	@-find . -name '*.pyc' -type f -exec rm -rf {} +
 	@-find . -name '__pycache__' -exec rm -rf {} +
 

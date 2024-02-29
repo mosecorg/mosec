@@ -53,13 +53,17 @@ jobs:
 
   test:
     runs-on: ${{ matrix.os }}
-    needs: [lint]
     timeout-minutes: 20
     strategy:
       max-parallel: 10
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        os: [ubuntu-latest , macos-latest]
+        os: [ubuntu-latest , macos-13, macos-14]
+        exclude:
+          - python-version: "3.8"
+            os: "macos-14"
+          - python-version: "3.9"
+            os: "macos-14"
 
     steps:
       - uses: actions/checkout@v4
@@ -69,11 +73,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: ./.github/actions/cache
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e .[dev,mixin]
+          rustup component add clippy
           make dev
       - name: Test
         run: |
