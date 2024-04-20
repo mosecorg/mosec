@@ -19,7 +19,7 @@ tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
 derive_more = { version = "0.99", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
-async-channel = "2.1"
+async-channel = "2.2"
 once_cell = "1.19"
 prometheus-client = "0.22"
 axum = "0.7"
