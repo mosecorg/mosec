@@ -38,11 +38,8 @@ class TypedMsgPackMixin(Worker):
         """Deserialize and validate request with msgspec."""
         import msgspec
 
-        if not self._input_typ:
+        if self._input_typ is None:
             self._input_typ = parse_func_type(self.forward, ParseTarget.INPUT)
-        if not issubclass(self._input_typ, msgspec.Struct):
-            # skip other annotation type
-            return super().deserialize(data)
 
         try:
             return msgspec.msgpack.decode(data, type=self._input_typ)
