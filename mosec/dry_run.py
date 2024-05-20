@@ -174,7 +174,7 @@ class DryRunner:
         self.shutdown_notify.set()
 
     def run(self):
-        """Execute thr dry run process."""
+        """Execute the dry run process."""
         for endpoint, runtimes in self.router.items():
             logger.info(
                 "init dry run for endpoint %s with %s",
