@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 from os import environ
+from typing import List
 
 from msgspec import Struct
 from sentence_transformers import CrossEncoder
@@ -28,11 +27,11 @@ WORKER_NUM = int(environ.get("WORKER_NUM", 1))
 
 class Request(Struct, kw_only=True):
     query: str
-    docs: list[str]
+    docs: List[str]
 
 
 class Response(Struct, kw_only=True):
-    scores: list[float]
+    scores: List[float]
 
 
 class Encoder(TypedMsgPackMixin, Worker):
