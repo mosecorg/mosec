@@ -37,7 +37,7 @@ changelog = "https://github.com/mosecorg/mosec/releases"
 
 [tool.cibuildwheel]
 build-frontend = "build"
-skip = ["cp36-*", "*-musllinux_*", "pp*"]
+skip = ["cp36-*", "cp37-*", "*-musllinux_*", "pp*"]
 archs = ["auto64"]
 before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 environment = { PRODUCTION_MODE="yes", PATH="$PATH:$HOME/.cargo/bin", PIP_NO_CLEAN="yes" }
@@ -54,6 +54,7 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm>=7.0"]
 write_to = "mosec/_version.py"
 
 [tool.mypy]
+python_version = "3.8"
 warn_redundant_casts = true
 warn_unreachable = true
 pretty = true
