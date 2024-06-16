@@ -15,8 +15,32 @@
 """Provide useful utils to inspect function type."""
 
 import inspect
+import sys
 from enum import Enum
-from typing import List
+from typing import Any, List
+
+
+def get_annotations(func) -> dict:
+    """Get the annotations of a class method.
+
+    This will evaluation the annotations of the method and return a dict.
+    The implementation is based on the `inspect.get_annotations` (Py>=3.10).
+
+    ``eval_str=True`` since ``from __future__ import annotations`` will change
+    all the annotations to string.
+    """
+    if sys.version_info >= (3, 10):
+        return inspect.get_annotations(func, eval_str=True)
+    annotations = getattr(func, "__annotations__", None)
+    obj_globals = getattr(func, "__globals__", None)
+    if annotations is None:
+        return {}
+    if not isinstance(annotations, dict):
+        raise TypeError(f"{func.__name__} annotations must be a dict or None")
+    return {
+        key: value if not isinstance(value, str) else eval(value, obj_globals)
+        for key, value in annotations.items()
+    }
 
 
 class ParseTarget(Enum):
@@ -32,22 +56,20 @@ def parse_func_type(func, target: ParseTarget) -> type:
     - single request: return the type
     - batch request: return the list item type
     """
-    sig = inspect.signature(func)
-    index = 0 if inspect.ismethod(func) else 1
+    annotations = get_annotations(func)
     name = func.__name__
+    typ = Any
     if target == ParseTarget.INPUT:
-        params = list(sig.parameters.values())
-        if len(params) < index + 1:
-            raise TypeError(
-                f"`{name}` method doesn't have enough({index + 1}) parameters"
-            )
-        typ = params[index].annotation
+        for key in annotations:
+            if key != "return":
+                typ = annotations[key]
+                break
     else:
-        typ = sig.return_annotation
+        typ = annotations.get("return", Any)
 
     origin = getattr(typ, "__origin__", None)
     if origin is None:
-        return typ
+        return typ  # type: ignore
     # GenericAlias, `func` could be batch inference
     if origin is list or origin is List:
         if not hasattr(typ, "__args__") or len(typ.__args__) != 1:  # type: ignore

@@ -301,7 +301,7 @@ def generate_openapi(workers: List[Type[Worker]]):
             if not return_schema
             else {
                 "200": make_body(
-                    "Mosec Inference Result",
+                    "Mosec Inference Response",
                     response_worker_cls.resp_mime_type,
                     return_schema,
                 )
