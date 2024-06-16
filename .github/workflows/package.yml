@@ -21,7 +21,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/cache
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -61,7 +60,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/cache
       - name: Publish Crates
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
