@@ -87,7 +87,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - uses: actions/checkout@v4
       - name: Build and push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           push: true
           tags: mosecorg/mosec:${{ github.event.release.tag_name }}
