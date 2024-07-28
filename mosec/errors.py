@@ -23,13 +23,13 @@ is raised; if the decoded data cannot pass the validation check (usually
 implemented by users), the `ValidationError` should be raised.
 """
 
-from mosec.protocol import HTTPStautsCode
+from mosec.protocol import HTTPStatusCode
 
 
 class MosecError(Exception):
     """Mosec basic exception."""
 
-    code: HTTPStautsCode = HTTPStautsCode.INTERNAL_ERROR
+    code: HTTPStatusCode = HTTPStatusCode.INTERNAL_ERROR
     msg: str = "mosec error"
 
 
@@ -42,7 +42,7 @@ class ClientError(MosecError):
     `HTTP 400 <https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400>`__.
     """
 
-    code = HTTPStautsCode.BAD_REQUEST
+    code = HTTPStatusCode.BAD_REQUEST
     msg = "bad request"
 
 
@@ -59,7 +59,7 @@ class ServerError(MosecError):
     an exception that is not inherited from `mosec.errors.MosecError`.
     """
 
-    code = HTTPStautsCode.INTERNAL_ERROR
+    code = HTTPStatusCode.INTERNAL_ERROR
     msg = "internal error"
 
 
@@ -100,7 +100,7 @@ class ValidationError(MosecError):
     in the response.
     """
 
-    code = HTTPStautsCode.VALIDATION_ERROR
+    code = HTTPStatusCode.VALIDATION_ERROR
     msg = "request validation error"
 
 
@@ -119,5 +119,5 @@ class MosecTimeoutError(BaseException):
     which isn't designed to break the working loop.
     """
 
-    code = HTTPStautsCode.TIMEOUT_ERROR
+    code = HTTPStatusCode.TIMEOUT_ERROR
     msg = "mosec timeout error"

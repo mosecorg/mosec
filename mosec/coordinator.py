@@ -29,7 +29,7 @@ from typing import Any, Optional, Sequence, Type
 
 from mosec.errors import MosecError, MosecTimeoutError
 from mosec.log import get_internal_logger
-from mosec.protocol import HTTPStautsCode, Protocol
+from mosec.protocol import HTTPStatusCode, Protocol
 from mosec.worker import SSEWorker, Worker
 
 logger = get_internal_logger()
@@ -190,7 +190,7 @@ class Coordinator:
                 payloads = (text.encode(),)
                 ids = (self.current_ids[index],)
                 self.protocol.send(
-                    HTTPStautsCode.STREAM_EVENT, ids, (0,) * len(ids), payloads
+                    HTTPStatusCode.STREAM_EVENT, ids, (0,) * len(ids), payloads
                 )
                 self.semaphore.release()
             except queue.Empty:
@@ -286,7 +286,7 @@ class Coordinator:
                         "returned data size doesn't match the input data size:"
                         f"input({length})!=output({len(data)})"
                     )
-                status = HTTPStautsCode.OK
+                status = HTTPStatusCode.OK
                 payloads = [
                     self.encode(datum, state) for (datum, state) in zip(data, states)
                 ]
@@ -298,7 +298,7 @@ class Coordinator:
                 payloads = [f"{err.msg}: {err_msg}".encode()] * length
             except Exception:
                 logger.warning(traceback.format_exc().replace("\n", " "))
-                status = HTTPStautsCode.INTERNAL_ERROR
+                status = HTTPStatusCode.INTERNAL_ERROR
                 payloads = ["inference internal error".encode()] * length
 
             try:
