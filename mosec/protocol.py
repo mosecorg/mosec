@@ -29,7 +29,7 @@ logger = get_internal_logger()
 IPC_LARGE_DATA_SIZE = 1024 * 1024  # set as 1 MB
 
 
-class HTTPStautsCode(IntFlag):
+class HTTPStatusCode(IntFlag):
     """HTTP status code flag."""
 
     OK = 1  # 200
