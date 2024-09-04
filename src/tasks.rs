@@ -32,18 +32,18 @@ use crate::protocol::communicate;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, derive_more::Error)]
 pub(crate) enum TaskCode {
-    #[display(fmt = "200: OK")]
+    #[display("200: OK")]
     Normal,
-    #[display(fmt = "400: Bad Request")]
+    #[display("400: Bad Request")]
     BadRequestError,
-    #[display(fmt = "422: Unprocessable Content")]
+    #[display("422: Unprocessable Content")]
     ValidationError,
-    #[display(fmt = "408: Request Timeout")]
+    #[display("408: Request Timeout")]
     TimeoutError,
-    #[display(fmt = "500: Internal Server Error")]
+    #[display("500: Internal Server Error")]
     InternalError,
     // special case
-    #[display(fmt = "200: Server Sent Event")]
+    #[display("200: Server Sent Event")]
     StreamEvent,
 }
 
