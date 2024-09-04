@@ -14,7 +14,6 @@
 
 """Test Server-Sent Event."""
 
-
 from mosec import Server, SSEWorker, ValidationError, Worker, get_logger
 
 logger = get_logger()

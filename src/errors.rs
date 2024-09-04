@@ -16,15 +16,15 @@ use crate::tasks::TaskCode;
 
 #[derive(Debug, derive_more::From, derive_more::Display, derive_more::Error)]
 pub(crate) enum ServiceError {
-    #[display(fmt = "inference timeout")]
+    #[display("inference timeout")]
     Timeout,
 
-    #[display(fmt = "too many request: task queue is full")]
+    #[display("too many request: task queue is full")]
     TooManyRequests,
 
-    #[display(fmt = "mosec unknown error")]
+    #[display("mosec unknown error")]
     UnknownError,
 
-    #[display(fmt = "SSE inference error: {_0}")]
+    #[display("SSE inference error: {_0}")]
     SSEError(TaskCode),
 }
