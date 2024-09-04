@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use once_cell::sync::OnceCell;
+use std::sync::OnceLock;
+
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::counter::Counter;
 use prometheus_client::metrics::family::{Family, MetricConstructor};
@@ -117,6 +118,6 @@ impl Metrics {
     }
 }
 
-pub(crate) static METRICS: OnceCell<Metrics> = OnceCell::new();
-pub(crate) static REGISTRY: OnceCell<Registry> = OnceCell::new();
-pub(crate) static DURATION_LABEL: OnceCell<StageConnectionLabel> = OnceCell::new();
+pub(crate) static METRICS: OnceLock<Metrics> = OnceLock::new();
+pub(crate) static REGISTRY: OnceLock<Registry> = OnceLock::new();
+pub(crate) static DURATION_LABEL: OnceLock<StageConnectionLabel> = OnceLock::new();

@@ -15,12 +15,11 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use bytes::Bytes;
 use hyper::StatusCode;
-use once_cell::sync::OnceCell;
 use tokio::sync::{mpsc, oneshot, Barrier};
 use tokio::time;
 use tracing::{debug, error, info, warn};
@@ -97,7 +96,7 @@ pub(crate) struct TaskManager {
     shutdown: AtomicBool,
 }
 
-pub(crate) static TASK_MANAGER: OnceCell<TaskManager> = OnceCell::new();
+pub(crate) static TASK_MANAGER: OnceLock<TaskManager> = OnceLock::new();
 
 impl TaskManager {
     pub(crate) fn global() -> &'static TaskManager {
