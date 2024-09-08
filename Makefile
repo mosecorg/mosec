@@ -13,11 +13,17 @@ dev:
 	cargo build
 	@mkdir -p mosec/bin
 	@cp ./target/debug/mosec mosec/bin/mosec
-	pip install -e .
+	pip install -e .[dev]
 
 test: dev
-	echo "Running tests for the main logic"
+	@pip install -q -r requirements/mixin.txt
+	echo "Running tests for the main logic and mixin(!shm)"
 	pytest tests -vv -s -m "not shm"
+	RUST_BACKTRACE=1 cargo test -vv
+
+test_unit: dev
+	echo "Running tests for the main logic"
+	pytest -vv -s tests/test_log.py tests/test_protocol.py tests/test_coordinator.py
 	RUST_BACKTRACE=1 cargo test -vv
 
 test_shm: dev
