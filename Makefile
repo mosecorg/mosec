@@ -16,8 +16,13 @@ dev:
 	pip install -e .
 
 test: dev
-	echo "Running tests for the main logic"
+	echo "Running tests for the main logic and mixin(!shm)"
 	pytest tests -vv -s -m "not shm"
+	RUST_BACKTRACE=1 cargo test -vv
+
+test_unit: dev
+	echo "Running tests for the main logic"
+	pytest -vv -s tests/test_log.py tests/test_utils.py tests/test_protocol.py tests/test_coordinator.py
 	RUST_BACKTRACE=1 cargo test -vv
 
 test_shm: dev
