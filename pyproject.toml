@@ -11,9 +11,7 @@ license = {text = "Apache-2.0"}
 keywords = ["machine learning", "deep learning", "model serving"]
 dynamic = ["version"]
 requires-python = ">=3.8"
-dependencies = [
-    "importlib_resources >= 5.10; python_version < '3.12'",
-]
+dependencies = []
 classifiers = [
     "Environment :: GPU",
     "Intended Audience :: Developers",
