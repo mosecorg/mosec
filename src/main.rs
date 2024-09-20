@@ -123,7 +123,7 @@ fn main() {
             .with(
                 output
                     .with_filter(filter::filter_fn(|metadata| {
-                        !metadata.target().starts_with("hyper")
+                        !metadata.target().starts_with("h2")
                     }))
                     .with_filter(filter::LevelFilter::DEBUG),
             )
