@@ -18,8 +18,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
+use axum::http::StatusCode;
 use bytes::Bytes;
-use hyper::StatusCode;
 use tokio::sync::{mpsc, oneshot, Barrier};
 use tokio::time;
 use tracing::{debug, error, info, warn};

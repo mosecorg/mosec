@@ -91,7 +91,7 @@ from mosec.mixin import MsgpackMixin
 logger = get_logger()
 ```
 
-Then, we **build an API** for clients to query a text prompt and obtain an image based on the [stable-diffusion-v1-5 model](https://huggingface.co/runwayml/stable-diffusion-v1-5) in just 3 steps.
+Then, we **build an API** for clients to query a text prompt and obtain an image based on the [stable-diffusion-v1-5 model](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5) in just 3 steps.
 
 1) Define your service as a class which inherits `mosec.Worker`. Here we also inherit `MsgpackMixin` to employ the [msgpack](https://msgpack.org/index.html) serialization format<sup>(a)</sup></a>.
 
@@ -104,10 +104,9 @@ Then, we **build an API** for clients to query a text prompt and obtain an image
 class StableDiffusion(MsgpackMixin, Worker):
     def __init__(self):
         self.pipe = StableDiffusionPipeline.from_pretrained(
-            "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
+            "sd-legacy/stable-diffusion-v1-5", torch_dtype=torch.float16
         )
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.pipe = self.pipe.to(device)
+        self.pipe.enable_model_cpu_offload()
         self.example = ["useless example prompt"] * 4  # warmup (batch_size=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:
@@ -229,6 +228,7 @@ More ready-to-use examples can be found in the [Example](https://mosecorg.github
 - For multi-stage services, note that the data passing through different stages will be serialized/deserialized by the `serialize_ipc/deserialize_ipc` methods, so extremely large data might make the whole pipeline slow. The serialized data is passed to the next stage through rust by default, you could enable shared memory to potentially reduce the latency (ref [RedisShmIPCMixin](https://mosecorg.github.io/mosec/examples/ipc.html#redis-shm-ipc-py)).
 - You should choose appropriate `serialize/deserialize` methods, which are used to decode the user request and encode the response. By default, both are using JSON. However, images and embeddings are not well supported by JSON. You can choose msgpack which is faster and binary compatible (ref [Stable Diffusion](https://mosecorg.github.io/mosec/examples/stable_diffusion.html)).
 - Configure the threads for OpenBLAS or MKL. It might not be able to choose the most suitable CPUs used by the current Python process. You can configure it for each worker by using the [env](https://mosecorg.github.io/mosec/reference/interface.html#mosec.server.Server.append_worker) (ref [custom GPU allocation](https://mosecorg.github.io/mosec/examples/env.html)).
+- Enable HTTP/2 from client side. `mosec` automatically adapts to user's protocol (e.g., HTTP/2) since v0.8.8.
 
 ## Adopters
 

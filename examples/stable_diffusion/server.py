@@ -27,10 +27,10 @@ logger = get_logger()
 class StableDiffusion(MsgpackMixin, Worker):
     def __init__(self):
         self.pipe = StableDiffusionPipeline.from_pretrained(
-            "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
+            "sd-legacy/stable-diffusion-v1-5",
+            torch_dtype=torch.float16,
         )
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.pipe = self.pipe.to(device)  # type: ignore
+        self.pipe.enable_model_cpu_offload()
         self.example = ["useless example prompt"] * 4  # warmup (bs=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:

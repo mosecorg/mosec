@@ -15,12 +15,11 @@
 use std::time::Duration;
 
 use axum::body::{to_bytes, Body};
-use axum::http::Uri;
+use axum::http::header::{HeaderValue, CONTENT_TYPE};
+use axum::http::{Request, Response, StatusCode, Uri};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use hyper::header::{HeaderValue, CONTENT_TYPE};
-use hyper::{Request, Response, StatusCode};
 use prometheus_client::encoding::text::encode;
 use tracing::warn;
 use utoipa::OpenApi;
