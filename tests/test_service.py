@@ -40,6 +40,15 @@ def http_client():
         yield client
 
 
+@pytest.fixture
+def http2_client():
+    # force to use HTTP/2
+    with httpx.Client(
+        base_url=f"http://127.0.0.1:{TEST_PORT}", http1=False, http2=True
+    ) as client:
+        yield client
+
+
 @pytest.fixture(scope="session")
 def mosec_service(request):
     params = request.param.split(" ")
@@ -52,6 +61,19 @@ def mosec_service(request):
     yield service
     service.terminate()
     assert wait_for_port_free(port=TEST_PORT), "service failed to stop"
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http2_client",
+    [
+        pytest.param("square_service", "", id="HTTP/2"),
+    ],
+    indirect=["mosec_service", "http2_client"],
+)
+def test_http2_service(mosec_service, http2_client):
+    resp = http2_client.get("/")
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.http_version == "HTTP/2"
 
 
 @pytest.mark.parametrize(

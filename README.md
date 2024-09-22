@@ -91,7 +91,7 @@ from mosec.mixin import MsgpackMixin
 logger = get_logger()
 ```
 
-Then, we **build an API** for clients to query a text prompt and obtain an image based on the [stable-diffusion-v1-5 model](https://huggingface.co/runwayml/stable-diffusion-v1-5) in just 3 steps.
+Then, we **build an API** for clients to query a text prompt and obtain an image based on the [stable-diffusion-v1-5 model](https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5) in just 3 steps.
 
 1) Define your service as a class which inherits `mosec.Worker`. Here we also inherit `MsgpackMixin` to employ the [msgpack](https://msgpack.org/index.html) serialization format<sup>(a)</sup></a>.
 
@@ -104,10 +104,9 @@ Then, we **build an API** for clients to query a text prompt and obtain an image
 class StableDiffusion(MsgpackMixin, Worker):
     def __init__(self):
         self.pipe = StableDiffusionPipeline.from_pretrained(
-            "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
+            "sd-legacy/stable-diffusion-v1-5", torch_dtype=torch.float16
         )
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.pipe = self.pipe.to(device)
+        self.pipe.enable_model_cpu_offload()
         self.example = ["useless example prompt"] * 4  # warmup (batch_size=4)
 
     def forward(self, data: List[str]) -> List[memoryview]:
