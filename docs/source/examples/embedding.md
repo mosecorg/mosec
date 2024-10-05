@@ -2,7 +2,7 @@
 
 This example shows how to create an embedding service that is compatible with the [OpenAI API](https://platform.openai.com/docs/api-reference/embeddings).
 
-In this example, we use the embedding model from [HuggingFace LeaderBoard](https://huggingface.co/spaces/mteb/leaderboard).
+In this example, we use the embedding model from [Hugging Face LeaderBoard](https://huggingface.co/spaces/mteb/leaderboard).
 
 
 ## Server
