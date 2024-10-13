@@ -38,12 +38,12 @@
 
 Mosec is a high-performance and flexible model serving framework for building ML model-enabled backend and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
 
-- **Highly performant**: web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
-- **Ease of use**: user interface purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
-- **Dynamic batching**: aggregate requests from different users for batched inference and distribute results back
-- **Pipelined stages**: spawn multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
-- **Cloud friendly**: designed to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by Kubernetes or any container orchestration systems
-- **Do one thing well**: focus on the online serving part, users can pay attention to the model optimization and business logic
+- **Highly performant**: Web layer and task coordination built with Rust 🦀, which offers blazing speed in addition to efficient CPU utilization powered by async I/O
+- **Ease of use**: The user interface is purely in Python 🐍, by which users can serve their models in an ML framework-agnostic manner using the same code as they do for offline testing
+- **Dynamic batching**: Aggregates requests from different users for batched inference and distribute results back
+- **Pipelined stages**: Spawns multiple processes for pipelined stages to handle CPU/GPU/IO mixed workloads
+- **Cloud friendly**: Designed to run in the cloud, with the model warmup, graceful shutdown, and Prometheus monitoring metrics, easily managed by Kubernetes or any container orchestration systems
+- **Do one thing well**: Focus on the online serving part, users can pay attention to the model optimization and business logic
 
 ## Installation
 
