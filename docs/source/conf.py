@@ -60,4 +60,7 @@ html_favicon = "https://user-images.githubusercontent.com/38581401/134798617-010
 html_theme_options = {
     "sidebar_hide_name": True,
     "navigation_with_keys": True,
+    "source_repository": "https://github.com/mosecorg/mosec",
+    "source_branch": "main",
+    "source_directory": "docs/source",
 }
