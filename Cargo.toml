@@ -24,4 +24,4 @@ async-stream = "0.3.6"
 serde = "1.0"
 serde_json = "1.0"
 utoipa = "4"
-utoipa-swagger-ui = { version = "7", features = ["axum"] }
+utoipa-swagger-ui = { version = "8", features = ["axum"] }
