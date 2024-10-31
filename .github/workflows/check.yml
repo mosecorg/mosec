@@ -9,6 +9,7 @@ on:
       - 'tests/**'
       - 'examples/**'
       - 'setup.py'
+      - 'pyproject.toml'
       - 'Cargo.lock'
       - 'Cargo.toml'
       - 'requirements/**'
@@ -22,6 +23,9 @@ on:
       - 'tests/**'
       - 'examples/**'
       - 'setup.py'
+      - 'pyproject.toml'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
       - 'requirements/**'
   merge_group:
 

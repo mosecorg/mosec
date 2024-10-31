@@ -9,7 +9,7 @@ authors = [
 ]
 license = {text = "Apache-2.0"}
 keywords = ["machine learning", "deep learning", "model serving"]
-dynamic = ["version"]
+dynamic = ["version", "optional-dependencies"]
 requires-python = ">=3.8"
 dependencies = []
 classifiers = [
@@ -43,8 +43,6 @@ archs = ["auto64"]
 before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 environment = { PRODUCTION_MODE="yes", PATH="$PATH:$HOME/.cargo/bin", PIP_NO_CLEAN="yes" }
 before-build = "git status" # help to debug what happened to the setuptools_scm (file changes)
-
-[project.optional-dependencies]
 
 [project.scripts]
 
