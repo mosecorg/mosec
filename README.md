@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/38581401/240117836-f06199ba-c80d-413a-9cb4-5adc76316bda.png" height="230" alt="MOSEC" />
+  <img src="https://user-images.githubusercontent.com/38581401/240117836-f06199ba-c80d-413a-9cb4-5adc76316bda.png" width=90% alt="MOSEC" />
 </p>
 
 <p align="center">
@@ -33,7 +33,7 @@
 ## Introduction
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/38581401/234162688-efd74e46-4063-4624-ac32-b197e4d8e56b.png" height="230" alt="MOSEC" />
+  <img src="https://user-images.githubusercontent.com/38581401/234162688-efd74e46-4063-4624-ac32-b197e4d8e56b.png" width=70% alt="MOSEC" />
 </p>
 
 Mosec is a high-performance and flexible model serving framework for building ML model-enabled backend and microservices. It bridges the gap between any machine learning models you just trained and the efficient online service API.
@@ -238,6 +238,7 @@ Here are some of the companies and individual users that are using Mosec:
 - [MOSS](https://github.com/OpenLMLab/MOSS/blob/main/README_en.md): An open sourced conversational language model like ChatGPT.
 - [TencentCloud](https://www.tencentcloud.com/document/product/1141/45261): Tencent Cloud Machine Learning Platform, using Mosec as the [core inference server framework](https://cloud.tencent.com/document/product/851/74148).
 - [TensorChord](https://github.com/tensorchord): Cloud native AI infrastructure company.
+- [OAT](https://github.com/sail-sg/oat): Serving reward models for online LLM alignment.
 
 ## Citation
 
