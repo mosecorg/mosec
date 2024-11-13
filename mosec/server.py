@@ -52,7 +52,7 @@ from mosec.worker import MOSEC_REF_TEMPLATE, SSEWorker, Worker
 logger = get_internal_logger()
 
 
-GUARD_CHECK_INTERVAL = 1
+GUARD_CHECK_INTERVAL = 0.1
 MOSEC_RESERVED_ENDPOINTS = {"/", "/metrics", "/openapi"}
 
 

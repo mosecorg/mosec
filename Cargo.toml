@@ -1,6 +1,6 @@
 [package]
 name = "mosec"
-version = "0.8.8"
+version = "0.8.9"
 authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -23,5 +23,5 @@ axum = { version = "0.7", default-features = false, features = ["matched-path", 
 async-stream = "0.3.6"
 serde = "1.0"
 serde_json = "1.0"
-utoipa = "4"
-utoipa-swagger-ui = { version = "7", features = ["axum"] }
+utoipa = "5"
+utoipa-swagger-ui = { version = "8", features = ["axum"] }

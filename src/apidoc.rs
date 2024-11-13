@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use utoipa::openapi::{Components, OpenApi, PathItemType};
+use utoipa::openapi::{Components, OpenApi};
 
 use crate::config::Route;
 
@@ -29,28 +29,29 @@ impl MosecOpenAPI {
             false => "/openapi/reserved/inference_sse",
         };
         let mut path = self.api.paths.paths.get(reserved).unwrap().clone();
-        let op = path.operations.get_mut(&PathItemType::Post).unwrap();
+        if let Some(mut op) = path.post.clone() {
+            if let Some(mut user_schemas) = route.schemas.clone() {
+                if self.api.components.is_none() {
+                    self.api.components = Some(Components::default());
+                }
+                self.api
+                    .components
+                    .as_mut()
+                    .unwrap()
+                    .schemas
+                    .append(&mut user_schemas);
+            };
+            if let Some(req) = route.request_body.clone() {
+                op.request_body = Some(req);
+            };
 
-        if let Some(mut user_schemas) = route.schemas.clone() {
-            if self.api.components.is_none() {
-                self.api.components = Some(Components::default());
-            }
-            self.api
-                .components
-                .as_mut()
-                .unwrap()
-                .schemas
-                .append(&mut user_schemas);
-        };
-        if let Some(req) = route.request_body.clone() {
-            op.request_body = Some(req);
-        };
-
-        if let Some(mut responses) = route.responses.clone() {
-            op.responses.responses.append(&mut responses);
-        };
-
+            if let Some(mut responses) = route.responses.clone() {
+                op.responses.responses.append(&mut responses);
+            };
+            path.post = Some(op);
+        }
         self.api.paths.paths.insert(route.endpoint.clone(), path);
+
         self
     }
 
