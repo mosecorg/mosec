@@ -14,12 +14,10 @@
 
 """Test IPC shared memory storage."""
 
-import subprocess
 import sys
 from typing import List
 
 import numpy as np
-from pyarrow import plasma  # type: ignore
 
 from mosec import Server, Worker
 from mosec.errors import ValidationError
@@ -63,19 +61,19 @@ class RedisDummyPostprocess(RedisShmIPCMixin, Worker):
 
 
 def start_redis_shm_mosec():
-    with subprocess.Popen(["redis-server"]) as process:  # start the redis server
-        # configure the plasma service path
-        RedisShmIPCMixin.set_redis_url("redis://localhost:6379/0")
+    # configure the plasma service path
+    # this assumes the redis server is running at `localhost:6379`
+    RedisShmIPCMixin.set_redis_url("redis://localhost:6379/0")
 
-        server = Server()
-        # register this process to be monitored
-        server.register_daemon("redis_server", process)
-        server.append_worker(RedisRandomService, max_batch_size=8)
-        server.append_worker(RedisDummyPostprocess, num=2)
-        server.run()
+    server = Server()
+    server.append_worker(RedisRandomService, max_batch_size=8)
+    server.append_worker(RedisDummyPostprocess, num=2)
+    server.run()
 
 
 def start_plasma_shm_mosec():
+    from pyarrow import plasma  # type: ignore
+
     # initialize a 20Mb object store as shared memory
     with plasma.start_plasma_store(plasma_store_memory=20 * 1000 * 1000) as (
         shm_path,
