@@ -99,5 +99,6 @@ jobs:
         # ignore the shm test for Python 3.12 since pyarrow doesn't have py3.12 wheel with version < 12
         if: ${{ startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, '3.12') && !startsWith(matrix.python-version, '3.13') }}
         run: |
-          sudo apt update && sudo apt install redis
+          docker run --rm -d --name redis -p 6379:6379 redis
           make test_shm
+          docker stop redis
