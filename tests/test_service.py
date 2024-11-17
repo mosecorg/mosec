@@ -14,6 +14,8 @@
 
 """End-to-end service tests."""
 
+import gzip
+import json
 import random
 import re
 import shlex
@@ -26,6 +28,7 @@ import httpx
 import msgpack  # type: ignore
 import pytest
 from httpx_sse import connect_sse
+from zstandard import ZstdCompressor
 
 from mosec.server import GUARD_CHECK_INTERVAL
 from tests.utils import wait_for_port_free, wait_for_port_open
@@ -349,3 +352,41 @@ def test_multi_route_service(mosec_service, http_client):
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.headers["content-type"] == "application/msgpack"
     assert msgpack.unpackb(resp.content) == {"length": len(data)}
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("square_service --compression --debug", "", id="compression"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_compression_service(mosec_service, http_client):
+    zstd_compressor = ZstdCompressor()
+    req = {"x": 2}
+    expect = {"x": 4}
+
+    # test without compression
+    resp = http_client.post("/inference", json=req)
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.json() == expect, resp.content
+
+    # test with gzip compression
+    binary = gzip.compress(json.dumps(req).encode())
+    resp = http_client.post(
+        "/inference",
+        content=binary,
+        headers={"Accept-Encoding": "gzip", "Content-Encoding": "gzip"},
+    )
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.json() == expect, resp.content
+
+    # test with zstd compression
+    binary = zstd_compressor.compress(json.dumps(req).encode())
+    resp = http_client.post(
+        "/inference",
+        content=binary,
+        headers={"Accept-Encoding": "zstd", "Content-Encoding": "zstd"},
+    )
+    assert resp.status_code == HTTPStatus.OK, resp
+    assert resp.json() == expect, resp.content

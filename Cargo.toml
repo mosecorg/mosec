@@ -1,6 +1,6 @@
 [package]
 name = "mosec"
-version = "0.8.9"
+version = "0.9.0"
 authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -25,3 +25,5 @@ serde = "1.0"
 serde_json = "1.0"
 utoipa = "5"
 utoipa-swagger-ui = { version = "8", features = ["axum"] }
+tower = "0.5.1"
+tower-http = {version = "0.6.1", features = ["compression-zstd", "decompression-zstd", "compression-gzip", "decompression-gzip"]}

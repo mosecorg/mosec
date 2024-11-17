@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![forbid(unsafe_code)]
+
 mod apidoc;
 mod config;
 mod errors;
@@ -27,6 +29,9 @@ use std::net::SocketAddr;
 use axum::routing::{get, post};
 use axum::Router;
 use tokio::signal::unix::{signal, SignalKind};
+use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
+use tower_http::decompression::RequestDecompressionLayer;
 use tracing::{debug, info};
 use tracing_subscriber::fmt::time::UtcTime;
 use tracing_subscriber::prelude::*;
@@ -90,12 +95,20 @@ async fn run(conf: &Config) {
         }
     }
 
+    if conf.compression {
+        router = router.layer(
+            ServiceBuilder::new()
+                .layer(RequestDecompressionLayer::new())
+                .layer(CompressionLayer::new()),
+        );
+    }
+
     // wait until each stage has at least one worker alive
     barrier.wait().await;
     let addr: SocketAddr = format!("{}:{}", conf.address, conf.port).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     info!(?addr, "http service is running");
-    axum::serve(listener, router.into_make_service())
+    axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
