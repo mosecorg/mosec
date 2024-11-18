@@ -65,7 +65,7 @@ pub(crate) struct Config {
     pub namespace: String,
     // log level: (debug, info, warning, error)
     pub log_level: String,
-    // Zstd & Gzip compression
+    // `zstd` & `gzip` compression
     pub compression: bool,
     pub runtimes: Vec<Runtime>,
     pub routes: Vec<Route>,

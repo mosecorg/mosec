@@ -137,7 +137,7 @@ def build_arguments_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--compression",
-        help="Enable Zstd & Gzip compression for the request body",
+        help="Enable `zstd` & `gzip` compression for the request & response",
         action="store_true",
     )
 
