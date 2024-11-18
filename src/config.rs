@@ -65,6 +65,8 @@ pub(crate) struct Config {
     pub namespace: String,
     // log level: (debug, info, warning, error)
     pub log_level: String,
+    // `zstd` & `gzip` compression
+    pub compression: bool,
     pub runtimes: Vec<Runtime>,
     pub routes: Vec<Route>,
 }
@@ -79,6 +81,7 @@ impl Default for Config {
             port: 8000,
             namespace: String::from("mosec_service"),
             log_level: String::from("info"),
+            compression: false,
             runtimes: vec![Runtime {
                 max_batch_size: 64,
                 max_wait_time: 3000,

@@ -16,6 +16,7 @@ pytorch
 rerank
 stable_diffusion
 validate
+compression
 ```
 
 We provide examples across different ML frameworks and for various tasks in this section.

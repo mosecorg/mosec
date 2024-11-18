@@ -60,7 +60,7 @@ fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
         ),
     ),
 )]
-pub(crate) async fn index(_: Request<Body>) -> Response<Body> {
+pub(crate) async fn index() -> Response<Body> {
     let task_manager = TaskManager::global();
     if task_manager.is_shutdown() {
         build_response(
@@ -79,7 +79,7 @@ pub(crate) async fn index(_: Request<Body>) -> Response<Body> {
         (status = StatusCode::OK, description = "Get metrics", body = String),
     ),
 )]
-pub(crate) async fn metrics(_: Request<Body>) -> Response<Body> {
+pub(crate) async fn metrics() -> Response<Body> {
     let mut encoded = String::new();
     let registry = REGISTRY.get().unwrap();
     encode(&mut encoded, registry).unwrap();

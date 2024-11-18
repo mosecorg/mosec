@@ -134,6 +134,13 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         "This will omit the worker number for each stage.",
         action="store_true",
     )
+
+    parser.add_argument(
+        "--compression",
+        help="Enable `zstd` & `gzip` compression for the request & response",
+        action="store_true",
+    )
+
     return parser
 
 
