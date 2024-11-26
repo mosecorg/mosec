@@ -24,6 +24,6 @@ __all__ = [
     "MsgpackMixin",
     "NumBinIPCMixin",
     "PlasmaShmIPCMixin",
-    "TypedMsgPackMixin",
     "RedisShmIPCMixin",
+    "TypedMsgPackMixin",
 ]

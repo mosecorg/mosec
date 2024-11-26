@@ -17,6 +17,6 @@
 from mosec.utils.types import ParseTarget, parse_func_type
 
 __all__ = [
-    "parse_func_type",
     "ParseTarget",
+    "parse_func_type",
 ]

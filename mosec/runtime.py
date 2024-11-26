@@ -16,23 +16,13 @@
 
 import multiprocessing as mp
 import subprocess
-import sys
+from importlib.resources import files as importlib_files
 from multiprocessing.context import ForkContext, SpawnContext
 from multiprocessing.process import BaseProcess
 from multiprocessing.synchronize import Event
 from pathlib import Path
 from time import monotonic, sleep
 from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
-
-if sys.version_info >= (3, 9):
-    from importlib.resources import files as importlib_files
-else:
-    from pkg_resources import resource_filename
-
-    def importlib_files(package: str) -> Path:
-        """Get the resource file path."""
-        return Path(resource_filename(package, ""))
-
 
 from mosec.coordinator import Coordinator
 from mosec.env import env_var_context, validate_env, validate_int_ge
@@ -282,5 +272,5 @@ class RsRuntimeManager:
 
         """
         # pylint: disable=consider-using-with
-        self.process = subprocess.Popen([self.server_path, config_path])
+        self.process = subprocess.Popen([str(self.server_path), config_path])
         return self.process
