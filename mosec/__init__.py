@@ -34,14 +34,14 @@ except ImportError:
     __version__ = get_version(root="..", relative_to=__file__)
 
 __all__ = [
-    "Server",
-    "Worker",
-    "SSEWorker",
-    "Runtime",
-    "ServerError",
     "ClientError",
-    "ValidationError",
-    "EncodingError",
     "DecodingError",
+    "EncodingError",
+    "Runtime",
+    "SSEWorker",
+    "Server",
+    "ServerError",
+    "ValidationError",
+    "Worker",
     "get_logger",
 ]

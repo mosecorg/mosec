@@ -16,7 +16,7 @@ from os import environ
 from typing import List
 
 from msgspec import Struct
-from sentence_transformers import CrossEncoder
+from sentence_transformers import CrossEncoder  # type: ignore
 
 from mosec import Server, Worker
 from mosec.mixin import TypedMsgPackMixin
