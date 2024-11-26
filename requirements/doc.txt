@@ -6,3 +6,4 @@ sphinx_autodoc_typehints>=1.22
 sphinxext-opengraph>=0.8
 myst-parser>=0.18
 furo>=2022.12.7
+sphinx-sitemap>=2.6.0
