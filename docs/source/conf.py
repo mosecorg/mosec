@@ -29,6 +29,7 @@ extensions = [
     "sphinxcontrib.programoutput",
     "sphinx_autodoc_typehints",
     "sphinxext.opengraph",
+    "sphinx_sitemap",
 ]
 
 templates_path = ["_templates"]
@@ -47,7 +48,9 @@ napoleon_use_admonition_for_references = True
 # https://sphinxext-opengraph.readthedocs.io/en/latest/
 ogp_site_url = "https://mosecorg.github.io/mosec/"
 ogp_image = "https://user-images.githubusercontent.com/38581401/240117836-f06199ba-c80d-413a-9cb4-5adc76316bda.png"
-
+# https://sphinx-sitemap.readthedocs.io/en/latest/getting-started.html
+html_baseurl = "https://mosecorg.github.io/mosec/"
+html_extra_path = ['robots.txt']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
