@@ -185,7 +185,7 @@ That's it! You have just hosted your **_stable-diffusion model_** as a service! 
 More ready-to-use examples can be found in the [Example](https://mosecorg.github.io/mosec/examples/index.html) section. It includes:
 
 - [Pipeline](https://mosecorg.github.io/mosec/examples/echo.html): a simple echo demo even without any ML model.
-- [Request validation](https://mosecorg.github.io/mosec/examples/validate.html): validate the request with type annotation.
+- [Request validation](https://mosecorg.github.io/mosec/examples/validate.html): validate the request with type annotation and generate OpenAPI documentation.
 - [Multiple route](https://mosecorg.github.io/mosec/examples/multi_route.html): serve multiple models in one service
 - [Embedding service](https://mosecorg.github.io/mosec/examples/embedding.html): OpenAI compatible embedding service
 - [Reranking service](https://mosecorg.github.io/mosec/examples/rerank.html): rerank a list of passages based on a query

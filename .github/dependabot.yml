@@ -8,8 +8,7 @@ updates:
   - package-ecosystem: "cargo" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "monthly"
     reviewers:
       - "kemingy"
     commit-message:
@@ -18,8 +17,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "monthly"
     reviewers:
       - "kemingy"
     commit-message:
@@ -28,8 +26,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "monthly"
     reviewers:
       - "kemingy"
     commit-message:

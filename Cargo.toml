@@ -8,14 +8,16 @@ readme = "README.md"
 repository = "https://github.com/mosecorg/mosec"
 description = "Model Serving made Efficient in the Cloud."
 documentation = "https://docs.rs/mosec"
+categories = ["science"]
+keywords = ["machine-learning", "deep-learning", "cloud", "model-serving", "service"]
 exclude = ["target", "examples", "tests", "scripts"]
 
 [dependencies]
-bytes = "1"
+bytes = "1.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
-derive_more = { version = "1", features = ["display", "error", "from"] }
+tokio = { version = "1.42", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
+derive_more = { version = "1.0", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = "2.2"
 prometheus-client = "0.22"
@@ -23,7 +25,7 @@ axum = { version = "0.7", default-features = false, features = ["matched-path", 
 async-stream = "0.3.6"
 serde = "1.0"
 serde_json = "1.0"
-utoipa = "5"
-utoipa-swagger-ui = { version = "8", features = ["axum"] }
+utoipa = "5.2"
+utoipa-swagger-ui = { version = "8.0", features = ["axum"] }
 tower = "0.5.1"
 tower-http = {version = "0.6.1", features = ["compression-zstd", "decompression-zstd", "compression-gzip", "decompression-gzip"]}
