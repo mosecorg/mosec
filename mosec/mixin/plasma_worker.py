@@ -69,7 +69,7 @@ class PlasmaShmIPCMixin(Worker):
 
     def deserialize_ipc(self, data: bytes) -> Any:
         """Get the data from the plasma server and delete it."""
-        from pyarrow import plasma
+        from pyarrow import plasma  # type: ignore
 
         client = self._get_client()
         object_id = plasma.ObjectID(bytes(data))
