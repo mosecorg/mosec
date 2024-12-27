@@ -39,35 +39,35 @@ jobs:
   publish:
     name: "Publish PyPI Package"
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     needs: [build]
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
       - uses: actions/download-artifact@v4
         with:
           pattern: wheels_${{ github.event.release.tag_name }}_*
           merge-multiple: true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-      - name: Publish PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          path: dist/
+      - name: Prepare PyPI package
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools wheel twine
-          ls
-          twine upload *
-      - uses: actions/checkout@v4
+          pip install setuptools wheel
+          python setup.py sdist
+          ls dist/
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          fetch-depth: 0
+          skip-existing: true
       - name: Publish Crates
         env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
           CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
         run: |
-          python setup.py sdist
-          twine upload --skip-existing dist/*
           cargo login $CRATES_TOKEN
           cargo publish
 
