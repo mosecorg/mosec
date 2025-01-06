@@ -1,6 +1,7 @@
-msgpack>=1.0.2
-msgspec>=0.15.0
+msgpack>=1.1.0
+msgspec>=0.19.0
 numbin>=0.5.0
 pyarrow>=0.6.1,<12; python_version < "3.12"
 redis>=4.0.0
-numpy<2 # pyarrow legacy dependency
+numpy<2; python_version < "3.12" # pyarrow legacy dependency
+numpy>=2; python_version >= "3.12"
