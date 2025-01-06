@@ -85,12 +85,9 @@ jobs:
           python -m pip install --upgrade pip
           rustup component add clippy
       - name: Test unit
-        # ignore the mixin test for Python 3.13 since some of the dependencies are not ready
-        if: ${{ startsWith(matrix.python-version, '3.13')}}
         run: |
           make test_unit
       - name: Test
-        if: ${{ !startsWith(matrix.python-version, '3.13')}}
         run: |
           make test
       - name: Test shm in Linux
