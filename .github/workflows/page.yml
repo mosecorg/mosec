@@ -30,8 +30,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
     - name: Setup Pages
       uses: actions/configure-pages@v5
     - name: Set up Python
@@ -40,8 +38,7 @@ jobs:
         python-version: 3.9
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev,doc,mixin]
+        make install
     - name: Generate docs
       run: |
         cd docs && make html

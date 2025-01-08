@@ -7,7 +7,7 @@ install:
 	pip install -r requirements/dev.txt -r requirements/mixin.txt -r requirements/doc.txt
 	pre-commit install
 	rustup toolchain install nightly
-	rustup component add rustfmt --toolchain nightly
+	rustup component add rustfmt clippy --toolchain nightly
 
 dev:
 	maturin develop
