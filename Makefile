@@ -10,7 +10,7 @@ install:
 	rustup component add rustfmt clippy --toolchain nightly
 
 dev:
-	maturin develop
+	pip install -e .
 
 test: dev
 	@pip install -q -r requirements/mixin.txt
