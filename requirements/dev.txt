@@ -8,3 +8,4 @@ pre-commit>=2.15.0
 httpx[http2]==0.28.1
 httpx-sse==0.4.0
 zstandard~=0.23
+maturin>=1.8,<2.0

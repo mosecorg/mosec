@@ -4,16 +4,13 @@ PY_SOURCE_FILES=mosec tests examples setup.py
 RUST_SOURCE_FILES=src/*
 
 install:
-	pip install -e .[dev,doc,mixin]
+	pip install -r requirements/dev.txt -r requirements/mixin.txt -r requirements/doc.txt
 	pre-commit install
 	rustup toolchain install nightly
 	rustup component add rustfmt --toolchain nightly
 
 dev:
-	cargo build
-	@mkdir -p mosec/bin
-	@cp ./target/debug/mosec mosec/bin/mosec
-	pip install -e .[dev]
+	maturin develop
 
 test: dev
 	@pip install -q -r requirements/mixin.txt
@@ -48,15 +45,11 @@ doc:
 clean:
 	@cargo clean
 	@-rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache .ruff_cache
-	@-rm -rf mosec/bin/
 	@-find . -name '*.pyc' -type f -exec rm -rf {} +
 	@-find . -name '__pycache__' -exec rm -rf {} +
 
 package: clean
-	PRODUCTION_MODE=yes python setup.py bdist_wheel
-
-cross_compile: clean
-	cibuildwheel --platform linux
+	maturin build --release --out dist
 
 publish: package
 	twine upload dist/*
@@ -78,7 +71,7 @@ semantic_lint:
 	@cargo clippy -- -D warnings
 
 version:
-	@python -m setuptools_scm
+	@cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "mosec") | .version'
 
 add_license:
 	@addlicense -c "MOSEC Authors" **/*.py **/*.rs **/**/*.py
