@@ -142,7 +142,7 @@ jobs:
   image:
     name: "Build Docker Image"
     runs-on: ubuntu-latest
-    needs: [publish]
+    needs: [release]
     steps:
       - name: Docker Setup QEMU
         uses: docker/setup-qemu-action@v3
