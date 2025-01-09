@@ -9,7 +9,7 @@ authors = [
 ]
 license = {text = "Apache-2.0"}
 keywords = ["machine learning", "deep learning", "model serving"]
-dynamic = ["version", "optional-dependencies"]
+dynamic = ["version"]
 requires-python = ">=3.9"
 dependencies = []
 classifiers = [
@@ -37,6 +37,11 @@ documentation = "https://mosecorg.github.io/mosec/"
 repository = "https://github.com/mosecorg/mosec"
 changelog = "https://github.com/mosecorg/mosec/releases"
 [project.scripts]
+[project.optional-dependencies]
+validation = ["msgspec"]
+redis = ["redis"]
+msgpack = ["msgpack"]
+numbin = ["numbin"]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]

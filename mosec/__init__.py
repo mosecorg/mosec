@@ -26,13 +26,6 @@ from mosec.runtime import Runtime
 from mosec.server import Server
 from mosec.worker import SSEWorker, Worker
 
-try:
-    from mosec._version import __version__  # type: ignore
-except ImportError:
-    from setuptools_scm import get_version  # type: ignore
-
-    __version__ = get_version(root="..", relative_to=__file__)
-
 __all__ = [
     "ClientError",
     "DecodingError",
