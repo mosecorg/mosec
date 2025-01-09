@@ -35,10 +35,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: 3.12
     - name: Install dependencies
       run: |
         make install
+        make dev
     - name: Generate docs
       run: |
         cd docs && make html
