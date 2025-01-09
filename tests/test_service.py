@@ -89,8 +89,8 @@ def test_http2_service(mosec_service, http2_client):
 def test_square_service(mosec_service, http_client):
     resp = http_client.get("/")
     assert resp.status_code == HTTPStatus.OK
-    # only check the prefix since the version from setuptools_scm may not be the
-    # correct one used in `Cargo.toml`
+    # only check the prefix since the version comes from Cargo.toml and cannot be
+    # accessed here
     assert resp.headers["server"].startswith("mosec/"), f"{resp.headers['server']}"
 
     resp = http_client.get("/metrics")

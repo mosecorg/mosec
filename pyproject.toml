@@ -9,7 +9,7 @@ authors = [
 ]
 license = {text = "Apache-2.0"}
 keywords = ["machine learning", "deep learning", "model serving"]
-dynamic = ["version", "optional-dependencies"]
+dynamic = ["version"]
 requires-python = ">=3.9"
 dependencies = []
 classifiers = [
@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -35,22 +36,22 @@ homepage = "https://mosecorg.github.io/"
 documentation = "https://mosecorg.github.io/mosec/"
 repository = "https://github.com/mosecorg/mosec"
 changelog = "https://github.com/mosecorg/mosec/releases"
-
-[tool.cibuildwheel]
-build-frontend = "build"
-skip = ["cp36-*", "cp37-*", "cp38-*", "*-musllinux_*", "pp*"]
-archs = ["auto64"]
-before-all = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
-environment = { PRODUCTION_MODE="yes", PATH="$PATH:$HOME/.cargo/bin", PIP_NO_CLEAN="yes" }
-before-build = "git status" # help to debug what happened to the setuptools_scm (file changes)
-
 [project.scripts]
+[project.optional-dependencies]
+validation = ["msgspec"]
+redis = ["redis"]
+msgpack = ["msgpack"]
+numbin = ["numbin"]
 
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm>=7.0"]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
 
-[tool.setuptools_scm]
-write_to = "mosec/_version.py"
+[tool.maturin]
+bindings = "bin"
+python-packages = ["mosec"]
+strip = true
+exclude = ["tests/**/*", "docs/**/*", "examples/**/*"]
 
 [tool.mypy]
 python_version = "3.9"

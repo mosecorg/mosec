@@ -16,7 +16,6 @@
 
 import multiprocessing as mp
 import subprocess
-from importlib.resources import files as importlib_files
 from multiprocessing.context import ForkContext, SpawnContext
 from multiprocessing.process import BaseProcess
 from multiprocessing.synchronize import Event
@@ -238,7 +237,6 @@ class RsRuntimeManager:
         """
         self.process: Optional[subprocess.Popen] = None
 
-        self.server_path = importlib_files("mosec") / "bin" / "mosec"
         self.timeout = timeout
 
     def halt(self):
@@ -272,5 +270,5 @@ class RsRuntimeManager:
 
         """
         # pylint: disable=consider-using-with
-        self.process = subprocess.Popen([str(self.server_path), config_path])
+        self.process = subprocess.Popen([str("mosec"), config_path])
         return self.process
