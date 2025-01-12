@@ -1,0 +1,35 @@
+name: Cargo Deny
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 10 * * 1'  # Every Monday at 10:30 AM UTC
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  merge_group:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  deny:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      VERSION: 0.16.3
+      CMD: "cargo-deny"
+      DIR: "/tmp/cargo-deny"
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install Deny
+        run: |
+          curl -L -o $DIR/archive.tar.gz https://github.com/EmbarkStudios/$CMD/releases/download/$VERSION/$CMD-$VERSION-x86_64-unknown-linux-musl.tar.gz
+          tar -xzvf $DIR/archive.tar.gz --strip-components=1 -C $DIR
+      - name: Deny
+        run: $DIR/$CMD -L debug --show-stats check bans licenses advisories
