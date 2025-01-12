@@ -8,6 +8,7 @@ on:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - '.github/workflows/deny.yml'
   merge_group:
 
 concurrency:
