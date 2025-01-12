@@ -8,6 +8,7 @@ on:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - '.github/workflows/deny.yml'
   merge_group:
 
 concurrency:
@@ -29,7 +30,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install Deny
         run: |
+          mkdir -p $DIR
           curl -L -o $DIR/archive.tar.gz https://github.com/EmbarkStudios/$CMD/releases/download/$VERSION/$CMD-$VERSION-x86_64-unknown-linux-musl.tar.gz
           tar -xzvf $DIR/archive.tar.gz --strip-components=1 -C $DIR
       - name: Deny
-        run: $DIR/$CMD -L debug --show-stats check bans licenses advisories
+        run: $DIR/$CMD -L debug check bans licenses advisories --show-stats
