@@ -9,6 +9,7 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/deny.yml'
+      - 'deny.toml'
   merge_group:
 
 concurrency:
