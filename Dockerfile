@@ -5,7 +5,7 @@ FROM ${base}
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 ENV PATH /opt/conda/bin:$PATH
 
-ARG CONDA_VERSION=py310_23.3.1-0
+ARG CONDA_VERSION=py311_24.11.1-0
 
 RUN apt update && \
     apt install -y --no-install-recommends \
@@ -18,16 +18,13 @@ RUN set -x && \
     UNAME_M="$(uname -m)" && \
     if [ "${UNAME_M}" = "x86_64" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh"; \
-        SHA256SUM="aef279d6baea7f67940f16aad17ebe5f6aac97487c7c03466ff01f4819e5a651"; \
+        SHA256SUM="807774bae6cd87132094458217ebf713df436f64779faf9bb4c3d4b6615c1e3a"; \
     elif [ "${UNAME_M}" = "s390x" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-s390x.sh"; \
-        SHA256SUM="ed4f51afc967e921ff5721151f567a4c43c4288ac93ec2393c6238b8c4891de8"; \
+        SHA256SUM="bb499b18dbcbb2d89b22f91fe26fe661f5ed1f1944fdc743560d69cd52a2468f"; \
     elif [ "${UNAME_M}" = "aarch64" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-aarch64.sh"; \
-        SHA256SUM="6950c7b1f4f65ce9b87ee1a2d684837771ae7b2e6044e0da9e915d1dee6c924c"; \
-    elif [ "${UNAME_M}" = "ppc64le" ]; then \
-        MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-ppc64le.sh"; \
-        SHA256SUM="b3de538cd542bc4f5a2f2d2a79386288d6e04f0e1459755f3cefe64763e51d16"; \
+        SHA256SUM="a8846ade7a5ddd9b6a6546590054d70d1c2cbe4fbe8c79fb70227e8fd93ef9f8"; \
     fi && \
     wget "${MINICONDA_URL}" -O miniconda.sh -q && \
     echo "${SHA256SUM} miniconda.sh" > shasum && \
@@ -43,6 +40,7 @@ RUN set -x && \
     /opt/conda/bin/conda clean -afy
 
 ENV PYTHON_PREFIX=/opt/conda/bin
+ENV PATH="$PATH:/opt/conda/bin"
 
 RUN update-alternatives --install /usr/bin/python python ${PYTHON_PREFIX}/python 1 && \
     update-alternatives --install /usr/bin/python3 python3 ${PYTHON_PREFIX}/python3 1 && \
@@ -54,4 +52,4 @@ RUN pip install mosec
 RUN mkdir -p /workspace
 WORKDIR /workspace
 
-ENTRYPOINT [ "bash" ]
+CMD [ "/bin/bash" ]
