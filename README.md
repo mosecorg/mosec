@@ -4,10 +4,10 @@
 
 <p align="center">
   <a href="https://discord.gg/Jq5vxuH69W">
-    <img alt="discord invitation link" src="https://dcbadge.vercel.app/api/server/Jq5vxuH69W?style=flat">
+    <img alt="discord invitation link" src="https://img.shields.io/discord/916177932236521533?style=flat&logo=discord&color=blue&cacheSeconds=60">
   </a>
   <a href="https://pypi.org/project/mosec/">
-    <img src="https://badge.fury.io/py/mosec.svg" alt="PyPI version" height="20">
+    <img src="https://img.shields.io/pypi/v/mosec?style=flat&logo=python&color=blue&cacheSeconds=60" alt="PyPI version" height="20">
   </a>
   <a href="https://anaconda.org/conda-forge/mosec">
     <img src="https://anaconda.org/conda-forge/mosec/badges/version.svg" alt="conda-forge">
@@ -17,12 +17,6 @@
   </a>
   <a href="https://pepy.tech/project/mosec">
     <img src="https://static.pepy.tech/badge/mosec/month" alt="PyPi monthly Downloads" height="20">
-  </a>
-  <a href="https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)">
-    <img src="https://img.shields.io/github/license/mosecorg/mosec" alt="License" height="20">
-  </a>
-  <a href="https://github.com/mosecorg/mosec/actions/workflows/check.yml?query=workflow%3A%22lint+and+test%22+branch%3Amain">
-    <img src="https://github.com/mosecorg/mosec/actions/workflows/check.yml/badge.svg?branch=main" alt="Check status" height="20">
   </a>
 </p>
 
