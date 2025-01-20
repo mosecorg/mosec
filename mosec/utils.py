@@ -1,4 +1,4 @@
-# Copyright 2023 MOSEC Authors
+# Copyright 2025 MOSEC Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,43 @@
 """Provide useful utils to inspect function type."""
 
 import inspect
+import os
 import sys
+import sysconfig
 from enum import Enum
-from typing import Any, List
+from pathlib import Path
+from typing import Any, List, Optional
+
+
+# adopted from https://github.com/PyO3/maturin/blob/main/maturin/__main__.py
+# License: Apache-2.0 or MIT
+def get_mosec_path() -> Optional[Path]:
+    """Get `mosec` binary path."""
+    SCRIPT_NAME = "mosec"
+
+    def script_dir(scheme: str) -> str:
+        return sysconfig.get_path("scripts", scheme)
+
+    def script_exists(dir: str) -> bool:
+        for _, _, files in os.walk(dir):
+            for f in files:
+                name, *_ = os.path.splitext(f)
+                if name == SCRIPT_NAME:
+                    return True
+
+        return False
+
+    paths = list(
+        filter(
+            script_exists,
+            filter(os.path.exists, map(script_dir, sysconfig.get_scheme_names())),
+        )
+    )
+
+    if paths:
+        return Path(paths[0]) / SCRIPT_NAME
+
+    return None
 
 
 def get_annotations(func) -> dict:

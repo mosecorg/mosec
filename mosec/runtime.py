@@ -26,6 +26,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 from mosec.coordinator import Coordinator
 from mosec.env import env_var_context, validate_env, validate_int_ge
 from mosec.log import get_internal_logger
+from mosec.utils import get_mosec_path
 from mosec.worker import Worker
 
 logger = get_internal_logger()
@@ -270,5 +271,5 @@ class RsRuntimeManager:
 
         """
         # pylint: disable=consider-using-with
-        self.process = subprocess.Popen([str("mosec"), config_path])
+        self.process = subprocess.Popen([str(get_mosec_path()), config_path])
         return self.process
