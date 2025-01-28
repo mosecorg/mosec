@@ -243,8 +243,9 @@ If you find this software useful for your research, please consider citing
 @software{yang2021mosec,
   title = {{MOSEC: Model Serving made Efficient in the Cloud}},
   author = {Yang, Keming and Liu, Zichen and Cheng, Philip},
-  url = {https://github.com/mosecorg/mosec},
-  year = {2021}
+  howpublished = {https://github.com/mosecorg/mosec},
+  year = {2021},
+  note = {Accessed: 2024-09-16}
 }
 ```
 
