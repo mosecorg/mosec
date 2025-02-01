@@ -17,7 +17,7 @@ rust-version = "1.78"
 bytes = "1.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
-tokio = { version = "1.42", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
+tokio = { version = "1.43", features = ["rt", "rt-multi-thread", "time", "macros", "sync", "signal", "io-util"] }
 derive_more = { version = "1.0", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = "2.2"
