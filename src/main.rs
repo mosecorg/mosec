@@ -26,24 +26,24 @@ use std::env;
 use std::fs::read_to_string;
 use std::net::SocketAddr;
 
-use axum::routing::{get, post};
 use axum::Router;
-use tokio::signal::unix::{signal, SignalKind};
+use axum::routing::{get, post};
+use tokio::signal::unix::{SignalKind, signal};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::decompression::RequestDecompressionLayer;
 use tracing::{debug, info};
 use tracing_subscriber::fmt::time::UtcTime;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{filter, Layer};
+use tracing_subscriber::{Layer, filter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::apidoc::MosecOpenAPI;
 use crate::config::Config;
-use crate::metrics::{Metrics, METRICS};
-use crate::routes::{index, inference, metrics, sse_inference, RustAPIDoc};
-use crate::tasks::{TaskManager, TASK_MANAGER};
+use crate::metrics::{METRICS, Metrics};
+use crate::routes::{RustAPIDoc, index, inference, metrics, sse_inference};
+use crate::tasks::{TASK_MANAGER, TaskManager};
 
 async fn shutdown_signal() {
     let mut interrupt = signal(SignalKind::interrupt()).unwrap();

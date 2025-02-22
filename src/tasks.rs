@@ -20,13 +20,13 @@ use std::time::{Duration, Instant};
 
 use axum::http::StatusCode;
 use bytes::Bytes;
-use tokio::sync::{mpsc, oneshot, Barrier};
+use tokio::sync::{Barrier, mpsc, oneshot};
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
 use crate::config::Config;
 use crate::errors::ServiceError;
-use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL};
+use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics};
 use crate::protocol::communicate;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, derive_more::Error)]
