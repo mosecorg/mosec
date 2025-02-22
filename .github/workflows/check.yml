@@ -42,14 +42,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.9
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: make install
-      - name: install node for pyright
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - name: install pyright
-        run: npm install -g pyright
       - name: Lint
         run: make lint semantic_lint
 
