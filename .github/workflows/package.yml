@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: kemingy/maturin-action@dev
+        uses: kemingy/maturin-action@fix_docker_rustc_version
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: kemingy/maturin-action@dev
+        uses: kemingy/maturin-action@fix_docker_rustc_version
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
-        uses: kemingy/maturin-action@dev
+        uses: kemingy/maturin-action@fix_docker_rustc_version
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
@@ -104,7 +104,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build sdist
-        uses: kemingy/maturin-action@dev
+        uses: kemingy/maturin-action@fix_docker_rustc_version
         with:
           command: sdist
           args: --out dist
@@ -134,7 +134,7 @@ jobs:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: kemingy/maturin-action@dev
+        uses: kemingy/maturin-action@fix_docker_rustc_version
         with:
           command: upload
           args: --non-interactive --skip-existing wheels-*/*
