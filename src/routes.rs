@@ -14,18 +14,18 @@
 
 use std::time::Duration;
 
-use axum::body::{to_bytes, Body};
-use axum::http::header::{HeaderValue, CONTENT_TYPE};
+use axum::body::{Body, to_bytes};
+use axum::http::header::{CONTENT_TYPE, HeaderValue};
 use axum::http::{Request, Response, StatusCode, Uri};
-use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use bytes::Bytes;
 use prometheus_client::encoding::text::encode;
 use tracing::warn;
 use utoipa::OpenApi;
 
 use crate::errors::ServiceError;
-use crate::metrics::{CodeLabel, Metrics, DURATION_LABEL, REGISTRY};
+use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics, REGISTRY};
 use crate::tasks::{TaskCode, TaskManager};
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
