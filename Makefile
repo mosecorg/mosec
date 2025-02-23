@@ -6,7 +6,7 @@ RUST_SOURCE_FILES=src/*
 install:
 	pip install -r requirements/dev.txt -r requirements/mixin.txt -r requirements/doc.txt
 	pre-commit install
-	rustup toolchain install nightly
+	rustup toolchain install nightly --no-self-update
 	rustup component add rustfmt clippy --toolchain nightly
 
 dev:
