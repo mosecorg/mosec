@@ -1,6 +1,13 @@
 name: Pages
 
 on:
+  pull_request:
+    paths:
+      - 'mosec/**'
+      - 'docs/**'
+      - '.github/workflows/page.yml'
+      - 'examples/**'
+      - '**.md'
   push:
     branches: [ main ]
     paths:
@@ -46,10 +53,12 @@ jobs:
       run: |
         cd docs && make html
     - name: Upload artifact
+      if: ${{ github.event_name == 'push' }}
       uses: actions/upload-pages-artifact@v3
       with:
         # Upload entire repository
         path: 'docs/build/html'
     - name: Deploy to GitHub Pages
+      if: ${{ github.event_name == 'push' }}
       id: deployment
       uses: actions/deploy-pages@v4

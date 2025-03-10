@@ -35,9 +35,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.9
+          enable-cache: true
+          python-version: "3.12"
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
