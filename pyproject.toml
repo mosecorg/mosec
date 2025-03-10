@@ -38,10 +38,18 @@ repository = "https://github.com/mosecorg/mosec"
 changelog = "https://github.com/mosecorg/mosec/releases"
 [project.scripts]
 [project.optional-dependencies]
-validation = ["msgspec"]
-redis = ["redis"]
-msgpack = ["msgpack"]
-numbin = ["numbin"]
+validation = [
+    "msgspec>=0.19.0",
+]
+redis = [
+    "redis>=5.2.1",
+]
+msgpack = [
+    "msgpack>=1.1.0",
+]
+numbin = [
+    "numbin>=0.5.0",
+]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
@@ -92,3 +100,37 @@ max-args = 10
 "examples/*" = ["D"]
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[dependency-groups]
+doc = [
+    "furo>=2022.12.7",
+    "myst-parser>=0.18",
+    "sphinx>=7.4.7",
+    "sphinx-autodoc-typehints>=1.22",
+    "sphinx-copybutton>=0.5",
+    "sphinx-sitemap>=2.6.0",
+    "sphinxcontrib-napoleon>=0.7",
+    "sphinxcontrib-programoutput>=0.17",
+    "sphinxext-opengraph>=0.8",
+]
+dev = [
+    "httpx-sse==0.4.0",
+    "httpx[http2]==0.28.1",
+    "maturin>=1.8,<2.0",
+    "mypy~=1.15",
+    "pre-commit>=2.15.0",
+    "pyright~=1.1",
+    "pytest>=8",
+    "pytest-mock>=3.5",
+    "ruff>=0.9",
+    "zstandard~=0.23",
+]
+mixin = [
+    "msgpack>=1.1.0",
+    "msgspec>=0.19.0",
+    "numbin>=0.5.0",
+    "numpy<2 ; python_full_version < '3.12'",
+    "numpy>=2 ; python_full_version >= '3.12'",
+    "pyarrow>=0.6.1,<12 ; python_full_version < '3.12'", # pyarrow legacy dependency
+    "redis>=4.0.0",
+]

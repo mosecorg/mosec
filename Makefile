@@ -1,46 +1,43 @@
-.DEFAULT_GOAL:=dev
-
 PY_SOURCE_FILES=mosec tests examples
 RUST_SOURCE_FILES=src/*
+RUST_BACKTRACE=1
 
-install:
-	pip install -r requirements/dev.txt -r requirements/mixin.txt -r requirements/doc.txt
+install_py:
+	uv venv
+	uv sync --all-groups --all-extras
 	pre-commit install
+
+install_rs:
 	rustup toolchain install nightly --no-self-update
 	rustup component add rustfmt clippy --toolchain nightly
 
-dev:
-	pip install -e .
+install: install_py install_rs
 
-test: dev
-	@pip install -q -r requirements/mixin.txt
+test:
 	echo "Running tests for the main logic and mixin(!shm)"
-	pytest tests -vv -s -m "not shm"
-	RUST_BACKTRACE=1 cargo test -vv
+	uv run pytest tests -vv -s -m "not shm"
+	cargo test -vv
 
-test_unit: dev
+test_unit:
 	echo "Running tests for the main logic"
-	pytest -vv -s tests/test_log.py tests/test_protocol.py tests/test_coordinator.py
-	RUST_BACKTRACE=1 cargo test -vv
+	uv run pytest -vv -s tests/test_log.py tests/test_protocol.py tests/test_coordinator.py
+	cargo test -vv
 
-test_shm: dev
-	@pip install -q -r requirements/mixin.txt
+test_shm:
 	echo "Running tests for the shm mixin"
-	pytest tests -vv -s -m "shm"
-	pip uninstall -y -r requirements/mixin.txt
+	uv run pytest tests -vv -s -m "shm"
 
-test_all: dev
-	@pip install -q -r requirements/mixin.txt
+test_all:
 	echo "Running tests for the all features"
-	pytest tests -vv -s
-	RUST_BACKTRACE=1 cargo test -vv
+	uv run pytest tests -vv -s
+	cargo test -vv
 
-test_chaos: dev
-	@python -m tests.bad_req
+test_chaos:
+	@uv run -m tests.bad_req
 
 doc:
 	@cd docs && make html && cd ../
-	@python -m http.server -d docs/build/html 7291 -b 127.0.0.1
+	@uv run -m http.server -d docs/build/html 7291 -b 127.0.0.1
 
 clean:
 	@cargo clean
@@ -49,22 +46,21 @@ clean:
 	@-find . -name '__pycache__' -exec rm -rf {} +
 
 package: clean
-	maturin build --release --out dist
+	uv run -- maturin build --release --out dist
 
 publish: package
-	twine upload dist/*
+	uv run twine upload dist/*
 
 format:
-	@ruff check --fix ${PY_SOURCE_FILES}
-	@ruff format ${PY_SOURCE_FILES}
+	@uv run -- ruff check --fix ${PY_SOURCE_FILES}
+	@uv run -- ruff format ${PY_SOURCE_FILES}
 	@cargo +nightly fmt --all
 
 lint:
-	@pip install -q -e .
-	@ruff check ${PY_SOURCE_FILES}
+	@uv run -- ruff check ${PY_SOURCE_FILES}
 	@-rm mosec/_version.py
-	@pyright --stats
-	@mypy --non-interactive --install-types ${PY_SOURCE_FILES}
+	@uv run -- pyright --stats
+	@uv run -- mypy --non-interactive --install-types ${PY_SOURCE_FILES}
 	@cargo +nightly fmt -- --check
 
 semantic_lint:
