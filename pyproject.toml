@@ -98,6 +98,10 @@ max-args = 10
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.typos]
+[tool.typos.default.extend-words]
+typ = "typ"
+
 [dependency-groups]
 doc = [
   "furo>=2022.12.7",
