@@ -218,7 +218,7 @@ class DryRunner:
             example = ingress.example
         elif ingress.multi_examples:
             assert isinstance(ingress.multi_examples, list), (
-                "`multi_examples` " "should be a list of data"
+                "`multi_examples` should be a list of data"
             )
             example = ingress.multi_examples[0]
 

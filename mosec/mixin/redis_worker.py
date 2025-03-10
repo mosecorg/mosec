@@ -55,8 +55,7 @@ class RedisShmIPCMixin(Worker):
             url = environ.get(_REDIS_URL_ENV)
             if not url:
                 raise RuntimeError(
-                    "please set the redis url with "
-                    "`RedisShmIPCMixin.set_redis_url()`"
+                    "please set the redis url with `RedisShmIPCMixin.set_redis_url()`"
                 )
             self._redis_client = redis.from_url(url)
         return self._redis_client

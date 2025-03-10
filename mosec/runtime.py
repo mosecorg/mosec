@@ -167,16 +167,16 @@ class Runtime:
     def _validate(self):
         """Validate arguments of worker runtime."""
         validate_env(self.env, self.num)
-        assert issubclass(
-            self.worker, Worker
-        ), "worker must be inherited from mosec.Worker"
+        assert issubclass(self.worker, Worker), (
+            "worker must be inherited from mosec.Worker"
+        )
         validate_int_ge(self.num, "worker number")
         validate_int_ge(self.max_batch_size, "maximum batch size")
         validate_int_ge(self.max_wait_time, "maximum wait time", 0)
         validate_int_ge(self.timeout, "forward timeout", 0)
-        assert (
-            self.start_method in NEW_PROCESS_METHOD
-        ), f"start method must be one of {NEW_PROCESS_METHOD}"
+        assert self.start_method in NEW_PROCESS_METHOD, (
+            f"start method must be one of {NEW_PROCESS_METHOD}"
+        )
 
 
 class PyRuntimeManager:

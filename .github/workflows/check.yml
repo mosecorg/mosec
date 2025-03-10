@@ -70,8 +70,6 @@ jobs:
           allow-prereleases: true
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: nightly
       - name: Install components
         run: |
           make install

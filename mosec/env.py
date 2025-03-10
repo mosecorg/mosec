@@ -79,9 +79,9 @@ def get_env_namespace(prefix: str = MOSEC_ENV_PREFIX) -> Namespace:
 
 def validate_int_ge(number, name, threshold=1):
     """Validate int number is greater than threshold."""
-    assert isinstance(
-        number, int
-    ), f"{name} must be integer but you give {type(number)}"
+    assert isinstance(number, int), (
+        f"{name} must be integer but you give {type(number)}"
+    )
     assert number >= threshold, f"{name} must be no less than {threshold}"
 
 
