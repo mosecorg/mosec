@@ -41,6 +41,7 @@ doc:
 
 clean:
 	@cargo clean
+	@uv cache clean
 	@-rm -rf build/ dist/ .eggs/ site/ *.egg-info .pytest_cache .mypy_cache .ruff_cache
 	@-find . -name '*.pyc' -type f -exec rm -rf {} +
 	@-find . -name '__pycache__' -exec rm -rf {} +

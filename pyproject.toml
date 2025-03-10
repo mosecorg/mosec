@@ -4,31 +4,31 @@ name = "mosec"
 description = "Model Serving made Efficient in the Cloud"
 readme = "README.md"
 authors = [
-    {name = "Keming", email = "kemingy94@gmail.com"},
-    {name = "Zichen", email = "lkevinzc@gmail.com"}
+  { name = "Keming", email = "kemingy94@gmail.com" },
+  { name = "Zichen", email = "lkevinzc@gmail.com" },
 ]
-license = {text = "Apache-2.0"}
+license = { text = "Apache-2.0" }
 keywords = ["machine learning", "deep learning", "model serving"]
 dynamic = ["version"]
 requires-python = ">=3.9"
 dependencies = []
 classifiers = [
-    "Environment :: GPU",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
-    "Programming Language :: Rust",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: Build Tools",
+  "Environment :: GPU",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Build Tools",
 ]
 
 [project.urls]
@@ -38,18 +38,10 @@ repository = "https://github.com/mosecorg/mosec"
 changelog = "https://github.com/mosecorg/mosec/releases"
 [project.scripts]
 [project.optional-dependencies]
-validation = [
-    "msgspec>=0.19.0",
-]
-redis = [
-    "redis>=5.2.1",
-]
-msgpack = [
-    "msgpack>=1.1.0",
-]
-numbin = [
-    "numbin>=0.5.0",
-]
+validation = ["msgspec>=0.19.0"]
+redis = ["redis>=5.2.1"]
+msgpack = ["msgpack>=1.1.0"]
+numbin = ["numbin>=0.5.0"]
 
 [build-system]
 requires = ["maturin>=1.8,<2.0"]
@@ -61,6 +53,13 @@ python-packages = ["mosec"]
 strip = true
 exclude = ["tests/**/*", "docs/**/*", "examples/**/*"]
 
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "Cargo.toml" },
+  { file = "src/**/*.rs" },
+]
+
 [tool.mypy]
 python_version = "3.9"
 warn_redundant_casts = true
@@ -69,11 +68,11 @@ pretty = true
 
 [[tool.mypy.overrides]]
 module = [
-    "torch.*",
-    "transformers",
-    "sentence_transformers",
-    "llmspec",
-    "openai",
+  "torch.*",
+  "transformers",
+  "sentence_transformers",
+  "llmspec",
+  "openai",
 ]
 ignore_missing_imports = true
 
@@ -84,9 +83,7 @@ include = ["mosec", "tests", "examples"]
 reportMissingImports = "warning"
 
 [tool.pytest.ini_options]
-markers = [
-    "shm: mark a test is related to shared memory",
-]
+markers = ["shm: mark a test is related to shared memory"]
 
 [tool.ruff.lint]
 select = ["E", "F", "G", "B", "I", "SIM", "TID", "PL", "RUF", "D"]
@@ -103,34 +100,34 @@ convention = "google"
 
 [dependency-groups]
 doc = [
-    "furo>=2022.12.7",
-    "myst-parser>=0.18",
-    "sphinx>=7.4.7",
-    "sphinx-autodoc-typehints>=1.22",
-    "sphinx-copybutton>=0.5",
-    "sphinx-sitemap>=2.6.0",
-    "sphinxcontrib-napoleon>=0.7",
-    "sphinxcontrib-programoutput>=0.17",
-    "sphinxext-opengraph>=0.8",
+  "furo>=2022.12.7",
+  "myst-parser>=0.18",
+  "sphinx>=7.4.7",
+  "sphinx-autodoc-typehints>=1.22",
+  "sphinx-copybutton>=0.5",
+  "sphinx-sitemap>=2.6.0",
+  "sphinxcontrib-napoleon>=0.7",
+  "sphinxcontrib-programoutput>=0.17",
+  "sphinxext-opengraph>=0.8",
 ]
 dev = [
-    "httpx-sse==0.4.0",
-    "httpx[http2]==0.28.1",
-    "maturin>=1.8,<2.0",
-    "mypy~=1.15",
-    "pre-commit>=2.15.0",
-    "pyright~=1.1",
-    "pytest>=8",
-    "pytest-mock>=3.5",
-    "ruff>=0.9",
-    "zstandard~=0.23",
+  "httpx-sse==0.4.0",
+  "httpx[http2]==0.28.1",
+  "maturin>=1.8,<2.0",
+  "mypy~=1.15",
+  "pre-commit>=2.15.0",
+  "pyright~=1.1",
+  "pytest>=8",
+  "pytest-mock>=3.5",
+  "ruff>=0.9",
+  "zstandard~=0.23",
 ]
 mixin = [
-    "msgpack>=1.1.0",
-    "msgspec>=0.19.0",
-    "numbin>=0.5.0",
-    "numpy<2 ; python_full_version < '3.12'",
-    "numpy>=2 ; python_full_version >= '3.12'",
-    "pyarrow>=0.6.1,<12 ; python_full_version < '3.12'", # pyarrow legacy dependency
-    "redis>=4.0.0",
+  "msgpack>=1.1.0",
+  "msgspec>=0.19.0",
+  "numbin>=0.5.0",
+  "numpy<2 ; python_full_version < '3.12'",
+  "numpy>=2 ; python_full_version >= '3.12'",
+  "pyarrow>=0.6.1,<12 ; python_full_version < '3.12'", # pyarrow legacy dependency
+  "redis>=4.0.0",
 ]
