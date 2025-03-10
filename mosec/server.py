@@ -179,9 +179,9 @@ class Server:
 
         """
         assert isinstance(name, str), "daemon name should be a string"
-        assert isinstance(
-            proc, (mp.Process, subprocess.Popen)
-        ), f"{type(proc)} is not a process or subprocess"
+        assert isinstance(proc, (mp.Process, subprocess.Popen)), (
+            f"{type(proc)} is not a process or subprocess"
+        )
         self._daemon[name] = proc
 
     # pylint: disable=too-many-arguments
