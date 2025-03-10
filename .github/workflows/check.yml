@@ -8,11 +8,9 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'examples/**'
-      - 'setup.py'
       - 'pyproject.toml'
       - 'Cargo.lock'
       - 'Cargo.toml'
-      - 'requirements/**'
   push:
     branches:
       - main
@@ -22,11 +20,9 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'examples/**'
-      - 'setup.py'
       - 'pyproject.toml'
       - 'Cargo.lock'
       - 'Cargo.toml'
-      - 'requirements/**'
   merge_group:
 
 concurrency:
@@ -39,9 +35,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.9
+          enable-cache: true
+          python-version: "3.12"
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
@@ -63,22 +61,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install components
-        run: |
-          make install
+        run: make install
       - name: Test unit
-        run: |
-          make test_unit
+        run: make test_unit
       - name: Test
-        run: |
-          make test
+        run: make test
       - name: Test shm in Linux
         # ignore the shm test for Python 3.12 since pyarrow doesn't have py3.12 wheel with version < 12
         if: ${{ startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, '3.12') && !startsWith(matrix.python-version, '3.13') }}

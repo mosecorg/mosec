@@ -3,6 +3,26 @@ name: Nightly Test
 on:
   schedule:
     - cron: '30 7 * * *'
+  pull_request:
+    paths:
+      - '.github/workflows/nightly.yml'
+      - 'mosec/**'
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'tests/bad_req.py'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/nightly.yml'
+      - 'mosec/**'
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'tests/bad_req.py'
   workflow_dispatch:
 
 concurrency:
@@ -20,16 +40,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
+          enable-cache: true
+          python-version: "3.12"
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
-        run: |
-          make install
-          make dev
+        run: make install_py
       - name: Test
-        run: |
-          python -m tests.bad_req
+        run: make test_chaos
