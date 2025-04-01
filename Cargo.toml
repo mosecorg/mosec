@@ -23,7 +23,7 @@ rust-version = "1.85"
 bytes = "1.10"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
-tokio = { version = "1.43", features = [
+tokio = { version = "1.44", features = [
   "rt",
   "rt-multi-thread",
   "time",
