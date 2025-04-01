@@ -36,7 +36,7 @@ derive_more = { version = "2.0.1", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = "2.2"
 prometheus-client = "0.23.1"
-axum = { version = "0.8.1", default-features = false, features = [
+axum = { version = "0.8.3", default-features = false, features = [
   "matched-path",
   "original-uri",
   "query",
