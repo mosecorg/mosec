@@ -20,7 +20,7 @@ exclude = ["target", "examples", "tests", "scripts"]
 rust-version = "1.85"
 
 [dependencies]
-bytes = "1.9"
+bytes = "1.10"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
 tokio = { version = "1.43", features = [
