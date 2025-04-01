@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -570,7 +571,6 @@ wheels = [
 
 [[package]]
 name = "mosec"
-version = "0.9.4"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -633,6 +633,7 @@ requires-dist = [
     { name = "numbin", marker = "extra == 'numbin'", specifier = ">=0.5.0" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=5.2.1" },
 ]
+provides-extras = ["validation", "redis", "msgpack", "numbin"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -1,2 +1,3 @@
+accept = "100..=103, 200..=208, 403"
 scheme = ["https", "http", "mailto"]
 exclude_loopback = true

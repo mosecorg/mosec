@@ -25,4 +25,4 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           fail: true
-          args: --accept '100..=103,200..=299, 403' --verbose --no-progress --format detailed .
+          args: --verbose --no-progress --format detailed .
