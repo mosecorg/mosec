@@ -5,7 +5,6 @@ RUST_BACKTRACE=1
 install_py:
 	uv venv
 	uv sync --all-groups --all-extras
-	pre-commit install
 
 install_rs:
 	rustup toolchain install nightly --no-self-update
