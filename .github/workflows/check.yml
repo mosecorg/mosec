@@ -29,6 +29,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
+env:
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -42,6 +46,8 @@ jobs:
           python-version: "3.12"
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install dependencies
         run: make install
       - name: Lint
@@ -68,6 +74,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install components
         run: make install
       - name: Test unit

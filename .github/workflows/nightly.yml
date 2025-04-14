@@ -29,6 +29,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
+env:
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
 jobs:
   test:
     name: "stressful bad requests test"
@@ -47,6 +51,8 @@ jobs:
           python-version: "3.12"
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install dependencies
         run: make install_py
       - name: Test
