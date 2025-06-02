@@ -109,7 +109,8 @@ confidence-threshold = 0.8
 exceptions = [
   # Each entry is the crate and version constraint, and its specific allow
   # list
-  #{ allow = ["Zlib"], crate = "adler32" },
+  { allow = ["Zlib"], crate = "zlib-rs" },
+  { allow = ["Zlib"], crate = "libz-rs-sys" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
