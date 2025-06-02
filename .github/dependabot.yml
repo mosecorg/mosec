@@ -9,8 +9,6 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
-    reviewers:
-      - "kemingy"
     commit-message:
       prefix: "chore(cargo)"
     groups:
@@ -22,8 +20,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    reviewers:
-      - "kemingy"
     commit-message:
       prefix: "chore(pip)"
     groups:
@@ -35,8 +31,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    reviewers:
-      - "kemingy"
     commit-message:
       prefix: "chore(actions)"
     groups:
