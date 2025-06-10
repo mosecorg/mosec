@@ -30,6 +30,7 @@ def jax():
 def build():
     base(dev=True, image="ubuntu:22.04")
     install.uv()
+    shell("fish")
     rust()
     runtime.init(["make install"])
 
