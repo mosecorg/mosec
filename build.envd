@@ -29,8 +29,7 @@ def jax():
 
 def build():
     base(dev=True, image="ubuntu:22.04")
-    install.conda()
-    install.python()
+    install.uv()
     rust()
     runtime.init(["make install"])
 

@@ -50,11 +50,11 @@ PROTOCOL_TIMEOUT = 2.0
 
 
 @contextmanager
-def set_mosec_timeout(duration: int):
+def set_mosec_timeout(duration: float):
     """Context manager to set a timeout for a code block.
 
     Args:
-        duration (float): the duration in seconds before timing out
+        duration: the duration in seconds before timing out
 
     """
 
@@ -64,11 +64,11 @@ def set_mosec_timeout(duration: int):
         )
 
     signal.signal(signal.SIGALRM, handler)
-    signal.alarm(duration)
+    signal.setitimer(signal.ITIMER_REAL, duration)
     try:
         yield
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 class FakeSemaphore:
@@ -108,7 +108,7 @@ class Coordinator:
         socket_prefix: str,
         stage_name: str,
         worker_id: int,
-        timeout: int,
+        timeout: float,
     ):
         """Initialize the mosec coordinator.
 

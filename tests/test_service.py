@@ -110,13 +110,13 @@ def test_square_service(mosec_service, http_client):
     "mosec_service,http_client,status_code",
     [
         pytest.param(
-            "timeout_service --sleep-duration 1.5 --worker-timeout 1",
+            "timeout_service --sleep-duration 1 --worker-timeout 0.5",
             None,
             HTTPStatus.REQUEST_TIMEOUT,
             id="worker-forward-trigger-worker-timeout",
         ),
         pytest.param(
-            "timeout_service --sleep-duration 1.0 --worker-timeout 2",
+            "timeout_service --sleep-duration 0.5 --worker-timeout 1",
             None,
             HTTPStatus.OK,
             id="normal-request-within-worker-timeout",
@@ -126,6 +126,18 @@ def test_square_service(mosec_service, http_client):
             None,
             HTTPStatus.REQUEST_TIMEOUT,
             id="worker-forward-trigger-service-timeout",
+        ),
+        pytest.param(
+            "timeout_service --sleep-duration 1 --worker-timeout 0.5",
+            None,
+            HTTPStatus.REQUEST_TIMEOUT,
+            id="worker-forward-trigger-worker-runtime-timeout",
+        ),
+        pytest.param(
+            "timeout_service --sleep-duration 0.5 --worker-timeout 1",
+            None,
+            HTTPStatus.OK,
+            id="normal-request-within-worker-runtime-timeout",
         ),
     ],
     indirect=["mosec_service", "http_client"],

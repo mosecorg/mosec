@@ -85,6 +85,14 @@ def validate_int_ge(number, name, threshold=1):
     assert number >= threshold, f"{name} must be no less than {threshold}"
 
 
+def validate_float_ge(number, name, threshold=0.0):
+    """Validate float number is greater than threshold."""
+    assert isinstance(number, float), (
+        f"{name} must be float but you give {type(number)}"
+    )
+    assert number >= threshold, f"{name} must be no less than {threshold}"
+
+
 def validate_str_dict(dictionary: Dict):
     """Validate keys and values of the dictionary is string type."""
     for key, value in dictionary.items():

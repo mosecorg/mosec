@@ -24,7 +24,7 @@ from time import monotonic, sleep
 from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
 
 from mosec.coordinator import Coordinator
-from mosec.env import env_var_context, validate_env, validate_int_ge
+from mosec.env import env_var_context, validate_env, validate_float_ge, validate_int_ge
 from mosec.log import get_internal_logger
 from mosec.utils import get_mosec_path
 from mosec.worker import Worker
@@ -48,23 +48,24 @@ class Runtime:
         worker: Type[Worker],
         num: int = 1,
         max_batch_size: int = 1,
-        max_wait_time: int = 10,
-        timeout: int = 3,
+        max_wait_time: int = 0,
+        timeout: float = 0.0,
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
     ):
         """Initialize the mosec coordinator.
 
         Args:
-            worker (Worker): subclass of `mosec.Worker` implemented by users.
-            num (int): number of workers
+            worker: subclass of `mosec.Worker` implemented by users.
+            num: number of workers
             max_batch_size: the maximum batch size allowed (>=1), will enable the
                 dynamic batching if it > 1
-            max_wait_time (int): the maximum wait time (millisecond)
+            max_wait_time: the maximum wait time (millisecond)
                 for dynamic batching, needs to be used with `max_batch_size`
                 to enable the feature. If not configure, will use the CLI
                 argument `--wait` (default=10ms)
-            timeout (int): timeout (second) for the `forward` function.
+            timeout: timeout (second) for the `forward` function.
+                If not set, will use the CLI argument `--timeout` (default=3s)
             start_method: the process starting method ("spawn" or "fork")
             env: the environment variables to set before starting the process
 
@@ -73,7 +74,7 @@ class Runtime:
         self.num = num
         self.max_batch_size = max_batch_size
         self.max_wait_time = max_wait_time
-        self.timeout = timeout
+        self.timeout_sec = float(timeout)
         self.start_method = start_method
         self.env = env
 
@@ -83,6 +84,13 @@ class Runtime:
         self._pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
 
         self._validate()
+
+    def _align_timeout_wait(self, timeout_sec: float, max_wait_time: int):
+        """Align the ``timeout`` and ``max_wait_time`` arguments."""
+        self.timeout_sec = self.timeout_sec if self.timeout_sec > 0 else timeout_sec
+        self.max_wait_time = (
+            self.max_wait_time if self.max_wait_time > 0 else max_wait_time
+        )
 
     @staticmethod
     def _process_healthy(process: Union[BaseProcess, None]) -> bool:
@@ -118,7 +126,7 @@ class Runtime:
                 work_path,
                 self.name,
                 worker_id + 1,
-                self.timeout,
+                self.timeout_sec,
             ),
             daemon=True,
         )
@@ -173,7 +181,7 @@ class Runtime:
         validate_int_ge(self.num, "worker number")
         validate_int_ge(self.max_batch_size, "maximum batch size")
         validate_int_ge(self.max_wait_time, "maximum wait time", 0)
-        validate_int_ge(self.timeout, "forward timeout", 0)
+        validate_float_ge(self.timeout_sec, "forward timeout", 0)
         assert self.start_method in NEW_PROCESS_METHOD, (
             f"start method must be one of {NEW_PROCESS_METHOD}"
         )

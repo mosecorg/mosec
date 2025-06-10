@@ -193,7 +193,7 @@ class Server:
         max_wait_time: int = 0,
         start_method: str = "spawn",
         env: Union[None, List[Dict[str, str]]] = None,
-        timeout: int = 0,
+        timeout: float = 0,
         route: Union[str, List[str]] = "/inference",
     ):
         """Sequentially appends workers to the workflow pipeline.
@@ -210,20 +210,23 @@ class Server:
             start_method: the process starting method ("spawn" or "fork"). (DO NOT
                 change this unless you understand the difference between them)
             env: the environment variables to set before starting the process
-            timeout: the timeout (second) for each worker forward processing (>=1)
+            timeout: the timeout (second) for each worker forward processing (>=0).
+                If not set, will use the CLI argument `--timeout` (default=3s)
             route: the route path for this worker. If not configured, will use the
                 default route path `/inference`. If a list is provided, different
                 route paths will share the same worker.
 
         """
-        timeout = timeout if timeout >= 1 else self._configs["timeout"] // 1000
+        timeout_sec = (
+            float(timeout) if timeout >= 0.0 else self._configs["timeout"] / 1000.0
+        )
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
         runtime = Runtime(
             worker,
             num,
             max_batch_size,
             max_wait_time,
-            timeout,
+            timeout_sec,
             start_method,
             env,
         )
@@ -231,7 +234,11 @@ class Server:
         self._py_runtime_manager.append(runtime)
 
     def register_runtime(self, routes: Dict[str, List[Runtime]]):
-        """Register the runtime to the routes."""
+        """Register the runtime to the routes.
+
+        Args:
+            routes: ``{"/your_endpoint": [Runtime1, Runtime2, ...], ...}``
+        """
         if self._py_runtime_manager.worker_count > 0:
             raise RuntimeError(
                 "`register_runtime` can only be registered to an empty mosec server"
@@ -240,6 +247,9 @@ class Server:
         for endpoint, runtimes in routes.items():
             for runtime in runtimes:
                 self._register_route(runtime, endpoint)
+                runtime._align_timeout_wait(
+                    self._configs["timeout"] / 1000.0, self._configs["wait"]
+                )
                 unique_runtimes.add(runtime)
         for runtime in unique_runtimes:
             self._py_runtime_manager.append(runtime)
