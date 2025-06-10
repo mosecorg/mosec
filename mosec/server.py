@@ -218,7 +218,7 @@ class Server:
 
         """
         timeout_sec = (
-            float(timeout) if timeout >= 0.0 else self._configs["timeout"] / 1000.0
+            float(timeout) if timeout > 0 else self._configs["timeout"] / 1000.0
         )
         max_wait_time = max_wait_time if max_wait_time >= 1 else self._configs["wait"]
         runtime = Runtime(
