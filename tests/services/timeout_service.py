@@ -18,7 +18,7 @@ import os
 import time
 from typing import Any
 
-from mosec import Server, Worker, get_logger
+from mosec import Runtime, Server, Worker, get_logger
 
 logger = get_logger()
 
@@ -39,17 +39,30 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--sleep-duration", type=float, help="worker sleep duration")
-    parser.add_argument("--worker-timeout", type=int, help="worker timeout")
+    parser.add_argument("--worker-timeout", type=float, help="worker timeout")
     parser.add_argument("--port", type=int, help="port")
+    parser.add_argument(
+        "--runtime",
+        action="store_true",
+        help="use runtime register instead of append worker",
+    )
 
     args = parser.parse_args()
 
     sleep_duration = args.sleep_duration
     worker_timeout = args.worker_timeout
     server = Server()
-    server.append_worker(
-        SleepyInference,
-        timeout=worker_timeout,
-        env=[{"SLEEP_DURATION": str(sleep_duration)}],
-    )
+    if args.runtime:
+        sleepy = Runtime(
+            SleepyInference,
+            timeout=worker_timeout,
+            env=[{"SLEEP_DURATION": str(sleep_duration)}],
+        )
+        server.register_runtime({"/inference": [sleepy]})
+    else:
+        server.append_worker(
+            SleepyInference,
+            timeout=worker_timeout,
+            env=[{"SLEEP_DURATION": str(sleep_duration)}],
+        )
     server.run()
