@@ -262,7 +262,7 @@ class RsRuntimeManager:
                 continue
             # exited
             if ctr_exitcode:  # on error
-                logger.error("mosec service halted on error [%d]", ctr_exitcode)
+                logger.error("mosec service halted with signal [%d]", ctr_exitcode)
             else:
                 logger.info("mosec service halted normally [%d]", ctr_exitcode)
             break
