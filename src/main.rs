@@ -118,10 +118,7 @@ fn main() {
     // let opts: Opts = argh::from_env();
     let cmd_args: Vec<String> = env::args().collect();
     if cmd_args.len() != 2 {
-        println!(
-            "expect one argument as the config path but got {:?}",
-            cmd_args
-        );
+        println!("expect one argument as the config path but got {cmd_args:?}");
         return;
     }
     let config_str = read_to_string(&cmd_args[1]).expect("read config file failure");
