@@ -556,4 +556,169 @@ mod tests {
             vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")]
         );
     }
+
+    #[cfg(all(feature = "loom", test))]
+    mod loom_tests {
+        use super::*;
+        use loom::sync::Mutex;
+        use loom::thread;
+        use std::sync::Arc;
+
+        /// Test concurrent task addition and notification patterns
+        /// This tests for the deadlock patterns mentioned in issues #311 and #316
+        #[test]
+        fn concurrent_task_operations() {
+            loom::model(|| {
+                let task_manager = Arc::new(SimpleTaskManager::new());
+                
+                // Pre-populate with a task
+                let id = task_manager.add_task(Bytes::from_static(b"test"));
+                
+                let tm1 = task_manager.clone();
+                let tm2 = task_manager.clone();
+
+                // Thread 1: Update and notify task (pattern from update_multi_tasks)
+                let handle1 = thread::spawn(move || {
+                    // Simulate the pattern where we update a task and then notify
+                    {
+                        let mut table = tm1.table.lock().unwrap();
+                        if let Some(task) = table.get_mut(&id) {
+                            task.update(TaskCode::Normal, &Bytes::from_static(b"updated"));
+                        }
+                    } // Release table lock
+                    tm1.notify_done(&id);
+                });
+
+                // Thread 2: Concurrent notification (could race with first thread)
+                let handle2 = thread::spawn(move || {
+                    tm2.notify_done(&id);
+                });
+
+                handle1.join().unwrap();
+                handle2.join().unwrap();
+            });
+        }
+
+        /// Test concurrent delete and notify operations
+        #[test]
+        fn concurrent_delete_notify() {
+            loom::model(|| {
+                let task_manager = Arc::new(SimpleTaskManager::new());
+                
+                // Pre-populate with a task
+                let id = task_manager.add_task(Bytes::from_static(b"test"));
+                
+                let tm1 = task_manager.clone();
+                let tm2 = task_manager.clone();
+
+                // Thread 1: Delete task
+                let handle1 = thread::spawn(move || {
+                    tm1.delete_task(id);
+                });
+
+                // Thread 2: Notify task done (this could race with delete)
+                let handle2 = thread::spawn(move || {
+                    tm2.notify_done(&id);
+                });
+
+                handle1.join().unwrap();
+                handle2.join().unwrap();
+            });
+        }
+
+        /// Test multiple concurrent operations on different tasks
+        #[test]
+        fn concurrent_multiple_tasks() {
+            loom::model(|| {
+                let task_manager = Arc::new(SimpleTaskManager::new());
+                
+                let tm1 = task_manager.clone();
+                let tm2 = task_manager.clone();
+                let tm3 = task_manager.clone();
+
+                // Thread 1: Add new task
+                let handle1 = thread::spawn(move || {
+                    tm1.add_task(Bytes::from_static(b"task1"));
+                });
+
+                // Thread 2: Add another task  
+                let handle2 = thread::spawn(move || {
+                    tm2.add_task(Bytes::from_static(b"task2"));
+                });
+
+                // Thread 3: Notify a task (may or may not exist)
+                let handle3 = thread::spawn(move || {
+                    tm3.notify_done(&0);
+                });
+
+                handle1.join().unwrap();
+                handle2.join().unwrap();
+                handle3.join().unwrap();
+            });
+        }
+
+        /// Simplified TaskManager for loom testing
+        /// Focuses only on the synchronization patterns that caused deadlocks
+        struct SimpleTaskManager {
+            table: Mutex<HashMap<u32, Task>>,
+            notifiers: Mutex<HashMap<u32, bool>>, // Simplified notifier state
+            current_id: Mutex<u32>,
+        }
+
+        impl SimpleTaskManager {
+            fn new() -> Self {
+                Self {
+                    table: Mutex::new(HashMap::new()),
+                    notifiers: Mutex::new(HashMap::new()),
+                    current_id: Mutex::new(0),
+                }
+            }
+
+            fn add_task(&self, data: Bytes) -> u32 {
+                let id: u32;
+                {
+                    let mut current_id = self.current_id.lock().unwrap();
+                    id = *current_id;
+                    *current_id = id.wrapping_add(1);
+                }
+                {
+                    let mut notifiers = self.notifiers.lock().unwrap();
+                    notifiers.insert(id, false);
+                }
+                {
+                    let mut table = self.table.lock().unwrap();
+                    table.insert(id, Task::new(data, "/test".to_string()));
+                }
+                id
+            }
+
+            fn notify_done(&self, id: &u32) {
+                let found;
+                {
+                    let mut notifiers = self.notifiers.lock().unwrap();
+                    found = notifiers.remove(id).is_some();
+                }
+                if found {
+                    // This is the potential deadlock pattern - accessing table after notifiers
+                    {
+                        let mut table = self.table.lock().unwrap();
+                        table.remove(id);
+                    }
+                }
+            }
+
+            fn delete_task(&self, id: u32) -> Option<Task> {
+                let task;
+                {
+                    let mut notifiers = self.notifiers.lock().unwrap();
+                    notifiers.remove(&id);
+                }
+                {
+                    let mut table = self.table.lock().unwrap();
+                    task = table.remove(&id);
+                }
+                task
+            }
+        }
+    }
 }
