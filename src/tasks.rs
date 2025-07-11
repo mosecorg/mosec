@@ -557,7 +557,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "loom", test))]
+    #[cfg(all(loom, test))]
     mod loom_tests {
         use super::*;
         use loom::sync::Mutex;
