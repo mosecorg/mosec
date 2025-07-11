@@ -56,7 +56,9 @@ tower-http = { version = "0.6.6", features = [
   "compression-gzip",
   "decompression-gzip",
 ] }
-loom = { version = "0.7", optional = true }
+
+[dev-dependencies]
+loom = "0.7"
 
 [features]
-loom = ["dep:loom"]
+loom = []
