@@ -79,6 +79,8 @@ jobs:
         run: make install
       - name: Test unit
         run: make test_unit
+      - name: Test loom
+        run: make test_loom
       - name: Test
         run: make test
       - name: Test shm in Linux
