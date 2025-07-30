@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use crate::sync::{Arc, Mutex, AtomicBool, Ordering, OnceLock};
+use crate::sync::{Mutex, AtomicBool, Ordering, OnceLock};
 
 use axum::http::StatusCode;
 use bytes::Bytes;
@@ -116,8 +116,8 @@ impl TaskManager {
         }
     }
 
-    pub(crate) fn init_from_config(&mut self, conf: &Config) -> Arc<Barrier> {
-        let barrier = Arc::new(Barrier::new(conf.runtimes.len() + 1));
+    pub(crate) fn init_from_config(&mut self, conf: &Config) -> std::sync::Arc<Barrier> {
+        let barrier = std::sync::Arc::new(Barrier::new(conf.runtimes.len() + 1));
 
         let mut worker_channel =
             HashMap::<String, (async_channel::Receiver<u32>, async_channel::Sender<u32>)>::new();
@@ -410,12 +410,11 @@ async fn wait_sse_finish(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sync::Arc;
 
-    #[cfg(loom)]
+    #[cfg(all(test, feature = "loom_tests"))]
     use loom;
-    #[cfg(loom)]
-    use crate::sync::Mutex;
+    #[cfg(all(test, feature = "loom_tests"))]
+    use crate::sync::{Arc, Mutex};
 
     const DEFAULT_ENDPOINT: &str = "/inference";
 
@@ -565,24 +564,23 @@ mod tests {
 
     /// Test concurrent task operations using loom to detect potential deadlocks
     /// This tests the patterns that caused deadlocks in issues #311 and #316
-    #[cfg(loom)]
+    #[cfg(all(test, feature = "loom_tests"))]
     #[test] 
     fn loom_concurrent_notify_delete() {
         use std::collections::HashMap;
-        use tokio::sync::oneshot;
+        use bytes::Bytes;
         
         loom::model(|| {
-            // Create the exact same sync primitives as TaskManager
-            let notifiers = Arc::new(Mutex::new(HashMap::<u32, oneshot::Sender<()>>::new()));
+            // Create the exact same sync primitives as TaskManager but without async dependencies
+            let notifiers = Arc::new(Mutex::new(HashMap::<u32, bool>::new()));
             let table = Arc::new(Mutex::new(HashMap::<u32, Task>::new()));
             
             // Setup initial state
             {
                 let mut notifiers_guard = notifiers.lock().unwrap();
                 let mut table_guard = table.lock().unwrap();
-                let (tx, _rx) = oneshot::channel();
-                notifiers_guard.insert(0, tx);
-                table_guard.insert(0, Task::new(0, 0, 0));
+                notifiers_guard.insert(0, true);
+                table_guard.insert(0, Task::new(Bytes::new(), "test".to_string()));
             }
             
             let notifiers1 = notifiers.clone();
@@ -624,15 +622,14 @@ mod tests {
 
     /// Test concurrent operations on the task table and notifiers
     /// This tests the specific locking pattern that can cause deadlocks
-    #[cfg(loom)]
+    #[cfg(all(test, feature = "loom_tests"))]
     #[test]
     fn loom_concurrent_table_access() {
         use std::collections::HashMap;
-        use tokio::sync::oneshot;
         
         loom::model(|| {
             // Create the same mutex structures as TaskManager
-            let notifiers = Arc::new(Mutex::new(HashMap::<u32, oneshot::Sender<()>>::new()));
+            let notifiers = Arc::new(Mutex::new(HashMap::<u32, bool>::new()));
             let table = Arc::new(Mutex::new(HashMap::<u32, Task>::new()));
             
             let notifiers1 = notifiers.clone();

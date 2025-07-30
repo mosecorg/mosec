@@ -57,8 +57,8 @@ tower-http = { version = "0.6.6", features = [
   "decompression-gzip",
 ] }
 
-[target.'cfg(loom)'.dependencies]
-loom = "0.7"
-
 [dev-dependencies]
 loom = "0.7"
+
+[features]
+loom_tests = []

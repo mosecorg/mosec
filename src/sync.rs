@@ -14,10 +14,10 @@
 
 //! Conditional sync primitives for std or loom testing
 
-#[cfg(loom)]
+#[cfg(all(test, feature = "loom_tests"))]
 pub use loom::sync::{Arc, Mutex};
 
-#[cfg(not(loom))]
+#[cfg(not(all(test, feature = "loom_tests")))]
 pub use std::sync::{Arc, Mutex};
 
 // These are not modeled by loom, so we always use std versions
