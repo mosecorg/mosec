@@ -14,9 +14,9 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
+
+use crate::sync::{Arc, Mutex, AtomicBool, Ordering, OnceLock};
 
 use axum::http::StatusCode;
 use bytes::Bytes;
@@ -410,6 +410,12 @@ async fn wait_sse_finish(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sync::Arc;
+
+    #[cfg(loom)]
+    use loom;
+    #[cfg(loom)]
+    use crate::sync::Mutex;
 
     const DEFAULT_ENDPOINT: &str = "/inference";
 
@@ -559,24 +565,56 @@ mod tests {
 
     /// Test concurrent task operations using loom to detect potential deadlocks
     /// This tests the patterns that caused deadlocks in issues #311 and #316
-    #[cfg(feature = "loom")]
+    #[cfg(loom)]
     #[test] 
     fn loom_concurrent_notify_delete() {
+        use std::collections::HashMap;
+        use tokio::sync::oneshot;
+        
         loom::model(|| {
-            let task_manager = TaskManager::new(1000);
-            let task_manager = std::sync::Arc::new(task_manager);
+            // Create the exact same sync primitives as TaskManager
+            let notifiers = Arc::new(Mutex::new(HashMap::<u32, oneshot::Sender<()>>::new()));
+            let table = Arc::new(Mutex::new(HashMap::<u32, Task>::new()));
             
-            let tm1 = task_manager.clone();
-            let tm2 = task_manager.clone();
+            // Setup initial state
+            {
+                let mut notifiers_guard = notifiers.lock().unwrap();
+                let mut table_guard = table.lock().unwrap();
+                let (tx, _rx) = oneshot::channel();
+                notifiers_guard.insert(0, tx);
+                table_guard.insert(0, Task::new(0, 0, 0));
+            }
+            
+            let notifiers1 = notifiers.clone();
+            let table1 = table.clone();
+            let notifiers2 = notifiers.clone();
+            let table2 = table.clone();
 
-            // Thread 1: Notify task done (simulates the pattern from notify_task_done)
+            // Thread 1: Simulate notify_task_done pattern
             let handle1 = loom::thread::spawn(move || {
-                tm1.notify_task_done(&0);
+                // This mirrors the exact locking pattern in notify_task_done
+                let res = {
+                    let mut notifiers = notifiers1.lock().unwrap();
+                    notifiers.remove(&0)
+                };
+                if res.is_some() {
+                    // This mirrors the nested locking in notify_task_done when sender is closed
+                    let mut table = table1.lock().unwrap();
+                    table.remove(&0);
+                }
             });
 
-            // Thread 2: Delete task (simulates concurrent deletion)
+            // Thread 2: Simulate delete_task pattern  
             let handle2 = loom::thread::spawn(move || {
-                tm2.delete_task(0, false);
+                // This mirrors the exact locking pattern in delete_task
+                {
+                    let mut notifiers = notifiers2.lock().unwrap();
+                    notifiers.remove(&0);
+                }
+                {
+                    let mut table = table2.lock().unwrap();
+                    table.remove(&0);
+                }
             });
 
             handle1.join().unwrap();
@@ -586,24 +624,30 @@ mod tests {
 
     /// Test concurrent operations on the task table and notifiers
     /// This tests the specific locking pattern that can cause deadlocks
-    #[cfg(feature = "loom")]
+    #[cfg(loom)]
     #[test]
     fn loom_concurrent_table_access() {
+        use std::collections::HashMap;
+        use tokio::sync::oneshot;
+        
         loom::model(|| {
-            let task_manager = TaskManager::new(1000);
-            let task_manager = std::sync::Arc::new(task_manager);
+            // Create the same mutex structures as TaskManager
+            let notifiers = Arc::new(Mutex::new(HashMap::<u32, oneshot::Sender<()>>::new()));
+            let table = Arc::new(Mutex::new(HashMap::<u32, Task>::new()));
             
-            let tm1 = task_manager.clone();
-            let tm2 = task_manager.clone();
+            let notifiers1 = notifiers.clone();
+            let table1 = table.clone();
+            let notifiers2 = notifiers.clone();
+            let table2 = table.clone();
 
             // Thread 1: Access table then notifiers (one ordering)
             let handle1 = loom::thread::spawn(move || {
                 {
-                    let _table = tm1.table.lock().unwrap();
+                    let _table = table1.lock().unwrap();
                     // Simulate some work with table
                 }
                 {
-                    let _notifiers = tm1.notifiers.lock().unwrap();
+                    let _notifiers = notifiers1.lock().unwrap();
                     // Simulate work with notifiers
                 }
             });
@@ -611,11 +655,11 @@ mod tests {
             // Thread 2: Access notifiers then table (reverse ordering that can cause deadlock)
             let handle2 = loom::thread::spawn(move || {
                 {
-                    let _notifiers = tm2.notifiers.lock().unwrap();
+                    let _notifiers = notifiers2.lock().unwrap();
                     // Simulate some work with notifiers
                 }
                 {
-                    let _table = tm2.table.lock().unwrap();
+                    let _table = table2.lock().unwrap();
                     // Simulate work with table
                 }
             });

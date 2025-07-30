@@ -24,7 +24,7 @@ test_unit:
 
 test_loom:
 	echo "Running loom tests for concurrency validation"
-	cargo test --features loom loom_
+	RUSTFLAGS="--cfg loom" cargo test loom_
 
 test_shm:
 	echo "Running tests for the shm mixin"
