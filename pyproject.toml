@@ -115,7 +115,7 @@ doc = [
   "sphinxext-opengraph>=0.8",
 ]
 dev = [
-  "httpx-sse==0.4.0",
+  "httpx-sse==0.4.1",
   "httpx[http2]==0.28.1",
   "maturin>=1.8,<2.0",
   "mypy~=1.15",
