@@ -31,7 +31,7 @@ logger = get_logger()
 
 
 # check the PROMETHEUS_MULTIPROC_DIR environment variable before import Prometheus
-if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+if not os.getenv("PROMETHEUS_MULTIPROC_DIR"):
     metric_dir_path = os.path.join(tempfile.gettempdir(), "prometheus_multiproc_dir")
     pathlib.Path(metric_dir_path).mkdir(parents=True, exist_ok=True)
     os.environ["PROMETHEUS_MULTIPROC_DIR"] = metric_dir_path

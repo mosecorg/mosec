@@ -161,7 +161,7 @@ def get_logger():
     """Get the logger used by mosec user for multiprocessing."""
     prefix = USER_LOG_PREFIX
     logger_name = USER_LOG_NAME
-    log_level = int(os.environ.get(MOSEC_LOG_NAME, "0"))
+    log_level = int(os.getenv(MOSEC_LOG_NAME, default="0"))
     if log_level == logging.DEBUG:
         return use_pretty_log(level=log_level, prefix=prefix, logger_name=logger_name)
     return use_json_log(level=log_level, prefix=prefix, logger_name=logger_name)
@@ -171,7 +171,7 @@ def get_internal_logger():
     """Get the logger used by mosec internally for multiprocessing."""
     prefix = MOSEC_LOG_PREFIX
     logger_name = MOSEC_LOG_NAME
-    log_level = int(os.environ.get(MOSEC_LOG_NAME, "0"))
+    log_level = int(os.getenv(MOSEC_LOG_NAME, default="0"))
     if log_level == logging.DEBUG:
         return use_pretty_log(level=log_level, prefix=prefix, logger_name=logger_name)
     return use_json_log(level=log_level, prefix=prefix, logger_name=logger_name)

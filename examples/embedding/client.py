@@ -22,7 +22,7 @@ DEFAULT_MODEL = "thenlper/gte-base"
 
 client = Client(api_key="fake", base_url="http://127.0.0.1:8000/")
 emb = client.embeddings.create(
-    model=os.environ.get("EMB_MODEL", DEFAULT_MODEL),
+    model=os.getenv("EMB_MODEL", DEFAULT_MODEL),
     input="Hello world!",
 )
 print(emb.data[0].embedding)  # type: ignore

@@ -27,7 +27,7 @@ class SleepyInference(Worker):
     """Sample Class."""
 
     def forward(self, data: Any) -> Any:
-        sleep_duration = float(os.environ["SLEEP_DURATION"])
+        sleep_duration = float(os.getenv("SLEEP_DURATION", default="0"))
         logger.info("sleep_duration %s", sleep_duration)
         time.sleep(sleep_duration)
         return data
