@@ -31,7 +31,7 @@ DEFAULT_MODEL = "thenlper/gte-base"
 
 class Embedding(Worker):
     def __init__(self):
-        self.model_name = os.environ.get("EMB_MODEL", DEFAULT_MODEL)
+        self.model_name = os.getenv("EMB_MODEL", DEFAULT_MODEL)
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_name)
         self.model = transformers.AutoModel.from_pretrained(self.model_name)
         self.device = (

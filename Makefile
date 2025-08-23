@@ -5,6 +5,7 @@ RUST_BACKTRACE=1
 install_py:
 	uv venv
 	uv sync --all-groups --all-extras
+	uv run -- prek install
 
 install_rs:
 	rustup toolchain install nightly --no-self-update
@@ -14,21 +15,21 @@ install: install_py install_rs
 
 test:
 	echo "Running tests for the main logic and mixin(!shm)"
-	uv run pytest tests -vv -s -m "not shm"
+	uv run -- pytest tests -vv -s -m "not shm"
 	cargo test -vv
 
 test_unit:
 	echo "Running tests for the main logic"
-	uv run pytest -vv -s tests/test_log.py tests/test_protocol.py tests/test_coordinator.py
+	uv run -- pytest -vv -s tests/test_log.py tests/test_protocol.py tests/test_coordinator.py
 	cargo test -vv
 
 test_shm:
 	echo "Running tests for the shm mixin"
-	uv run pytest tests -vv -s -m "shm"
+	uv run -- pytest tests -vv -s -m "shm"
 
 test_all:
 	echo "Running tests for the all features"
-	uv run pytest tests -vv -s
+	uv run -- pytest tests -vv -s
 	cargo test -vv
 
 test_chaos:
@@ -49,7 +50,7 @@ package: clean
 	uv run -- maturin build --release --out dist
 
 publish: package
-	uv run twine upload dist/*
+	uv run -- twine upload dist/*
 
 format:
 	@uv run -- ruff check --fix ${PY_SOURCE_FILES}

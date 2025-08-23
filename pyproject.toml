@@ -77,6 +77,8 @@ module = [
 ignore_missing_imports = true
 
 [tool.pyright]
+venvPath = "."
+venv = ".venv"
 pythonPlatform = "Linux"
 pythonVersion = "3.9"
 include = ["mosec", "tests", "examples"]
@@ -87,7 +89,7 @@ markers = ["shm: mark a test is related to shared memory"]
 
 [tool.ruff.lint]
 select = ["E", "F", "G", "B", "I", "SIM", "TID", "PL", "RUF", "D"]
-ignore = ["E501", "D203", "D213"]
+ignore = ["E501", "D203", "D213", "PLC0415"]
 [tool.ruff.lint.isort]
 known-first-party = ["mosec"]
 [tool.ruff.lint.pylint]
@@ -119,11 +121,11 @@ dev = [
   "httpx[http2]==0.28.1",
   "maturin>=1.8,<2.0",
   "mypy~=1.15",
-  "pre-commit>=2.15.0",
+  "prek>=0.1.2",
   "pyright~=1.1",
   "pytest>=8",
   "pytest-mock>=3.5",
-  "ruff>=0.9",
+  "ruff>=0.11.11",
   "zstandard~=0.23",
 ]
 mixin = [

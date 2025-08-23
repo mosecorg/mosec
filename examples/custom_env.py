@@ -26,11 +26,11 @@ class Inference(Worker):
     def __init__(self):
         super().__init__()
         # initialize your models here and allocate dedicated device to it
-        device = os.environ["CUDA_VISIBLE_DEVICES"]
+        device = os.getenv("CUDA_VISIBLE_DEVICES")
         logger.info("initializing model on device=%s", device)
 
     def forward(self, data: dict) -> dict:
-        device = os.environ["CUDA_VISIBLE_DEVICES"]
+        device = os.getenv("CUDA_VISIBLE_DEVICES")
         # NOTE self.worker_id is 1-indexed
         logger.info("worker=%d on device=%s is processing...", self.worker_id, device)
         return {"device": device}

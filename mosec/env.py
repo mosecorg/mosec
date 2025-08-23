@@ -59,7 +59,7 @@ def get_env_namespace(prefix: str = MOSEC_ENV_PREFIX) -> Namespace:
     namespace = Namespace()
     for name, converter in MOSEC_ENV_CONFIG.items():
         var = f"{prefix}{name.upper()}"
-        value = os.environ.get(var)
+        value = os.getenv(var)
         if not value:
             continue
         try:

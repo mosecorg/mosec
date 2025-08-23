@@ -30,7 +30,7 @@ LATENT_SIZE = 16
 OUTPUT_SIZE = 2
 
 MAX_BATCH_SIZE = 8
-USE_JIT = os.environ.get("USE_JIT", "false")
+USE_JIT = os.getenv("USE_JIT", default="false")
 
 
 class JittedInference(Worker):

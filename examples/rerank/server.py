@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from os import environ
+from os import getenv
 from typing import List
 
 from msgspec import Struct
@@ -22,7 +22,7 @@ from mosec import Server, Worker
 from mosec.mixin import TypedMsgPackMixin
 
 DEFAULT_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-WORKER_NUM = int(environ.get("WORKER_NUM", 1))
+WORKER_NUM = int(getenv("WORKER_NUM", default="1"))
 
 
 class Request(Struct, kw_only=True):
@@ -36,7 +36,7 @@ class Response(Struct, kw_only=True):
 
 class Encoder(TypedMsgPackMixin, Worker):
     def __init__(self):
-        self.model_name = environ.get("MODEL_NAME", DEFAULT_MODEL)
+        self.model_name = getenv("MODEL_NAME", default=DEFAULT_MODEL)
         self.model = CrossEncoder(self.model_name)
 
     def forward(self, data: Request) -> Response:
