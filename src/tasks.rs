@@ -20,9 +20,9 @@ use std::time::{Duration, Instant};
 
 use axum::http::StatusCode;
 use bytes::Bytes;
+use log::{debug, error, info, warn};
 use tokio::sync::{Barrier, mpsc, oneshot};
 use tokio::time;
-use tracing::{debug, error, info, warn};
 
 use crate::config::Config;
 use crate::errors::ServiceError;
@@ -167,7 +167,7 @@ impl TaskManager {
                     route = &self.senders[&task.route];
                 }
                 None => {
-                    warn!(%id, "failed to get the task when trying to send it");
+                    warn!(id:%; "failed to get the task when trying to send it");
                     return;
                 }
             };
@@ -177,7 +177,7 @@ impl TaskManager {
             return;
         }
         if route[stage].send(*id).await.is_err() {
-            warn!(%id, "failed to send this task, the sender might be closed");
+            warn!(id:%; "failed to send this task, the sender might be closed");
         }
     }
 
@@ -194,7 +194,7 @@ impl TaskManager {
                 }
                 retry += 1;
                 if (retry % 10) == 0 {
-                    info!(%remaining_task_num, "waiting for remaining tasks to complete");
+                    info!(remaining_task_num:%; "waiting for remaining tasks to complete");
                 }
             }
         });
@@ -206,7 +206,7 @@ impl TaskManager {
     pub(crate) async fn submit_task(&self, data: Bytes, key: &str) -> Result<Task, ServiceError> {
         let (id, rx) = self.add_new_task(data, key)?;
         if let Err(err) = time::timeout(self.timeout, rx).await {
-            warn!(%id, %err, "task was not completed in the expected time, if this happens a lot, \
+            warn!(id:%, err:%; "task was not completed in the expected time, if this happens a lot, \
                 you might want to increase the service timeout");
             self.delete_task(id, false);
             return Err(ServiceError::Timeout);
@@ -215,7 +215,7 @@ impl TaskManager {
         match table.remove(&id) {
             Some(task) => Ok(task),
             None => {
-                error!(%id, "cannot find the task when trying to remove it");
+                error!(id:%; "cannot find the task when trying to remove it");
                 Err(ServiceError::UnknownError)
             }
         }
@@ -286,10 +286,10 @@ impl TaskManager {
             let mut table = self.table.lock().unwrap();
             table.insert(id, Task::new(data, key.to_string()));
         }
-        debug!(%id, "add a new task");
+        debug!(id:%; "add a new task");
 
         if self.senders[key][0].try_send(id).is_err() {
-            warn!(%id, "reach the capacity limit, will delete this task");
+            warn!(id:%; "reach the capacity limit, will delete this task");
             self.delete_task(id, false);
             return Err(ServiceError::TooManyRequests);
         }
@@ -306,7 +306,7 @@ impl TaskManager {
             if !sender.is_closed() {
                 sender.send(()).unwrap();
             } else {
-                warn!(%id, "the task notifier is already closed, will delete it \
+                warn!(id:%; "the task notifier is already closed, will delete it \
                     (this is usually because the client side has closed the connection)");
                 {
                     let mut table = self.table.lock().unwrap();
@@ -317,7 +317,7 @@ impl TaskManager {
             }
         } else {
             // if the task is already timeout, the notifier may be removed by another thread
-            info!(%id, "cannot find the task notifier, maybe this task has expired");
+            info!(id:%; "cannot find the task notifier, maybe this task has expired");
         }
     }
 
@@ -356,7 +356,7 @@ impl TaskManager {
                     }
                     None => {
                         // if the task is already timeout, it may be removed by another thread
-                        info!(id=%ids[i], "cannot find this task, maybe it has expired");
+                        info!(id:% = ids[i]; "cannot find this task, maybe it has expired");
                     }
                 }
             }
@@ -366,9 +366,9 @@ impl TaskManager {
             for i in 0..abnormal_tasks.len() {
                 if let Some(sender) = self.get_stream_sender(&abnormal_tasks[i]) {
                     if let Err(err) = sender.send((data[i].clone(), code)).await {
-                        info!(%err, task_id=abnormal_tasks[i], "failed to send stream event");
+                        info!(err:%, task_id=abnormal_tasks[i]; "failed to send stream event");
                     }
-                    debug!(%code, task_id=abnormal_tasks[i], "sent abnormal task event to the channel");
+                    debug!(code:%, task_id=abnormal_tasks[i]; "sent abnormal task event to the channel");
                 }
             }
         }
@@ -386,7 +386,7 @@ async fn wait_sse_finish(
 ) {
     let task_manager = TaskManager::global();
     if let Err(err) = time::timeout(timeout, notifier).await {
-        warn!(%err, "task was not completed in the expected time");
+        warn!(err:%; "task was not completed in the expected time");
     }
 
     let metrics = Metrics::global();
