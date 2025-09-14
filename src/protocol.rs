@@ -18,10 +18,10 @@ use std::time::{Duration, Instant};
 
 use async_channel::Receiver;
 use bytes::{BufMut, Bytes, BytesMut};
+use log::{debug, error, info, warn};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::Barrier;
-use tracing::{debug, error, info, warn};
 
 use crate::metrics::{Metrics, StageConnectionLabel};
 use crate::tasks::{TaskCode, TaskManager};
@@ -55,10 +55,10 @@ pub(crate) async fn communicate(
         let receiver_clone = receiver.clone();
         let stage_name_label = stage_name.clone();
         let connection_id_label = connection_id.to_string();
-        info!(?path, "begin listening to socket");
+        info!(path:?; "begin listening to socket");
         match listener.accept().await {
             Ok((mut stream, addr)) => {
-                info!(?addr, "socket accepted connection from");
+                info!(addr:?; "socket accepted connection from");
                 tokio::spawn(async move {
                     let mut code: TaskCode = TaskCode::InternalError;
                     let mut ids: Vec<u32> = Vec::with_capacity(batch_size);
@@ -97,7 +97,7 @@ pub(crate) async fn communicate(
                                 .observe(data.len() as f64);
                         }
                         if let Err(err) = send_message(&mut stream, &ids, &data, &states).await {
-                            error!(%err, %stage_name_label, %connection_id, "socket send message error");
+                            error!(err:%, stage_name_label:%, connection_id:%; "socket send message error");
                             info!(
                                 "service failed to write data to stream, will try to send task \
                                  back to see if other thread can handle it"
@@ -107,7 +107,7 @@ pub(crate) async fn communicate(
                             }
                             break;
                         }
-                        debug!(%stage_name_label, %connection_id, "socket finished to send message");
+                        debug!(stage_name_label:%, connection_id:%; "socket finished to send message");
 
                         ids.clear();
                         data.clear();
@@ -116,10 +116,10 @@ pub(crate) async fn communicate(
                             read_message(&mut stream, &mut code, &mut ids, &mut data, &mut states)
                                 .await
                         {
-                            error!(%err, %stage_name_label, %connection_id, "socket receive message error");
+                            error!(err:%, stage_name_label:%, connection_id:%; "socket receive message error");
                             break;
                         }
-                        debug!(%stage_name_label, %connection_id, "socket finished to read message");
+                        debug!(stage_name_label:%, connection_id:%; "socket finished to read message");
                         while code == TaskCode::StreamEvent {
                             send_stream_event(&ids, &data).await;
                             ids.clear();
@@ -134,10 +134,10 @@ pub(crate) async fn communicate(
                             )
                             .await
                             {
-                                error!(%err, %stage_name_label, %connection_id, "socket receive message error");
+                                error!(err:%, stage_name_label:%, connection_id:%; "socket receive message error");
                                 break;
                             }
-                            debug!(%stage_name_label, %connection_id, "socket finished to read message");
+                            debug!(stage_name_label:%, connection_id:%; "socket finished to read message");
                         }
                         task_manager.update_multi_tasks(code, &ids, &data).await;
                         match code {
@@ -153,10 +153,10 @@ pub(crate) async fn communicate(
                             }
                             _ => {
                                 warn!(
-                                    ?ids,
-                                    ?code,
-                                    ?stage_name_label,
-                                    ?connection_id,
+                                    ids:?,
+                                    code:?,
+                                    stage_name_label:?,
+                                    connection_id:?;
                                     "abnormal tasks, check Python log for more details"
                                 );
                             }
@@ -169,7 +169,7 @@ pub(crate) async fn communicate(
                 }
             }
             Err(err) => {
-                error!(%err, %stage_name, %connection_id, "socket failed to accept the connection");
+                error!(err:%, stage_name:%, connection_id:%; "socket failed to accept the connection");
                 break;
             }
         }
@@ -183,11 +183,11 @@ async fn send_stream_event(ids: &[u32], data: &[Bytes]) {
         match task_manager.get_stream_sender(id) {
             Some(sender) => {
                 if let Err(err) = sender.send((data.clone(), TaskCode::Normal)).await {
-                    info!(%err, %id, "failed to send stream event");
+                    info!(err:%, id:%; "failed to send stream event");
                 }
             }
             None => {
-                info!(%id, "stream sender not found");
+                info!(id:%; "stream sender not found");
             }
         }
     }
@@ -221,7 +221,7 @@ async fn read_message(
     } else {
         TaskCode::InternalError
     };
-    debug!(?flag, ?flag_buf, "read message");
+    debug!(flag:?, flag_buf:?; "read message");
 
     let mut id_buf = [0u8; TASK_ID_U8_SIZE];
     let mut length_buf = [0u8; LENGTH_U8_SIZE];
@@ -241,11 +241,11 @@ async fn read_message(
     }
     let byte_size = data.iter().fold(0, |acc, x| acc + x.len());
     debug!(
-        ?ids,
-        ?code,
-        ?num,
-        ?flag,
-        ?byte_size,
+        ids:?,
+        code:?,
+        num:?,
+        flag:?,
+        byte_size:?;
         "received tasks from the socket"
     );
     Ok(())
@@ -258,7 +258,7 @@ async fn inner_batch(receiver: &Receiver<u32>, ids: &mut Vec<u32>, limit: usize)
                 ids.push(id);
             }
             Err(err) => {
-                error!(%err, "failed to collect the tasks in batch");
+                error!(err:%; "failed to collect the tasks in batch");
             }
         }
         if ids.len() == limit {
@@ -302,7 +302,7 @@ async fn send_message(
         buffer.put(data[i].clone());
     }
     stream.write_all(&buffer).await?;
-    debug!(?ids, batch_size=%ids.len(), byte_size=%buffer.len(), "send data to the socket");
+    debug!(ids:?, batch_size = ids.len(), byte_size = buffer.len(); "send data to the socket");
 
     Ok(())
 }
