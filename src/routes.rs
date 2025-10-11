@@ -20,8 +20,8 @@ use axum::http::{Request, Response, StatusCode, Uri};
 use axum::response::IntoResponse;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use bytes::Bytes;
+use log::warn;
 use prometheus_client::encoding::text::encode;
-use tracing::warn;
 use utoipa::OpenApi;
 
 use crate::errors::ServiceError;
@@ -117,7 +117,7 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
     let data = match to_bytes(req.into_body(), DEFAULT_MAX_REQUEST_SIZE).await {
         Ok(data) => data,
         Err(err) => {
-            warn!(?err, "failed to read request body (too large)");
+            warn!(err:?; "failed to read request body (too large)");
             return build_response(
                 StatusCode::PAYLOAD_TOO_LARGE,
                 Bytes::from_static(RESPONSE_TOO_LARGE),
@@ -208,7 +208,7 @@ pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<Body
     let data = match to_bytes(req.into_body(), DEFAULT_MAX_REQUEST_SIZE).await {
         Ok(data) => data,
         Err(err) => {
-            warn!(?err, "failed to read request body (too large)");
+            warn!(err:?; "failed to read request body (too large)");
             return build_response(
                 StatusCode::PAYLOAD_TOO_LARGE,
                 Bytes::from_static(RESPONSE_TOO_LARGE),
@@ -234,7 +234,7 @@ pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<Body
                             )
                         }
                         _ => {
-                            warn!(?code, ?msg, "unexpected error in SSE");
+                            warn!(code:?, msg:?; "unexpected error in SSE");
                             Err(ServiceError::SSEError(code))
                         }
                     }
