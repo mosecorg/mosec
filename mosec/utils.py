@@ -16,7 +16,6 @@
 
 import inspect
 import os
-import sys
 import sysconfig
 from enum import Enum
 from pathlib import Path
@@ -54,29 +53,6 @@ def get_mosec_path() -> Optional[Path]:
     return None
 
 
-def get_annotations(func) -> dict:
-    """Get the annotations of a class method.
-
-    This will evaluation the annotations of the method and return a dict.
-    The implementation is based on the `inspect.get_annotations` (Py>=3.10).
-
-    ``eval_str=True`` since ``from __future__ import annotations`` will change
-    all the annotations to string.
-    """
-    if sys.version_info >= (3, 10):
-        return inspect.get_annotations(func, eval_str=True)
-    annotations = getattr(func, "__annotations__", None)
-    obj_globals = getattr(func, "__globals__", None)
-    if annotations is None:
-        return {}
-    if not isinstance(annotations, dict):
-        raise TypeError(f"{func.__name__} annotations must be a dict or None")
-    return {
-        key: value if not isinstance(value, str) else eval(value, obj_globals)
-        for key, value in annotations.items()
-    }
-
-
 class ParseTarget(Enum):
     """Enum to specify the target of parsing func type."""
 
@@ -90,7 +66,7 @@ def parse_func_type(func, target: ParseTarget) -> type:
     - single request: return the type
     - batch request: return the list item type
     """
-    annotations = get_annotations(func)
+    annotations = inspect.get_annotations(func, eval_str=True)
     name = func.__name__
     typ = Any
     if target == ParseTarget.INPUT:
