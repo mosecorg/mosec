@@ -242,7 +242,7 @@ def test_echo_batch(base_test_config, test_data, worker, deserializer):
             assert got_states == [State.INGRESS | State.EGRESS] * len(sent_ids)
             assert all(
                 deserializer(x) == deserializer(y)
-                for x, y in zip(got_payloads, sent_payloads)
+                for x, y in zip(got_payloads, sent_payloads, strict=True)
             )
             shutdown.set()
             # wait for socket timeout, make the client not read closed socket

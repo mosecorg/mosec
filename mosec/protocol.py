@@ -137,7 +137,7 @@ class Protocol:
         batch_size = len(ids)
         data.write(struct.pack(self.FORMAT_BATCH, batch_size))
         if batch_size > 0:
-            for task_id, state, payload in zip(ids, states, payloads):
+            for task_id, state, payload in zip(ids, states, payloads, strict=True):
                 data.write(task_id)
                 data.write(struct.pack(self.FORMAT_STATE, state))
                 data.write(struct.pack(self.FORMAT_LENGTH, len(payload)))

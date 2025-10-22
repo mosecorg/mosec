@@ -273,7 +273,7 @@ class Coordinator:
             try:
                 data = [
                     self.decode(payload, state)
-                    for (payload, state) in zip(payloads, states)
+                    for (payload, state) in zip(payloads, states, strict=True)
                 ]
                 with set_mosec_timeout(self.timeout):
                     data = (
@@ -288,7 +288,8 @@ class Coordinator:
                     )
                 status = HTTPStatusCode.OK
                 payloads = [
-                    self.encode(datum, state) for (datum, state) in zip(data, states)
+                    self.encode(datum, state)
+                    for (datum, state) in zip(data, states, strict=True)
                 ]
             except (MosecError, MosecTimeoutError) as err:
                 err_msg = str(err).replace("\n", " - ")
