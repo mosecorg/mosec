@@ -59,6 +59,7 @@ format:
 
 lint:
 	@uv run -- ruff check ${PY_SOURCE_FILES}
+	@uv run -- ruff format --check ${PY_SOURCE_FILES}
 	@-rm mosec/_version.py
 	@uv run -- pyright --stats
 	@uv run -- mypy --non-interactive --install-types ${PY_SOURCE_FILES}

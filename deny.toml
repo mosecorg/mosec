@@ -111,6 +111,7 @@ exceptions = [
   # list
   { allow = ["Zlib"], crate = "zlib-rs" },
   { allow = ["Zlib"], crate = "libz-rs-sys" },
+  { allow = ["MPL-2.0"], crate = "colored" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
