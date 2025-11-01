@@ -35,7 +35,7 @@ jobs:
     - name: Setup Pages
       uses: actions/configure-pages@v5
     - name: Install uv
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
     - name: Set up Rust
