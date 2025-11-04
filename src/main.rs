@@ -20,6 +20,7 @@ mod errors;
 mod metrics;
 mod protocol;
 mod routes;
+mod sync;
 mod tasks;
 
 use std::env;
