@@ -1,11 +1,11 @@
-ARG base=nvidia/cuda:11.6.2-cudnn8-runtime-ubuntu20.04
+ARG base=nvidia/cuda:13.0.2-cudnn-runtime-ubuntu22.04
 
 FROM ${base}
 
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 ENV PATH /opt/conda/bin:$PATH
 
-ARG CONDA_VERSION=py311_24.11.1-0
+ARG CONDA_VERSION=py311_25.9.1-1
 
 RUN apt update && \
     apt install -y --no-install-recommends \
@@ -18,13 +18,10 @@ RUN set -x && \
     UNAME_M="$(uname -m)" && \
     if [ "${UNAME_M}" = "x86_64" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh"; \
-        SHA256SUM="807774bae6cd87132094458217ebf713df436f64779faf9bb4c3d4b6615c1e3a"; \
-    elif [ "${UNAME_M}" = "s390x" ]; then \
-        MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-s390x.sh"; \
-        SHA256SUM="bb499b18dbcbb2d89b22f91fe26fe661f5ed1f1944fdc743560d69cd52a2468f"; \
+        SHA256SUM="238abad23f8d4d8ba89dd05df0b0079e278909a36e06955f12bbef4aa94e6131"; \
     elif [ "${UNAME_M}" = "aarch64" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-aarch64.sh"; \
-        SHA256SUM="a8846ade7a5ddd9b6a6546590054d70d1c2cbe4fbe8c79fb70227e8fd93ef9f8"; \
+        SHA256SUM="4e0723b9d76aa491cf22511dac36f4fdec373e41d2a243ff875e19b8df39bf94"; \
     fi && \
     wget "${MINICONDA_URL}" -O miniconda.sh -q && \
     echo "${SHA256SUM} miniconda.sh" > shasum && \
