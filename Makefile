@@ -23,6 +23,10 @@ test_unit:
 	uv run -- pytest -vv -s tests/test_log.py tests/test_protocol.py tests/test_coordinator.py
 	cargo test -vv
 
+test_loom:
+	echo "Running loom tests for concurrency validation"
+	cargo test --features loom_tests loom_
+
 test_shm:
 	echo "Running tests for the shm mixin"
 	uv run -- pytest tests -vv -s -m "shm"
