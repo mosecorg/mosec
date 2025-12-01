@@ -20,7 +20,7 @@ exclude = ["target", "examples", "tests", "scripts"]
 rust-version = "1.85"
 
 [dependencies]
-bytes = "1.10"
+bytes = "1.11"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["local-time", "json"] }
 tokio = { version = "1.48", features = [
@@ -36,7 +36,7 @@ derive_more = { version = "2.0.1", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = "2.5"
 prometheus-client = "0.24.0"
-axum = { version = "0.8.6", default-features = false, features = [
+axum = { version = "0.8.7", default-features = false, features = [
   "matched-path",
   "original-uri",
   "query",
@@ -50,7 +50,7 @@ serde_json = "1.0"
 utoipa = "5.4"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 tower = "0.5.2"
-tower-http = { version = "0.6.6", features = [
+tower-http = { version = "0.6.7", features = [
   "compression-zstd",
   "decompression-zstd",
   "compression-gzip",
