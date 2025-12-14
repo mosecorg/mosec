@@ -17,6 +17,7 @@
 mod apidoc;
 mod config;
 mod errors;
+mod layouts;
 mod metrics;
 mod protocol;
 mod routes;
@@ -30,8 +31,7 @@ use axum::Router;
 use axum::routing::{get, post};
 use log::{debug, info};
 use logforth::append;
-use logforth::layout::{JsonLayout, TextLayout};
-use logforth::record::LevelFilter;
+use logforth::record::{Level, LevelFilter};
 use tokio::signal::unix::{SignalKind, signal};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
@@ -41,6 +41,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::apidoc::MosecOpenAPI;
 use crate::config::Config;
+use crate::layouts::{ColoredLayout, JsonLayout};
 use crate::metrics::{METRICS, Metrics};
 use crate::routes::{RustAPIDoc, index, inference, metrics, sse_inference};
 use crate::tasks::{TASK_MANAGER, TaskManager};
@@ -62,7 +63,7 @@ async fn shutdown_signal() {
                 info!("service shutdown complete");
                 break;
             },
-        };
+        }
     }
 }
 
@@ -126,25 +127,24 @@ fn main() {
 
     if conf.log_level == "debug" {
         // use colorful log for debug
-        let layout = TextLayout::default().timezone(jiff::tz::TimeZone::UTC);
         logforth::starter_log::builder()
             .dispatch(|d| {
-                d.filter(LevelFilter::Debug)
-                    .append(append::Stderr::default().with_layout(layout))
+                d.filter(LevelFilter::MoreSevereEqual(Level::Debug))
+                    .append(append::Stderr::default().with_layout(ColoredLayout))
             })
             .apply();
     } else {
         // use JSON format for production
-        let level_filter = match conf.log_level.as_str() {
-            "error" => LevelFilter::Error,
-            "warning" => LevelFilter::Warn,
-            _ => LevelFilter::Info,
-        };
-        let layout = JsonLayout::default().timezone(jiff::tz::TimeZone::UTC);
+        let level_filter =
+            LevelFilter::MoreSevereEqual(match conf.log_level.to_ascii_lowercase().as_str() {
+                "error" => Level::Error,
+                "warning" => Level::Warn,
+                _ => Level::Info,
+            });
         logforth::starter_log::builder()
             .dispatch(|d| {
                 d.filter(level_filter)
-                    .append(append::Stderr::default().with_layout(layout))
+                    .append(append::Stderr::default().with_layout(JsonLayout))
             })
             .apply();
     }
