@@ -38,7 +38,7 @@ repository = "https://github.com/mosecorg/mosec"
 changelog = "https://github.com/mosecorg/mosec/releases"
 [project.scripts]
 [project.optional-dependencies]
-validation = ["msgspec>=0.19.0"]
+validation = ["msgspec>=0.20"]
 redis = ["redis>=5.2.1"]
 msgpack = ["msgpack>=1.1.0"]
 numbin = ["numbin>=0.5.0"]
@@ -59,9 +59,6 @@ cache-keys = [
   { file = "Cargo.toml" },
   { file = "src/**/*.rs" },
 ]
-
-[tool.uv.sources]
-msgspec = { git = "https://github.com/jcrist/msgspec.git", rev = "a5d3f8e202866300f281288ca317948e6d3d0d5e" }
 
 [tool.mypy]
 python_version = "3.10"
@@ -120,7 +117,7 @@ doc = [
   "sphinxext-opengraph>=0.8",
 ]
 dev = [
-  "httpx-sse==0.4.1",
+  "httpx-sse==0.4.3",
   "httpx[http2]==0.28.1",
   "maturin>=1.8,<2.0",
   "mypy~=1.15",
@@ -133,9 +130,7 @@ dev = [
 ]
 mixin = [
   "msgpack>=1.1.0",
-  "msgspec>=0.19 ; python_full_version < '3.14'",
-  "msgspec>=0.19.0",
-  "msgspec ; python_full_version >= '3.14'",
+  "msgspec>=0.20",
   "numbin>=0.5.0",
   "numpy<2 ; python_full_version < '3.12'",
   "numpy>=2 ; python_full_version >= '3.12'",
