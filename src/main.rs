@@ -17,6 +17,7 @@
 mod apidoc;
 mod config;
 mod errors;
+mod layouts;
 mod metrics;
 mod protocol;
 mod routes;
@@ -28,19 +29,19 @@ use std::net::SocketAddr;
 
 use axum::Router;
 use axum::routing::{get, post};
+use log::{debug, info};
+use logforth::append;
+use logforth::record::{Level, LevelFilter};
 use tokio::signal::unix::{SignalKind, signal};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::decompression::RequestDecompressionLayer;
-use tracing::{debug, info};
-use tracing_subscriber::fmt::time::UtcTime;
-use tracing_subscriber::prelude::*;
-use tracing_subscriber::{Layer, filter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::apidoc::MosecOpenAPI;
 use crate::config::Config;
+use crate::layouts::{ColoredLayout, JsonLayout};
 use crate::metrics::{METRICS, Metrics};
 use crate::routes::{RustAPIDoc, index, inference, metrics, sse_inference};
 use crate::tasks::{TASK_MANAGER, TaskManager};
@@ -62,7 +63,7 @@ async fn shutdown_signal() {
                 info!("service shutdown complete");
                 break;
             },
-        };
+        }
     }
 }
 
@@ -107,7 +108,7 @@ async fn run(conf: &Config) {
     barrier.wait().await;
     let addr: SocketAddr = format!("{}:{}", conf.address, conf.port).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    info!(?addr, "http service is running");
+    info!(addr:?; "http service is running");
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await
@@ -124,34 +125,30 @@ fn main() {
     let config_str = read_to_string(&cmd_args[1]).expect("read config file failure");
     let conf: Config = serde_json::from_str(&config_str).expect("parse config failure");
 
-    // this has to be defined before tokio multi-threads
-    let timer = UtcTime::rfc_3339();
     if conf.log_level == "debug" {
         // use colorful log for debug
-        let output = tracing_subscriber::fmt::layer().compact().with_timer(timer);
-        tracing_subscriber::registry()
-            .with(
-                output
-                    .with_filter(filter::filter_fn(|metadata| {
-                        !metadata.target().starts_with("h2")
-                    }))
-                    .with_filter(filter::LevelFilter::DEBUG),
-            )
-            .init();
+        logforth::starter_log::builder()
+            .dispatch(|d| {
+                d.filter(LevelFilter::MoreSevereEqual(Level::Debug))
+                    .append(append::Stderr::default().with_layout(ColoredLayout))
+            })
+            .apply();
     } else {
         // use JSON format for production
-        let level = match conf.log_level.as_str() {
-            "error" => tracing::Level::ERROR,
-            "warning" => tracing::Level::WARN,
-            _ => tracing::Level::INFO,
-        };
-        tracing_subscriber::fmt()
-            .with_max_level(level)
-            .json()
-            .with_timer(timer)
-            .init();
+        let level_filter =
+            LevelFilter::MoreSevereEqual(match conf.log_level.to_ascii_lowercase().as_str() {
+                "error" => Level::Error,
+                "warning" => Level::Warn,
+                _ => Level::Info,
+            });
+        logforth::starter_log::builder()
+            .dispatch(|d| {
+                d.filter(level_filter)
+                    .append(append::Stderr::default().with_layout(JsonLayout))
+            })
+            .apply();
     }
 
-    debug!(?conf, "parse service arguments");
+    debug!(conf:?; "parse service arguments");
     run(&conf);
 }
