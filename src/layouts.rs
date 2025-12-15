@@ -22,7 +22,6 @@ impl logforth::Layout for ColoredLayout {
         });
 
         let target = record.target();
-        let file = record.filename();
         let line = record.line().unwrap_or_default();
         let message = record.payload();
 
@@ -37,9 +36,7 @@ impl logforth::Layout for ColoredLayout {
             }
         }
 
-        let mut visitor = KvWriter(format!(
-            "{ts:.6} {level:>6} {target}: {file}:{line} {message}"
-        ));
+        let mut visitor = KvWriter(format!("{ts:.6} {level:>6} {target}:{line} {message}"));
         record.key_values().visit(&mut visitor)?;
         for d in diags {
             d.visit(&mut visitor)?;
@@ -82,9 +79,7 @@ impl logforth::Layout for JsonLayout {
         struct RecordLine<'a> {
             timestamp: String,
             level: &'a str,
-            target: &'a str,
-            file: &'a str,
-            line: u32,
+            target: String,
             #[serde(skip_serializing_if = "Map::is_empty")]
             fields: Map<String, serde_json::Value>,
         }
@@ -92,9 +87,7 @@ impl logforth::Layout for JsonLayout {
         let record_line = RecordLine {
             timestamp: format!("{ts:.6}"),
             level: record.level().name(),
-            target: record.target(),
-            file: record.file().unwrap_or_default(),
-            line: record.line().unwrap_or_default(),
+            target: format!("{}:{}", record.target(), record.line().unwrap_or_default(),),
             fields: visitor.0,
         };
 
