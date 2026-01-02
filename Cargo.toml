@@ -30,11 +30,11 @@ tokio = { version = "1.48", features = [
   "signal",
   "io-util",
 ] }
-derive_more = { version = "2.0.1", features = ["display", "error", "from"] }
+derive_more = { version = "2.1.1", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = "2.5"
 prometheus-client = "0.24.0"
-axum = { version = "0.8.7", default-features = false, features = [
+axum = { version = "0.8.8", default-features = false, features = [
   "matched-path",
   "original-uri",
   "query",
@@ -56,4 +56,4 @@ tower-http = { version = "0.6.7", features = [
 ] }
 log = { version = "0.4.28", features = ["kv"] }
 logforth = { version = "0.29.1", features = ["starter-log"] }
-jiff = "0.2.15"
+jiff = "0.2.17"
