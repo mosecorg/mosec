@@ -16,6 +16,7 @@
 
 import inspect
 import os
+import shutil
 import sysconfig
 from enum import Enum
 from pathlib import Path
@@ -49,6 +50,18 @@ def get_mosec_path() -> Optional[Path]:
 
     if paths:
         return Path(paths[0]) / SCRIPT_NAME
+
+    # Fallback for maturin dev mode: check target directory
+    pkg_dir = Path(__file__).parent.parent
+    for build_type in ["release", "debug"]:
+        target_path = pkg_dir / "target" / build_type / SCRIPT_NAME
+        if target_path.exists():
+            return target_path
+
+    # Last resort: check PATH
+    which_path = shutil.which(SCRIPT_NAME)
+    if which_path:
+        return Path(which_path)
 
     return None
 
