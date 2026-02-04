@@ -46,7 +46,7 @@ clean:
 	@-find . -name '*.pyc' -type f -exec rm -rf {} +
 	@-find . -name '__pycache__' -exec rm -rf {} +
 
-package: clean
+package:
 	uv run -- maturin build --release --out dist
 
 publish: package

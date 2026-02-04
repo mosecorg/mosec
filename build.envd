@@ -6,18 +6,6 @@
 # To access GPU, you can run `envd up :gpu`. Make sure you have nvidia-docker
 # installed.
 
-
-def rust():
-    """Install Rust."""
-    install.apt_packages(name=["build-essential"])
-    run(
-        [
-            "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
-        ]
-    )
-    runtime.environ(extra_path=["/home/envd/.cargo/bin"])
-
-
 def jax():
     install.python_packages(
         name=[
@@ -29,9 +17,12 @@ def jax():
 
 def build():
     base(dev=True, image="ubuntu:22.04")
+    install.apt_packages(name=["build-essential"])
     install.uv()
     shell("fish")
-    rust()
+    install.rust()
+    install.codex()
+    runtime.mount("~/.codex", "~/.codex")
     runtime.init(["make install"])
 
 
