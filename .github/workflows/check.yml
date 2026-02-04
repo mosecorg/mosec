@@ -3,26 +3,26 @@ name: lint and test
 on:
   pull_request:
     paths:
-      - '.github/workflows/check.yml'
-      - 'mosec/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'examples/**'
-      - 'pyproject.toml'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
+      - ".github/workflows/check.yml"
+      - "mosec/**"
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "Cargo.lock"
+      - "Cargo.toml"
   push:
     branches:
       - main
     paths:
-      - '.github/workflows/check.yml'
-      - 'mosec/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'examples/**'
-      - 'pyproject.toml'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
+      - ".github/workflows/check.yml"
+      - "mosec/**"
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "Cargo.lock"
+      - "Cargo.toml"
   merge_group:
 
 concurrency:
@@ -47,6 +47,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: "v0.12.0"
       - name: Install dependencies
         run: make install
       - name: Lint
@@ -72,6 +74,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: "v0.12.0"
       - name: Install components
         run: make install
       - name: Test unit
