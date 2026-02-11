@@ -48,7 +48,7 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
-          version: "v0.12.0"
+          version: "v0.14.0"
       - name: Install dependencies
         run: make install
       - name: Lint
@@ -75,7 +75,7 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
         with:
-          version: "v0.12.0"
+          version: "v0.14.0"
       - name: Install components
         run: make install
       - name: Test unit
