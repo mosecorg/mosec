@@ -9,6 +9,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 15
+      semver-patch-days: 7
     commit-message:
       prefix: "chore(cargo)"
     groups:
@@ -20,6 +25,11 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 15
+      semver-patch-days: 7
     commit-message:
       prefix: "chore(pip)"
     groups:
@@ -31,6 +41,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(actions)"
     groups:
