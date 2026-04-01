@@ -621,7 +621,7 @@ provides-extras = ["msgpack", "numbin", "redis", "validation"]
 dev = [
     { name = "httpx", extras = ["http2"], specifier = "==0.28.1" },
     { name = "httpx-sse", specifier = "==0.4.3" },
-    { name = "maturin", specifier = ">=1.8,<=1.12.5" },
+    { name = "maturin", specifier = ">=1.8,<=1.12.6" },
     { name = "mypy", specifier = "~=1.15" },
     { name = "prek", specifier = ">=0.1.2" },
     { name = "pyright", specifier = "~=1.1" },
