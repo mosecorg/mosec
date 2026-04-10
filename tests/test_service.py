@@ -416,6 +416,6 @@ def test_max_request_size(mosec_service, http_client):
     resp = http_client.post("/inference", json={"x": 2})
     assert resp.status_code == HTTPStatus.OK
 
-    # request larger than 64 bytes should be rejected
+    # request larger than 64 bytes should return status code 413
     resp = http_client.post("/inference", json={"x": 2, "padding": "a" * 100})
     assert resp.status_code == HTTPStatus.REQUEST_ENTITY_TOO_LARGE
