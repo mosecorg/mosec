@@ -93,6 +93,7 @@ pub(crate) struct TaskManager {
     current_id: Mutex<u32>,
     senders: HashMap<String, Vec<async_channel::Sender<u32>>>,
     mime_types: HashMap<String, String>,
+    pub max_request_size: usize,
     shutdown: AtomicBool,
 }
 
@@ -103,7 +104,7 @@ impl TaskManager {
         TASK_MANAGER.get().expect("task manager is not initialized")
     }
 
-    pub(crate) fn new(timeout: u64) -> Self {
+    pub(crate) fn new(timeout: u64, max_request_size: usize) -> Self {
         Self {
             table: Mutex::new(HashMap::new()),
             notifiers: Mutex::new(HashMap::new()),
@@ -112,6 +113,7 @@ impl TaskManager {
             current_id: Mutex::new(0),
             senders: HashMap::new(),
             mime_types: HashMap::new(),
+            max_request_size,
             shutdown: AtomicBool::new(false),
         }
     }
@@ -429,7 +431,7 @@ mod tests {
 
     #[tokio::test]
     async fn task_manager_add_new_task() {
-        let mut task_manager = TaskManager::new(1000);
+        let mut task_manager = TaskManager::new(1000, 10 * 1024 * 1024);
         task_manager.init_from_config(&Config::default());
         let (id, _rx) = task_manager
             .add_new_task(Bytes::from_static(b"hello"), DEFAULT_ENDPOINT)
@@ -455,7 +457,7 @@ mod tests {
 
     #[tokio::test]
     async fn task_manager_timeout() {
-        let mut task_manager = TaskManager::new(1);
+        let mut task_manager = TaskManager::new(1, 10 * 1024 * 1024);
         task_manager.init_from_config(&Config::default());
 
         // wait until this task timeout
@@ -467,7 +469,7 @@ mod tests {
 
     #[tokio::test]
     async fn task_manager_too_many_request() {
-        let mut task_manager = TaskManager::new(1);
+        let mut task_manager = TaskManager::new(1, 10 * 1024 * 1024);
         let mut config = Config::default();
         // capacity > 0
         config.capacity = 1;
@@ -487,7 +489,7 @@ mod tests {
 
     #[tokio::test]
     async fn task_manager_graceful_shutdown() {
-        let mut task_manager = TaskManager::new(1);
+        let mut task_manager = TaskManager::new(1, 10 * 1024 * 1024);
         task_manager.init_from_config(&Config::default());
         assert!(!task_manager.is_shutdown());
         task_manager.shutdown().await;
@@ -496,7 +498,7 @@ mod tests {
 
     #[tokio::test]
     async fn task_manager_graceful_shutdown_after_timeout() {
-        let mut task_manager = TaskManager::new(10);
+        let mut task_manager = TaskManager::new(10, 10 * 1024 * 1024);
         task_manager.init_from_config(&Config::default());
         {
             // block with one task in the channel
@@ -516,7 +518,7 @@ mod tests {
 
     #[tokio::test]
     async fn task_manager_get_and_update_task() {
-        let mut task_manager = TaskManager::new(1);
+        let mut task_manager = TaskManager::new(1, 10 * 1024 * 1024);
         task_manager.init_from_config(&Config::default());
 
         // add some tasks to the table

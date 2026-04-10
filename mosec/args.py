@@ -55,7 +55,8 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         description="Mosec Server Configurations",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog="The following arguments can be set through environment variables: ("
-        "path, capacity, timeout, address, port, namespace, debug, log_level, dry_run"
+        "path, capacity, timeout, address, port, namespace, debug, log_level, dry_run, "
+        "max_request_size"
         "). Note that the environment variable should start with `MOSEC_` with upper "
         "case. For example: `MOSEC_PORT=8080 MOSEC_TIMEOUT=5000 python main.py`.",
     )
@@ -139,6 +140,14 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         "--compression",
         help="Enable `zstd` & `gzip` compression for the request & response",
         action="store_true",
+    )
+
+    parser.add_argument(
+        "--max-request-size",
+        help="Maximum request body size in bytes. Requests larger than this "
+        "will be rejected with status 413",
+        type=int,
+        default=10 * 1024 * 1024,
     )
 
     return parser

@@ -34,8 +34,6 @@ const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_TOO_LARGE: &[u8] = b"request body is too large";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 const DEFAULT_RESPONSE_MIME: &str = "application/json";
-const DEFAULT_MAX_REQUEST_SIZE: usize = 10 * 1024 * 1024; // 10MiB
-
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
     Response::builder()
         .status(status)
@@ -114,7 +112,7 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         );
     }
 
-    let data = match to_bytes(req.into_body(), DEFAULT_MAX_REQUEST_SIZE).await {
+    let data = match to_bytes(req.into_body(), task_manager.max_request_size).await {
         Ok(data) => data,
         Err(err) => {
             warn!(err:?; "failed to read request body (too large)");
@@ -205,7 +203,7 @@ pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<Body
             .into_response();
     }
 
-    let data = match to_bytes(req.into_body(), DEFAULT_MAX_REQUEST_SIZE).await {
+    let data = match to_bytes(req.into_body(), task_manager.max_request_size).await {
         Ok(data) => data,
         Err(err) => {
             warn!(err:?; "failed to read request body (too large)");
