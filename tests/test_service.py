@@ -402,3 +402,20 @@ def test_compression_service(mosec_service, http_client):
     )
     assert resp.status_code == HTTPStatus.OK, resp
     assert resp.json() == expect, resp.content
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        pytest.param("square_service --max-request-size 64", "", id="max-request-size"),
+    ],
+    indirect=["mosec_service", "http_client"],
+)
+def test_max_request_size(mosec_service, http_client):
+    # small request should succeed
+    resp = http_client.post("/inference", json={"x": 2})
+    assert resp.status_code == HTTPStatus.OK
+
+    # request larger than 64 bytes should be rejected
+    resp = http_client.post("/inference", json={"x": 2, "padding": "a" * 100})
+    assert resp.status_code == HTTPStatus.REQUEST_ENTITY_TOO_LARGE
