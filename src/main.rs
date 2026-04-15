@@ -43,7 +43,7 @@ use crate::apidoc::MosecOpenAPI;
 use crate::config::Config;
 use crate::layouts::{ColoredLayout, JsonLayout};
 use crate::metrics::{METRICS, Metrics};
-use crate::routes::{RustAPIDoc, index, inference, metrics, sse_inference};
+use crate::routes::{AppState, RustAPIDoc, index, inference, metrics, sse_inference};
 use crate::tasks::{TASK_MANAGER, TaskManager};
 
 async fn shutdown_signal() {
@@ -83,6 +83,9 @@ async fn run(conf: &Config) {
     let barrier = task_manager.init_from_config(conf);
     TASK_MANAGER.set(task_manager).unwrap();
 
+    let app_state = AppState {
+        max_request_size: conf.max_request_size,
+    };
     let mut router = Router::new()
         .merge(SwaggerUi::new("/openapi/swagger").url("/openapi/metadata.json", doc.api))
         .route("/", get(index))
@@ -103,6 +106,8 @@ async fn run(conf: &Config) {
                 .layer(CompressionLayer::new()),
         );
     }
+
+    let router = router.with_state(app_state);
 
     // wait until each stage has at least one worker alive
     barrier.wait().await;

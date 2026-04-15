@@ -67,6 +67,8 @@ pub(crate) struct Config {
     pub log_level: String,
     // `zstd` & `gzip` compression
     pub compression: bool,
+    // maximum request body size in bytes
+    pub max_request_size: usize,
     pub runtimes: Vec<Runtime>,
     pub routes: Vec<Route>,
 }
@@ -82,6 +84,7 @@ impl Default for Config {
             namespace: String::from("mosec_service"),
             log_level: String::from("info"),
             compression: false,
+            max_request_size: 10 * 1024 * 1024,
             runtimes: vec![Runtime {
                 max_batch_size: 64,
                 max_wait_time: 3000,
