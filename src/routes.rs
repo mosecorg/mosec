@@ -24,9 +24,16 @@ use log::warn;
 use prometheus_client::encoding::text::encode;
 use utoipa::OpenApi;
 
+use axum::extract::State;
+
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics, REGISTRY};
 use crate::tasks::{TaskCode, TaskManager};
+
+#[derive(Clone)]
+pub(crate) struct AppState {
+    pub(crate) max_request_size: usize,
+}
 
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
@@ -97,7 +104,11 @@ pub(crate) async fn metrics() -> Response<Body> {
         (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
     ),
 )]
-pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
+pub(crate) async fn inference(
+    State(state): State<AppState>,
+    uri: Uri,
+    req: Request<Body>,
+) -> Response<Body> {
     let task_manager = TaskManager::global();
     let endpoint = uri.path();
     let mime = match task_manager.get_mime_type(endpoint) {
@@ -112,7 +123,7 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         );
     }
 
-    let data = match to_bytes(req.into_body(), task_manager.max_request_size).await {
+    let data = match to_bytes(req.into_body(), state.max_request_size).await {
         Ok(data) => data,
         Err(err) => {
             warn!(err:?; "failed to read request body (too large)");
@@ -191,7 +202,11 @@ pub(crate) async fn inference(uri: Uri, req: Request<Body>) -> Response<Body> {
         (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
     ),
 )]
-pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<Body> {
+pub(crate) async fn sse_inference(
+    State(state): State<AppState>,
+    uri: Uri,
+    req: Request<Body>,
+) -> Response<Body> {
     let task_manager = TaskManager::global();
     let endpoint = uri.path();
 
@@ -203,7 +218,7 @@ pub(crate) async fn sse_inference(uri: Uri, req: Request<Body>) -> Response<Body
             .into_response();
     }
 
-    let data = match to_bytes(req.into_body(), task_manager.max_request_size).await {
+    let data = match to_bytes(req.into_body(), state.max_request_size).await {
         Ok(data) => data,
         Err(err) => {
             warn!(err:?; "failed to read request body (too large)");
