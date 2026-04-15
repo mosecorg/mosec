@@ -15,6 +15,7 @@
 use std::time::Duration;
 
 use axum::body::{Body, to_bytes};
+use axum::extract::State;
 use axum::http::header::{CONTENT_TYPE, HeaderValue};
 use axum::http::{Request, Response, StatusCode, Uri};
 use axum::response::IntoResponse;
@@ -23,8 +24,6 @@ use bytes::Bytes;
 use log::warn;
 use prometheus_client::encoding::text::encode;
 use utoipa::OpenApi;
-
-use axum::extract::State;
 
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics, REGISTRY};
