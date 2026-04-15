@@ -30,17 +30,18 @@ use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics, REGISTRY};
 use crate::tasks::{TaskCode, TaskManager};
 
-#[derive(Clone)]
-pub(crate) struct AppState {
-    pub(crate) max_request_size: usize,
-}
-
 const SERVER_INFO: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 const RESPONSE_DEFAULT: &[u8] = b"MOSEC service";
 const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_TOO_LARGE: &[u8] = b"request body is too large";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 const DEFAULT_RESPONSE_MIME: &str = "application/json";
+
+#[derive(Clone)]
+pub(crate) struct AppState {
+    pub(crate) max_request_size: usize,
+}
+
 fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
     Response::builder()
         .status(status)
