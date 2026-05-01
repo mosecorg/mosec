@@ -41,7 +41,7 @@ jobs:
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Run sccache-cache
-      uses: mozilla-actions/sccache-action@v0.0.9
+      uses: mozilla-actions/sccache-action@v0.0.10
     - name: Install dependencies
       run: |
         make install_py
