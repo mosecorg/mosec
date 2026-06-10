@@ -70,7 +70,7 @@ def _get_gpu_metrics() -> Dict[str, Any]:
 
     try:
         # pylint: disable=import-outside-toplevel
-        from pynvml import (
+        from pynvml import (  # type: ignore[import-not-found]
             nvmlDeviceGetHandleByIndex,
             nvmlDeviceGetMemoryInfo,
             nvmlDeviceGetUtilizationRates,
