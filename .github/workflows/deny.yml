@@ -25,7 +25,7 @@ jobs:
       CMD: "cargo-deny"
       DIR: "/tmp/cargo-deny"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install Deny

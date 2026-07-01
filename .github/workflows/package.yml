@@ -34,7 +34,7 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -62,7 +62,7 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -86,7 +86,7 @@ jobs:
           - runner: macos-14
             target: aarch64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -102,7 +102,7 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -129,7 +129,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@v4.1.0
         with:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
@@ -148,7 +148,7 @@ jobs:
       # for GitHub Container Registry
       packages: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6
