@@ -33,7 +33,7 @@ tokio = { version = "1.52", features = [
 derive_more = { version = "2.1.1", features = ["display", "error", "from"] }
 # MPMS that only one consumer sees each message & async
 async-channel = "2.5"
-prometheus-client = "0.24.1"
+prometheus-client = "0.25.0"
 axum = { version = "0.8.9", default-features = false, features = [
   "matched-path",
   "original-uri",
@@ -48,7 +48,7 @@ serde_json = "1.0"
 utoipa = "5.5"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 tower = "0.5.3"
-tower-http = { version = "0.6.11", features = [
+tower-http = { version = "0.7.0", features = [
   "compression-zstd",
   "decompression-zstd",
   "compression-gzip",
