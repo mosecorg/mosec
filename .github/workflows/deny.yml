@@ -3,13 +3,13 @@ name: Cargo Deny
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 10 * * 1'  # Every Monday at 10:30 AM UTC
+    - cron: "30 10 * * 1" # Every Monday at 10:30 AM UTC
   pull_request:
     paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - '.github/workflows/deny.yml'
-      - 'deny.toml'
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/deny.yml"
+      - "deny.toml"
   merge_group:
 
 concurrency:
@@ -25,7 +25,7 @@ jobs:
       CMD: "cargo-deny"
       DIR: "/tmp/cargo-deny"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install Deny
