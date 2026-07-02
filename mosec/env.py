@@ -33,6 +33,7 @@ MOSEC_ENV_CONFIG = {
     "debug": bool,
     "dry_run": bool,
     "log_level": str,
+    "max_request_size": int,
 }
 
 
