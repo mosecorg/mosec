@@ -1,6 +1,6 @@
 name: Label
 on:
-  pull_request:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] label-only job; no PR code or checkout is executed
     types: [opened, edited]
 
 # make sure you have the following labels:
