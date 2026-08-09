@@ -1,6 +1,6 @@
 name: Label
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] label-only job; no PR code or checkout is executed
     types: [opened, edited]
 
 # make sure you have the following labels:
@@ -14,17 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
       PR: ${{ github.event.number }}
     steps:
-      - uses: actions/checkout@v7
-      - run: gh pr edit $PR --remove-label documentation --remove-label enhancement  --remove-label bug_fix  --remove-label refactoring --remove-label chore
-      - run: gh pr edit $PR --add-label documentation
+      - run: gh pr edit "$PR" --remove-label documentation --remove-label enhancement --remove-label bug_fix --remove-label refactoring --remove-label chore
+      - run: gh pr edit "$PR" --add-label documentation
         if: ${{ startsWith(github.event.pull_request.title, 'doc') }}
-      - run: gh pr edit $PR --add-label enhancement
+      - run: gh pr edit "$PR" --add-label enhancement
         if: ${{ startsWith(github.event.pull_request.title, 'feat') }}
-      - run: gh pr edit $PR --add-label bug_fix
+      - run: gh pr edit "$PR" --add-label bug_fix
         if: ${{ startsWith(github.event.pull_request.title, 'fix') }}
-      - run: gh pr edit $PR --add-label refactoring
+      - run: gh pr edit "$PR" --add-label refactoring
         if: ${{ startsWith(github.event.pull_request.title, 'refact') }}
-      - run: gh pr edit $PR --add-label chore
+      - run: gh pr edit "$PR" --add-label chore
         if: ${{ startsWith(github.event.pull_request.title, 'chore') }}
