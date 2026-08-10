@@ -17,11 +17,12 @@
 from __future__ import annotations
 
 import json
+import resource
 import signal
 import sys
 import time
 from multiprocessing.context import SpawnContext, SpawnProcess
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 from mosec.env import env_var_context
 from mosec.log import get_internal_logger
@@ -35,6 +36,64 @@ if TYPE_CHECKING:
 logger = get_internal_logger()
 
 
+def _get_memory_metrics() -> Dict[str, Any]:
+    """Collect memory metrics using stdlib resource module."""
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    rss = usage.ru_maxrss
+    # On macOS, ru_maxrss is in bytes; on Linux, it's in kilobytes
+    if sys.platform != "darwin":
+        rss *= 1024
+    return {"max_rss_bytes": rss}
+
+
+def _try_reset_gpu_peak_memory():
+    """Reset GPU peak memory stats if torch.cuda is available."""
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+    except ImportError:
+        pass
+
+
+def _get_gpu_metrics() -> Dict[str, Any]:
+    """Collect GPU metrics if available (torch.cuda or pynvml)."""
+    metrics: Dict[str, Any] = {}
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+
+        if torch.cuda.is_available():
+            metrics["gpu_peak_memory_bytes"] = torch.cuda.max_memory_allocated()
+    except ImportError:
+        pass
+
+    try:
+        # pylint: disable=import-outside-toplevel
+        from pynvml import (  # type: ignore[import-not-found]
+            nvmlDeviceGetHandleByIndex,
+            nvmlDeviceGetMemoryInfo,
+            nvmlDeviceGetUtilizationRates,
+            nvmlInit,
+            nvmlShutdown,
+        )
+
+        nvmlInit()
+        try:
+            handle = nvmlDeviceGetHandleByIndex(0)
+            mem = nvmlDeviceGetMemoryInfo(handle)
+            util = nvmlDeviceGetUtilizationRates(handle)
+            metrics.setdefault("gpu_memory_used_bytes", mem.used)
+            metrics["gpu_memory_total_bytes"] = mem.total
+            metrics["gpu_utilization_pct"] = util.gpu
+        finally:
+            nvmlShutdown()
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    return metrics
+
+
 def dry_run_func(
     worker_cls: type[Worker],
     batch: int,
@@ -42,6 +101,7 @@ def dry_run_func(
     sender: PipeConnection,
     ingress: bool,
     shutdown_notify: Event,
+    metrics_sender: PipeConnection,
 ):
     """Dry run simulation function."""
     worker = worker_cls()
@@ -55,7 +115,21 @@ def dry_run_func(
     try:
         data = receiver.recv() if ingress else worker.deserialize(receiver.recv_bytes())
         logger.info("%s received %s", worker, data)
+
+        _try_reset_gpu_peak_memory()
+        cpu_before = time.process_time()
+
         data = worker.forward([data])[0] if batch > 1 else worker.forward(data)
+
+        cpu_after = time.process_time()
+        stage_metrics: Dict[str, Any] = {
+            "stage": worker_cls.__name__,
+            "cpu_time_seconds": cpu_after - cpu_before,
+            **_get_memory_metrics(),
+            **_get_gpu_metrics(),
+        }
+        metrics_sender.send(stage_metrics)
+
         logger.info("%s inference result: %s", worker, data)
         data = worker.serialize(data)
         sender.send_bytes(data)
@@ -82,6 +156,7 @@ class Pool:
         self.processes: List[SpawnProcess] = []
         self.sender_pipes: List[PipeConnection] = []
         self.receiver_pipes: List[PipeConnection] = []
+        self.metrics_receivers: List[PipeConnection] = []
 
     def new_pipe(self):
         """Create new pipe for dry run workers to communicate."""
@@ -98,6 +173,8 @@ class Pool:
 
         """
         self.new_pipe()
+        metrics_receiver, metrics_sender = self.process_context.Pipe(duplex=False)
+        self.metrics_receivers.append(metrics_receiver)
         coordinator = self.process_context.Process(
             target=dry_run_func,
             args=(
@@ -107,6 +184,7 @@ class Pool:
                 self.sender_pipes[-1],
                 init,
                 self.shutdown_notify,
+                metrics_sender,
             ),
             daemon=True,
         )
@@ -146,6 +224,22 @@ class Pool:
     def first_last_pipe(self):
         """Get first sender and last receiver pipes."""
         return self.sender_pipes[0], self.receiver_pipes[-1]
+
+    def collect_metrics(self, timeout: float = 5.0) -> List[Dict[str, Any]]:
+        """Collect metrics from all worker stages.
+
+        Args:
+            timeout: seconds to wait for each worker's metrics.
+
+        Returns:
+            List of per-stage metrics dicts.
+
+        """
+        results: List[Dict[str, Any]] = []
+        for receiver in self.metrics_receivers:
+            if receiver.poll(timeout):
+                results.append(receiver.recv())
+        return results
 
 
 class DryRunner:
@@ -249,13 +343,22 @@ class DryRunner:
 
         res = receiver.recv_bytes()
         duration = time.perf_counter() - start_time
-        logger.info(
-            "dry run result: %s",
-            json.dumps(
-                {
-                    "request": example,
-                    "result_size": len(res),
-                    "warmup_duration": duration,
-                }
-            ),
-        )
+
+        stage_metrics = pool.collect_metrics()
+        num_stages = len(runtimes)
+        if len(stage_metrics) < num_stages:
+            logger.warning(
+                "only received metrics from %d/%d stages"
+                " (some workers may have failed before reporting)",
+                len(stage_metrics),
+                num_stages,
+            )
+
+        result = {
+            "request": example,
+            "result_size": len(res),
+            "warmup_duration": duration,
+        }
+        if stage_metrics:
+            result["stage_metrics"] = stage_metrics
+        logger.info("dry run result: %s", json.dumps(result, default=str))
