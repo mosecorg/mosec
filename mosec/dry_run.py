@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import os
 import resource
 import signal
 import sys
@@ -53,7 +54,7 @@ def _try_reset_gpu_peak_memory():
 
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats()
-    except ImportError:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
@@ -65,27 +66,35 @@ def _get_gpu_metrics() -> Dict[str, Any]:
 
         if torch.cuda.is_available():
             metrics["gpu_peak_memory_bytes"] = torch.cuda.max_memory_allocated()
-    except ImportError:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     try:
         # pylint: disable=import-outside-toplevel
         from pynvml import (  # type: ignore[import-not-found]
             nvmlDeviceGetHandleByIndex,
+            nvmlDeviceGetHandleByUUID,
             nvmlDeviceGetMemoryInfo,
-            nvmlDeviceGetUtilizationRates,
             nvmlInit,
             nvmlShutdown,
         )
 
         nvmlInit()
         try:
-            handle = nvmlDeviceGetHandleByIndex(0)
+            # honor CUDA_VISIBLE_DEVICES: the worker's device 0 is the first
+            # entry there, which may be an index or a `GPU-<uuid>`/`MIG-<uuid>`
+            devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+            visible = "0" if devices is None else devices.split(",")[0].strip()
+            if not visible:
+                # set but empty: no GPU is visible to this worker
+                return metrics
+            if visible.startswith(("GPU-", "MIG-")):
+                handle = nvmlDeviceGetHandleByUUID(visible.encode())
+            else:
+                handle = nvmlDeviceGetHandleByIndex(int(visible))
             mem = nvmlDeviceGetMemoryInfo(handle)
-            util = nvmlDeviceGetUtilizationRates(handle)
             metrics.setdefault("gpu_memory_used_bytes", mem.used)
             metrics["gpu_memory_total_bytes"] = mem.total
-            metrics["gpu_utilization_pct"] = util.gpu
         finally:
             nvmlShutdown()
     except Exception:  # pylint: disable=broad-except
@@ -96,6 +105,7 @@ def _get_gpu_metrics() -> Dict[str, Any]:
 
 def dry_run_func(
     worker_cls: type[Worker],
+    name: str,
     batch: int,
     receiver: PipeConnection,
     sender: PipeConnection,
@@ -123,7 +133,7 @@ def dry_run_func(
 
         cpu_after = time.process_time()
         stage_metrics: Dict[str, Any] = {
-            "stage": worker_cls.__name__,
+            "stage": name,
             "cpu_time_seconds": cpu_after - cpu_before,
             **_get_memory_metrics(),
             **_get_gpu_metrics(),
@@ -179,6 +189,7 @@ class Pool:
             target=dry_run_func,
             args=(
                 worker_runtime.worker,
+                worker_runtime.name,
                 worker_runtime.max_batch_size,
                 self.receiver_pipes[-2],
                 self.sender_pipes[-1],

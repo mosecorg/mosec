@@ -88,6 +88,7 @@ def test_dry_run_func_sends_metrics(dry_run_pipes):
         target=dry_run_func,
         args=(
             EchoWorker,
+            "echo_stage",
             1,
             p["data_receiver"],
             p["result_sender"],
@@ -106,7 +107,7 @@ def test_dry_run_func_sends_metrics(dry_run_pipes):
     assert p["metrics_receiver"].poll(timeout=5)
     metrics = p["metrics_receiver"].recv()
 
-    assert metrics["stage"] == "EchoWorker"
+    assert metrics["stage"] == "echo_stage"
     assert metrics["cpu_time_seconds"] >= 0
     assert metrics["max_rss_bytes"] > 0
 
@@ -120,6 +121,7 @@ def test_dry_run_func_batch_worker(dry_run_pipes):
         target=dry_run_func,
         args=(
             BatchEchoWorker,
+            "batch_stage",
             8,
             p["data_receiver"],
             p["result_sender"],
@@ -137,7 +139,7 @@ def test_dry_run_func_batch_worker(dry_run_pipes):
 
     assert p["metrics_receiver"].poll(timeout=5)
     metrics = p["metrics_receiver"].recv()
-    assert metrics["stage"] == "BatchEchoWorker"
+    assert metrics["stage"] == "batch_stage"
 
     p["shutdown_notify"].set()
     proc.join(timeout=5)
@@ -160,7 +162,7 @@ def test_pool_collect_metrics(spawn_ctx):
 
     metrics = pool.collect_metrics(timeout=5.0)
     assert len(metrics) == 1
-    assert metrics[0]["stage"] == "EchoWorker"
+    assert metrics[0]["stage"] == "EchoWorker_1"
     assert metrics[0]["cpu_time_seconds"] >= 0
     assert metrics[0]["max_rss_bytes"] > 0
 
