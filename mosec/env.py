@@ -38,7 +38,7 @@ MOSEC_ENV_CONFIG = {
 
 
 @contextlib.contextmanager
-def env_var_context(env: None | List[Dict[str, str]], index: int):
+def env_var_context(env: List[Dict[str, str]] | None, index: int):
     """Manage the environment variables for a worker process."""
     default: Dict = {}
     try:

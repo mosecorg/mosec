@@ -51,7 +51,7 @@ class Runtime:
         max_wait_time: int = 0,
         timeout: float = 0.0,
         start_method: str = "spawn",
-        env: Union[None, List[Dict[str, str]]] = None,
+        env: Union[List[Dict[str, str]], None] = None,
     ):
         """Initialize the mosec coordinator.
 

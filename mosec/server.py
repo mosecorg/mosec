@@ -192,7 +192,7 @@ class Server:
         max_batch_size: int = 1,
         max_wait_time: int = 0,
         start_method: str = "spawn",
-        env: Union[None, List[Dict[str, str]]] = None,
+        env: Union[List[Dict[str, str]], None] = None,
         timeout: float = 0,
         route: Union[str, List[str]] = "/inference",
     ):
