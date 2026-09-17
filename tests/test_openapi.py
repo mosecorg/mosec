@@ -52,9 +52,7 @@ def test_generate_openapi_from_worker_boundary_types():
     operation = spec["paths"]["/v1/inference"]["post"]
 
     assert operation["requestBody"]["content"] == {
-        "application/msgpack": {
-            "schema": {"$ref": "#/$defs/Request"}
-        }
+        "application/msgpack": {"schema": {"$ref": "#/$defs/Request"}}
     }
     assert operation["responses"]["200"]["content"] == {
         "application/msgpack": {"schema": {"type": "integer"}}

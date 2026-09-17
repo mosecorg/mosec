@@ -324,9 +324,7 @@ def test_openapi_service(mosec_service, http_client, args):
     path_item = spec["paths"]["/v1/inference"]["post"]
 
     if input_cls == "TypedPreprocess":
-        want = {
-            "application/msgpack": {"schema": {"$ref": "#/$defs/Request"}}
-        }
+        want = {"application/msgpack": {"schema": {"$ref": "#/$defs/Request"}}}
         assert path_item["requestBody"]["content"] == want
         assert "Request" in spec["$defs"]
     else:
