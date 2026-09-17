@@ -158,6 +158,8 @@ python examples/stable_diffusion/server.py --log-level debug --timeout 30000
 ```
 
 Open `http://127.0.0.1:8000/openapi/swagger/` in your browser to get the OpenAPI doc.
+The self-contained Swagger page and OpenAPI metadata are generated from the Python
+worker request and response annotations before the service starts.
 
 And in another terminal, test it:
 

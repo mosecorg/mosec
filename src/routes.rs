@@ -23,7 +23,6 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use bytes::Bytes;
 use log::warn;
 use prometheus_client::encoding::text::encode;
-use utoipa::OpenApi;
 
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics, REGISTRY};
@@ -49,22 +48,6 @@ fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
         .unwrap()
 }
 
-#[utoipa::path(
-    get,
-    path = "/",
-    responses(
-        (
-            status = StatusCode::OK,
-            description = "Root path, can be used for liveness health check",
-            body = String,
-        ),
-        (
-            status = StatusCode::SERVICE_UNAVAILABLE,
-            description = "SERVICE_UNAVAILABLE",
-            body = String,
-        ),
-    ),
-)]
 pub(crate) async fn index() -> Response<Body> {
     let task_manager = TaskManager::global();
     if task_manager.is_shutdown() {
@@ -77,13 +60,6 @@ pub(crate) async fn index() -> Response<Body> {
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/metrics",
-    responses(
-        (status = StatusCode::OK, description = "Get metrics", body = String),
-    ),
-)]
 pub(crate) async fn metrics() -> Response<Body> {
     let mut encoded = String::new();
     let registry = REGISTRY.get().unwrap();
@@ -91,19 +67,6 @@ pub(crate) async fn metrics() -> Response<Body> {
     build_response(StatusCode::OK, Bytes::from(encoded))
 }
 
-#[utoipa::path(
-    post,
-    path = "/openapi/reserved/inference",
-    responses(
-        (status = StatusCode::OK, description = "Inference"),
-        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
-        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
-        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
-        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
-        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
-    ),
-)]
 pub(crate) async fn inference(
     State(state): State<AppState>,
     uri: Uri,
@@ -189,19 +152,6 @@ pub(crate) async fn inference(
     resp
 }
 
-#[utoipa::path(
-    post,
-    path = "/openapi/reserved/inference_sse",
-    responses(
-        (status = StatusCode::OK, description = "Inference"),
-        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
-        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
-        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
-        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
-        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
-    ),
-)]
 pub(crate) async fn sse_inference(
     State(state): State<AppState>,
     uri: Uri,
@@ -276,7 +226,3 @@ pub(crate) async fn sse_inference(
         }
     }
 }
-
-#[derive(OpenApi)]
-#[openapi(paths(index, metrics, inference, sse_inference))]
-pub(crate) struct RustAPIDoc;
