@@ -64,8 +64,12 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
             version=_mosec_version(),
         )
     )
-    openapi.register_route("/", "get", summary="Liveness health check", response_type=str)
-    openapi.register_route("/metrics", "get", summary="Prometheus metrics", response_type=str)
+    openapi.register_route(
+        "/", "get", summary="Liveness health check", response_type=str
+    )
+    openapi.register_route(
+        "/metrics", "get", summary="Prometheus metrics", response_type=str
+    )
 
     for endpoint, workers in routes.items():
         if not workers:
@@ -96,9 +100,9 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
                 INFERENCE_ERROR_RESPONSES
             )
             if issubclass(workers[-1], SSEWorker):
-                spec["paths"][endpoint]["post"]["responses"]["200"][
-                    "description"
-                ] = "Server-sent event stream"
+                spec["paths"][endpoint]["post"]["responses"]["200"]["description"] = (
+                    "Server-sent event stream"
+                )
     return spec
 
 
