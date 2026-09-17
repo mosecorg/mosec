@@ -210,6 +210,10 @@ class Worker(abc.ABC):
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Retrieve the JSON schema for the `forward` method of the class.
 
+        This legacy customization hook is retained for compatibility. Mosec now
+        generates OpenAPI schemas directly from ``forward`` annotations with
+        ``defspec`` and does not call this method.
+
         Args:
             cls : The class object.
             target : The target variable to parse the schema for.
@@ -223,16 +227,6 @@ class Worker(abc.ABC):
         It takes a :py:obj:`target` param specifying the target to parse the schema for.
 
         The returned value is a tuple containing the schema and the component schema.
-
-        .. note::
-
-            Developer must implement this function to retrieve the JSON schema
-            to enable openapi spec.
-
-        .. note::
-
-            The :py:const:`MOSEC_REF_TEMPLATE` constant should be used as a reference
-            template according to openapi standards.
 
         """
         return {}, {}
