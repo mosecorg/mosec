@@ -21,12 +21,30 @@ from mosec.openapi import (
     generate_openapi,
     write_openapi_assets,
 )
+from mosec.worker import Worker
 from tests.services.openapi_service import (
     TypedInference,
     TypedPreprocess,
     UntypedInference,
     UntypedPreprocess,
 )
+
+
+class PlainWorker(Worker):
+    def forward(self, data: str) -> int:
+        return len(data)
+
+
+def test_generate_openapi_for_plain_worker():
+    spec = generate_openapi({"/inference": [PlainWorker]})
+    operation = spec["paths"]["/inference"]["post"]
+
+    assert operation["requestBody"]["content"] == {
+        "application/json": {"schema": {"type": "string"}}
+    }
+    assert operation["responses"]["200"]["content"] == {
+        "application/json": {"schema": {"type": "integer"}}
+    }
 
 
 def test_generate_openapi_from_worker_boundary_types():
