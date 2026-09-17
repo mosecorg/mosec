@@ -14,7 +14,6 @@
 
 #![forbid(unsafe_code)]
 
-mod apidoc;
 mod config;
 mod errors;
 mod layouts;
@@ -27,8 +26,10 @@ mod tasks;
 use std::env;
 use std::fs::read_to_string;
 use std::net::SocketAddr;
+use std::path::Path;
 
 use axum::Router;
+use axum::response::Redirect;
 use axum::routing::{get, post};
 use log::{debug, info};
 use logforth::append;
@@ -37,14 +38,12 @@ use tokio::signal::unix::{SignalKind, signal};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::decompression::RequestDecompressionLayer;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
+use tower_http::services::ServeFile;
 
-use crate::apidoc::MosecOpenAPI;
 use crate::config::Config;
 use crate::layouts::{ColoredLayout, JsonLayout};
 use crate::metrics::{METRICS, Metrics};
-use crate::routes::{AppState, RustAPIDoc, index, inference, metrics, sse_inference};
+use crate::routes::{AppState, index, inference, metrics, sse_inference};
 use crate::tasks::{TASK_MANAGER, TaskManager};
 
 async fn shutdown_signal() {
@@ -68,15 +67,13 @@ async fn shutdown_signal() {
     }
 }
 
+const OPENAPI_METADATA_FILE: &str = "openapi-metadata.json";
+const OPENAPI_SWAGGER_FILE: &str = "openapi-swagger.html";
+
 #[tokio::main]
-async fn run(conf: &Config) {
-    let mut doc = MosecOpenAPI {
-        api: RustAPIDoc::openapi(),
-    };
-    for route in &conf.routes {
-        doc.merge_route(route);
-    }
-    doc.clean();
+async fn run(conf: &Config, config_dir: &Path) {
+    let metadata = config_dir.join(OPENAPI_METADATA_FILE);
+    let swagger = config_dir.join(OPENAPI_SWAGGER_FILE);
 
     let metrics_instance = Metrics::init_with_namespace(&conf.namespace, conf.timeout);
     METRICS.set(metrics_instance).unwrap();
@@ -88,7 +85,12 @@ async fn run(conf: &Config) {
         max_request_size: conf.max_request_size,
     };
     let mut router = Router::new()
-        .merge(SwaggerUi::new("/openapi/swagger").url("/openapi/metadata.json", doc.api))
+        .route_service("/openapi/metadata.json", ServeFile::new(metadata))
+        .route(
+            "/openapi/swagger",
+            get(|| async { Redirect::permanent("/openapi/swagger/") }),
+        )
+        .route_service("/openapi/swagger/", ServeFile::new(swagger))
         .route("/", get(index))
         .route("/metrics", get(metrics));
 
@@ -128,7 +130,8 @@ fn main() {
         println!("expect one argument as the config path but got {cmd_args:?}");
         return;
     }
-    let config_str = read_to_string(&cmd_args[1]).expect("read config file failure");
+    let config_path = Path::new(&cmd_args[1]);
+    let config_str = read_to_string(config_path).expect("read config file failure");
     let conf: Config = serde_json::from_str(&config_str).expect("parse config failure");
 
     if conf.log_level == "debug" {
@@ -156,5 +159,8 @@ fn main() {
     }
 
     debug!(conf:?; "parse service arguments");
-    run(&conf);
+    run(
+        &conf,
+        config_path.parent().unwrap_or_else(|| Path::new(".")),
+    );
 }

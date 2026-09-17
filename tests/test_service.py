@@ -325,10 +325,10 @@ def test_openapi_service(mosec_service, http_client, args):
 
     if input_cls == "TypedPreprocess":
         want = {
-            "application/msgpack": {"schema": {"$ref": "#/components/schemas/Request"}}
+            "application/msgpack": {"schema": {"$ref": "#/$defs/Request"}}
         }
         assert path_item["requestBody"]["content"] == want
-        assert "Request" in spec["components"]["schemas"]
+        assert "Request" in spec["$defs"]
     else:
         assert "requestBody" not in path_item
 
@@ -337,6 +337,16 @@ def test_openapi_service(mosec_service, http_client, args):
         assert path_item["responses"]["200"]["content"] == want
     else:
         assert "content" not in path_item["responses"]["200"]
+
+    if args == "TypedPreprocess/TypedInference":
+        redirect = http_client.get("/openapi/swagger")
+        assert redirect.status_code == HTTPStatus.PERMANENT_REDIRECT
+        assert redirect.headers["location"] == "/openapi/swagger/"
+
+        response = http_client.get("/openapi/swagger/")
+        assert response.status_code == HTTPStatus.OK
+        assert response.headers["content-type"].startswith("text/html")
+        assert "/openapi/metadata.json" in response.text
 
 
 @pytest.mark.parametrize(

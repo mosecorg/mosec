@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::Deserialize;
-use utoipa::openapi::request_body::RequestBody;
-use utoipa::openapi::{RefOr, Response, Schema};
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct Runtime {
@@ -32,9 +29,6 @@ pub(crate) struct Route {
     pub workers: Vec<String>,
     pub mime: String,
     pub is_sse: bool,
-    pub request_body: Option<RequestBody>,
-    pub responses: Option<BTreeMap<String, RefOr<Response>>>,
-    pub schemas: Option<BTreeMap<String, RefOr<Schema>>>,
 }
 
 impl fmt::Debug for Route {
@@ -95,9 +89,6 @@ impl Default for Config {
                 workers: vec![String::from("Inference_1")],
                 mime: String::from("application/json"),
                 is_sse: false,
-                request_body: None,
-                responses: None,
-                schemas: None,
             }],
         }
     }

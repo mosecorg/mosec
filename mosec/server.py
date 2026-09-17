@@ -45,9 +45,9 @@ from typing import Dict, List, Type, Union
 from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.log import get_internal_logger
+from mosec.openapi import write_openapi_assets
 from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
-from mosec.utils import ParseTarget
-from mosec.worker import MOSEC_REF_TEMPLATE, SSEWorker, Worker
+from mosec.worker import SSEWorker, Worker
 
 logger = get_internal_logger()
 
@@ -132,12 +132,19 @@ class Server:
                     "endpoint": endpoint,
                     "workers": [runtime.name for runtime in pipeline],
                     "is_sse": issubclass(pipeline[-1].worker, SSEWorker),
-                    **generate_openapi([runtime.worker for runtime in pipeline]),
+                    "mime": pipeline[-1].worker.resp_mime_type,
                 }
             )
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w", encoding="utf-8") as file:
             json.dump(configs, file, indent=2)
+        write_openapi_assets(
+            {
+                endpoint: [runtime.worker for runtime in pipeline]
+                for endpoint, pipeline in self._router.items()
+            },
+            config_path.parent,
+        )
 
         process = self._rs_runtime_manager.start(config_path)
         self.register_daemon("rs_runtime", process)
@@ -281,42 +288,3 @@ class Server:
         except Exception:
             logger.error(traceback.format_exc().replace("\n", " "))
         self._halt()
-
-
-def generate_openapi(workers: List[Type[Worker]]):
-    """Generate the OpenAPI specification for one pipeline."""
-    if not workers:
-        return {}
-    request_worker_cls, response_worker_cls = workers[0], workers[-1]
-    input_schema, input_components = request_worker_cls.get_forward_json_schema(
-        ParseTarget.INPUT, MOSEC_REF_TEMPLATE
-    )
-    return_schema, return_components = response_worker_cls.get_forward_json_schema(
-        ParseTarget.RETURN, MOSEC_REF_TEMPLATE
-    )
-
-    def make_body(description, mime, schema):
-        if not schema:
-            return None
-        return {"description": description, "content": {mime: {"schema": schema}}}
-
-    return {
-        "request_body": make_body(
-            "Mosec Inference Request Body",
-            request_worker_cls.resp_mime_type,
-            input_schema,
-        ),
-        "responses": (
-            None
-            if not return_schema
-            else {
-                "200": make_body(
-                    "Mosec Inference Response",
-                    response_worker_cls.resp_mime_type,
-                    return_schema,
-                )
-            }
-        ),
-        "schemas": {**input_components, **return_components},
-        "mime": response_worker_cls.resp_mime_type,
-    }
