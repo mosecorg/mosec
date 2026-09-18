@@ -21,7 +21,7 @@ from mosec.openapi import (
     generate_openapi,
     write_openapi_assets,
 )
-from mosec.worker import Worker
+from mosec.worker import SSEWorker, Worker
 from tests.services.openapi_service import (
     TypedInference,
     TypedPreprocess,
@@ -35,6 +35,19 @@ class PlainWorker(Worker):
         return len(data)
 
 
+class CustomMimeWorker(Worker):
+    req_mime_type = "text/plain"
+    resp_mime_type = "application/octet-stream"
+
+    def forward(self, data: str) -> bytes:
+        return data.encode()
+
+
+class AnnotatedSSEWorker(SSEWorker):
+    def forward(self, data: str) -> str:
+        return data
+
+
 def test_generate_openapi_for_plain_worker():
     spec = generate_openapi({"/inference": [PlainWorker]})
     operation = spec["paths"]["/inference"]["post"]
@@ -45,6 +58,22 @@ def test_generate_openapi_for_plain_worker():
     assert operation["responses"]["200"]["content"] == {
         "application/json": {"schema": {"type": "integer"}}
     }
+
+
+def test_generate_openapi_uses_separate_request_and_response_mime_types():
+    spec = generate_openapi({"/inference": [CustomMimeWorker]})
+    operation = spec["paths"]["/inference"]["post"]
+
+    assert set(operation["requestBody"]["content"]) == {"text/plain"}
+    assert set(operation["responses"]["200"]["content"]) == {"application/octet-stream"}
+
+
+def test_generate_openapi_sse_request_defaults_to_json():
+    spec = generate_openapi({"/stream": [AnnotatedSSEWorker]})
+    operation = spec["paths"]["/stream"]["post"]
+
+    assert set(operation["requestBody"]["content"]) == {"application/json"}
+    assert set(operation["responses"]["200"]["content"]) == {"text/event-stream"}
 
 
 def test_generate_openapi_from_worker_boundary_types():

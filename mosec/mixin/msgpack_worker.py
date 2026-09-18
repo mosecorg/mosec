@@ -32,6 +32,7 @@ class MsgpackMixin:
 
     # pylint: disable=no-self-use
 
+    req_mime_type = "application/msgpack"
     resp_mime_type = "application/msgpack"
 
     def serialize(self, data: Any) -> bytes:

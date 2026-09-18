@@ -31,6 +31,7 @@ class TypedMsgPackMixin(Worker):
 
     # pylint: disable=no-self-use
 
+    req_mime_type = "application/msgpack"
     resp_mime_type = "application/msgpack"
     _input_typ: Optional[type] = None
 

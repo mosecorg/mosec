@@ -64,6 +64,7 @@ class Worker(abc.ABC):
 
     example: Any = None
     multi_examples: Sequence[Any] = []
+    req_mime_type = "application/json"
     resp_mime_type = "application/json"
     _worker_id: int = 0
     _stage: str = ""
