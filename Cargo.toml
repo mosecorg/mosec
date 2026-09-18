@@ -57,3 +57,9 @@ tower-http = { version = "0.7.0", features = [
 log = { version = "0.4.28", features = ["kv"] }
 logforth = { version = "0.29.1", features = ["starter-log"] }
 jiff = "0.2.25"
+
+[dev-dependencies]
+loom = { version = "0.7.2", features = ["futures"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(mosec_loom)"] }

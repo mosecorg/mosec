@@ -14,8 +14,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use axum::http::StatusCode;
@@ -28,6 +27,7 @@ use crate::config::Config;
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics};
 use crate::protocol::communicate;
+use crate::sync::{AtomicBool, Mutex, Ordering};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display, derive_more::Error)]
 pub(crate) enum TaskCode {
@@ -555,5 +555,56 @@ mod tests {
             new_data,
             vec![Bytes::from_static(b"rust"), Bytes::from_static(b"tokio")]
         );
+    }
+}
+
+#[cfg(all(test, mosec_loom))]
+mod loom_tests {
+    use loom::future::block_on;
+    use loom::sync::Arc;
+    use loom::{model, thread};
+
+    use super::*;
+    use crate::metrics::{METRICS, Metrics};
+
+    #[test]
+    fn loom_task_completion_never_deadlocks() {
+        let _ = METRICS.set(Metrics::new(1_000));
+
+        model(|| {
+            let manager = Arc::new(TaskManager::new(1_000));
+
+            // Closed receivers exercise the cleanup path that needs both the
+            // notifier and task-table mutexes. Two task IDs let both cleanup
+            // paths race without competing to remove the same notifier.
+            for id in 0..2 {
+                let (sender, receiver) = oneshot::channel();
+                drop(receiver);
+                manager.notifiers.lock().unwrap().insert(id, sender);
+                manager
+                    .table
+                    .lock()
+                    .unwrap()
+                    .insert(id, Task::new(Bytes::new(), "/inference".to_string()));
+            }
+
+            let updater = Arc::clone(&manager);
+            let update = thread::spawn(move || {
+                block_on(updater.update_multi_tasks(
+                    TaskCode::BadRequestError,
+                    &[0],
+                    &[Bytes::new()],
+                ));
+            });
+
+            let notifier = Arc::clone(&manager);
+            let notify = thread::spawn(move || notifier.notify_task_done(&1));
+
+            update.join().unwrap();
+            notify.join().unwrap();
+
+            assert!(manager.notifiers.lock().unwrap().is_empty());
+            assert!(manager.table.lock().unwrap().is_empty());
+        });
     }
 }
