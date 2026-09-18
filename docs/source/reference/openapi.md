@@ -24,6 +24,8 @@ omitted.
 ```python
 from dataclasses import dataclass
 
+from mosec import Worker
+
 
 @dataclass
 class Request:

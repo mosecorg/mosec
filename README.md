@@ -158,13 +158,9 @@ python examples/stable_diffusion/server.py --log-level debug --timeout 30000
 ```
 
 Open `http://127.0.0.1:8000/openapi/swagger/` in your browser to get the OpenAPI doc.
-Starting in v0.9.8, the self-contained Swagger page and OpenAPI metadata are
-generated from the Python worker request and response annotations before the service
-starts. This works for all `Worker` implementations and does not require
-`TypedMsgPackMixin`; that mixin is only needed for runtime MessagePack validation.
-For a pipeline, Mosec documents the input type of the first worker and the return type
-of the last worker. Missing or unsupported type annotations are omitted from the
-schema.
+Starting in v0.9.8, OpenAPI generation works for all `Worker` implementations and
+does not require `TypedMsgPackMixin`. See the [OpenAPI reference](https://mosecorg.github.io/mosec/reference/openapi.html)
+for schema generation details.
 
 And in another terminal, test it:
 
