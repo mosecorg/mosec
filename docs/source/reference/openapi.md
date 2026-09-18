@@ -1,8 +1,9 @@
 # OpenAPI
 
-Mosec generates an OpenAPI specification for every registered route before starting
-the HTTP server. OpenAPI generation applies to all {class}`mosec.Worker` subclasses;
-it does not require {class}`mosec.mixin.TypedMsgPackMixin`.
+Starting in v0.9.8, Mosec generates an OpenAPI specification for every registered
+route before starting the HTTP server. OpenAPI generation applies to all
+{class}`mosec.Worker` subclasses; it does not require
+{class}`mosec.mixin.TypedMsgPackMixin`.
 
 For each pipeline, Mosec uses:
 
