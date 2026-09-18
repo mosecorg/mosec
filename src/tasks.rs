@@ -560,6 +560,9 @@ mod tests {
 
 #[cfg(all(test, mosec_loom))]
 mod loom_tests {
+    // These models exercise TaskManager's mutexes. Channels use their real
+    // implementations, but their internal synchronization is not modeled.
+    // Receiver state and worker-queue capacity are fixed before racing threads.
     use loom::future::block_on;
     use loom::sync::Arc;
     use loom::{model, thread};
@@ -567,9 +570,27 @@ mod loom_tests {
     use super::*;
     use crate::metrics::{METRICS, Metrics};
 
+    const ENDPOINT: &str = "/inference";
+
+    fn insert_task(manager: &TaskManager, id: u32) -> oneshot::Receiver<()> {
+        let (sender, receiver) = oneshot::channel();
+        manager.notifiers.lock().unwrap().insert(id, sender);
+        manager
+            .table
+            .lock()
+            .unwrap()
+            .insert(id, Task::new(Bytes::new(), ENDPOINT.to_string()));
+        receiver
+    }
+
+    fn assert_empty(manager: &TaskManager) {
+        assert!(manager.notifiers.lock().unwrap().is_empty());
+        assert!(manager.table.lock().unwrap().is_empty());
+    }
+
     #[test]
     fn loom_task_completion_never_deadlocks() {
-        let _ = METRICS.set(Metrics::new(1_000));
+        METRICS.get_or_init(|| Metrics::new(1_000));
 
         model(|| {
             let manager = Arc::new(TaskManager::new(1_000));
@@ -578,14 +599,7 @@ mod loom_tests {
             // notifier and task-table mutexes. Two task IDs let both cleanup
             // paths race without competing to remove the same notifier.
             for id in 0..2 {
-                let (sender, receiver) = oneshot::channel();
-                drop(receiver);
-                manager.notifiers.lock().unwrap().insert(id, sender);
-                manager
-                    .table
-                    .lock()
-                    .unwrap()
-                    .insert(id, Task::new(Bytes::new(), "/inference".to_string()));
+                drop(insert_task(&manager, id));
             }
 
             let updater = Arc::clone(&manager);
@@ -603,8 +617,94 @@ mod loom_tests {
             update.join().unwrap();
             notify.join().unwrap();
 
-            assert!(manager.notifiers.lock().unwrap().is_empty());
-            assert!(manager.table.lock().unwrap().is_empty());
+            assert_empty(&manager);
+        });
+    }
+
+    fn completion_races_timeout(receiver_closed: bool) {
+        METRICS.get_or_init(|| Metrics::new(1_000));
+
+        model(move || {
+            let manager = Arc::new(TaskManager::new(1_000));
+            let mut receiver = Some(insert_task(&manager, 0));
+            if receiver_closed {
+                drop(receiver.take());
+            }
+
+            let notifier = Arc::clone(&manager);
+            let notify = thread::spawn(move || notifier.notify_task_done(&0));
+            let deleter = Arc::clone(&manager);
+            let delete = thread::spawn(move || deleter.delete_task(0, false));
+
+            notify.join().unwrap();
+            delete.join().unwrap();
+
+            assert_empty(&manager);
+            if let Some(mut receiver) = receiver {
+                // Completion either sent the notification or timeout dropped
+                // the sender. Neither ordering may leave the receiver pending.
+                assert!(matches!(
+                    receiver.try_recv(),
+                    Ok(()) | Err(oneshot::error::TryRecvError::Closed)
+                ));
+            }
+        });
+    }
+
+    #[test]
+    fn loom_completion_races_timeout_with_live_receiver() {
+        completion_races_timeout(false);
+    }
+
+    #[test]
+    fn loom_completion_races_timeout_with_closed_receiver() {
+        completion_races_timeout(true);
+    }
+
+    #[test]
+    fn loom_abnormal_update_cleans_up_disconnected_task() {
+        METRICS.get_or_init(|| Metrics::new(1_000));
+
+        model(|| {
+            let manager = TaskManager::new(1_000);
+            drop(insert_task(&manager, 0));
+
+            // No competing thread is needed to catch the #316 regression:
+            // notification must not reacquire a table lock held by the update.
+            block_on(manager.update_multi_tasks(TaskCode::BadRequestError, &[0], &[Bytes::new()]));
+
+            assert_empty(&manager);
+        });
+    }
+
+    #[test]
+    fn loom_full_queue_cleans_up_only_rejected_task() {
+        model(|| {
+            let mut manager = TaskManager::new(1_000);
+            let (sender, worker) = async_channel::bounded(1);
+            manager.senders.insert(ENDPOINT.to_string(), vec![sender]);
+
+            let (accepted_id, mut receiver) = manager.add_new_task(Bytes::new(), ENDPOINT).unwrap();
+            assert!(matches!(
+                manager.add_new_task(Bytes::new(), ENDPOINT),
+                Err(ServiceError::TooManyRequests)
+            ));
+
+            // Rejection must release insertion locks before calling delete_task
+            // and must preserve the accepted task and its notification channel.
+            assert_eq!(manager.table.lock().unwrap().len(), 1);
+            assert!(manager.table.lock().unwrap().contains_key(&accepted_id));
+            assert_eq!(manager.notifiers.lock().unwrap().len(), 1);
+            assert!(manager.notifiers.lock().unwrap().contains_key(&accepted_id));
+            assert_eq!(worker.try_recv().unwrap(), accepted_id);
+            assert!(matches!(
+                worker.try_recv(),
+                Err(async_channel::TryRecvError::Empty)
+            ));
+            manager.notify_task_done(&accepted_id);
+            assert_eq!(receiver.try_recv(), Ok(()));
+            assert!(manager.delete_task(accepted_id, false).is_some());
+            assert_empty(&manager);
         });
     }
 }
