@@ -80,7 +80,7 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
             "post",
             summary="Mosec inference",
             request_type=_forward_type(request_worker, ParseTarget.INPUT),
-            request_content_type=request_worker.resp_mime_type,
+            request_content_type=request_worker.req_mime_type,
             response_type=_forward_type(response_worker, ParseTarget.RETURN),
             response_content_type=response_worker.resp_mime_type,
         )

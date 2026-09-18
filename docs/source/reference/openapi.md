@@ -9,8 +9,8 @@ For each pipeline, Mosec uses:
 
 - the input annotation of the first worker's `forward` method as the request model;
 - the return annotation of the last worker's `forward` method as the response model;
-- the boundary workers' `resp_mime_type` values as the request and response content
-  types.
+- the first worker's `req_mime_type` as the request content type;
+- the last worker's `resp_mime_type` as the response content type.
 
 For dynamically batched workers, annotate the boundary with `List[Model]`. Mosec
 documents one `Model`, because each HTTP request contains one item rather than the
@@ -43,4 +43,9 @@ The generated endpoints are:
 - `/openapi/swagger/` for the self-contained Swagger UI.
 
 `TypedMsgPackMixin` serves a separate purpose: it uses `msgspec` to validate requests
-at runtime and changes the wire content type to `application/msgpack`.
+at runtime and changes both wire content types to `application/msgpack`.
+
+On `Worker`, both MIME attributes default to `application/json`. A worker that
+customizes request deserialization can set `req_mime_type` without changing its
+response content type. For example, `SSEWorker` keeps the JSON request default and
+sets only `resp_mime_type` to `text/event-stream`.
