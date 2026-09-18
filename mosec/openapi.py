@@ -15,14 +15,18 @@
 """Generate the static OpenAPI artifacts served by the Rust HTTP process."""
 
 import json
+from functools import partial
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Type
 
 from defspec import OpenAPI, OpenAPIInfo
 
-from mosec.utils import ParseTarget, parse_func_type
+from mosec import get_logger
+from mosec.utils import get_forward_input_type, get_forward_return_type
 from mosec.worker import SSEWorker, Worker
+
+logger = get_logger()
 
 OPENAPI_METADATA_FILE = "openapi-metadata.json"
 OPENAPI_SWAGGER_FILE = "openapi-swagger.html"
@@ -46,13 +50,20 @@ def _mosec_version() -> str:
         return "unknown"
 
 
-def _forward_type(worker: Type[Worker], target: ParseTarget) -> type | None:
-    """Extract the model type and unwrap Mosec's per-batch list annotation."""
-    try:
-        typ = parse_func_type(worker.forward, target)
-    except TypeError:
-        return None
+def _schema_type(typ: Any) -> type | None:
+    """Omit an unannotated boundary from the generated OpenAPI document."""
     return None if typ is Any else typ
+
+
+def _try_schema_type(func, message: str, *args: Any) -> type | None:
+    """Call a type extractor without making OpenAPI generation fatal."""
+    try:
+        return _schema_type(func())
+    # TypeError is raised for malformed batch annotations. NameError is raised
+    # when inspect cannot resolve a forward reference in an annotation.
+    except (TypeError, NameError) as err:
+        logger.warning(message, *args, err)
+        return None
 
 
 def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]:
@@ -79,9 +90,19 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
             endpoint,
             "post",
             summary="Mosec inference",
-            request_type=_forward_type(request_worker, ParseTarget.INPUT),
+            # Bad annotations must not prevent Mosec from starting; omit only
+            # the affected schema and make the failure visible in the logs.
+            request_type=_try_schema_type(
+                partial(get_forward_input_type, request_worker.forward),
+                "Failed to generate request schema for %s: %s",
+                endpoint,
+            ),
             request_content_type=request_worker.req_mime_type,
-            response_type=_forward_type(response_worker, ParseTarget.RETURN),
+            response_type=_try_schema_type(
+                partial(get_forward_return_type, response_worker.forward),
+                "Failed to generate response schema for %s: %s",
+                endpoint,
+            ),
             response_content_type=response_worker.resp_mime_type,
         )
 

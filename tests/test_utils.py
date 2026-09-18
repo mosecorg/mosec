@@ -14,12 +14,12 @@
 
 """Test util functions."""
 
-from typing import List
+from typing import List, Optional
 
 from msgspec import Struct
 
 from mosec import Worker
-from mosec.utils import ParseTarget, parse_func_type
+from mosec.utils import get_forward_input_type, get_forward_return_type
 
 
 class Request(Struct):
@@ -27,18 +27,26 @@ class Request(Struct):
 
 
 class Demo(Worker):
-    def forward(self, data: Request):
+    def forward(self, data: Request) -> Optional[Request]:
         pass
 
-    def batch_forward(self, data: List[Request]):
+    def batch_forward(self, data: List[Request]) -> List[Request]:
+        pass
+
+    def generic_forward(self, data: dict[str, int]) -> dict[str, int]:
         pass
 
 
 def test_parse_forward_input_type():
     demo = Demo()
 
-    single = parse_func_type(demo.forward, ParseTarget.INPUT)
+    single = get_forward_input_type(demo.forward)
     assert single is Request, single
 
-    batch = parse_func_type(demo.batch_forward, ParseTarget.INPUT)
+    batch = get_forward_input_type(demo.batch_forward)
     assert batch is Request, batch
+
+    assert get_forward_return_type(demo.forward) == Optional[Request]
+    assert get_forward_return_type(demo.batch_forward) is Request
+    assert get_forward_input_type(demo.generic_forward) == dict[str, int]
+    assert get_forward_return_type(demo.generic_forward) == dict[str, int]

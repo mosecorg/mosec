@@ -68,6 +68,38 @@ def test_generate_openapi_uses_separate_request_and_response_mime_types():
     assert set(operation["responses"]["200"]["content"]) == {"application/octet-stream"}
 
 
+def test_generate_openapi_preserves_generic_boundary_types():
+    class GenericWorker(Worker):
+        def forward(self, data: dict[str, int]) -> dict[str, int]:
+            return data
+
+    operation = generate_openapi({"/inference": [GenericWorker]})["paths"][
+        "/inference"
+    ]["post"]
+
+    assert operation["requestBody"]["content"]["application/json"]["schema"] == {
+        "type": "object",
+        "additionalProperties": {"type": "integer"},
+    }
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "type": "object",
+        "additionalProperties": {"type": "integer"},
+    }
+
+
+def test_generate_openapi_omits_invalid_boundary_types():
+    class InvalidWorker(Worker):
+        def forward(self, data: list[int, str]) -> list[int, str]:
+            return data
+
+    operation = generate_openapi({"/invalid": [InvalidWorker]})["paths"]["/invalid"][
+        "post"
+    ]
+
+    assert "requestBody" not in operation
+    assert "content" not in operation["responses"]["200"]
+
+
 def test_generate_openapi_sse_request_defaults_to_json():
     spec = generate_openapi({"/stream": [AnnotatedSSEWorker]})
     operation = spec["paths"]["/stream"]["post"]
