@@ -2,9 +2,9 @@
 
 This example shows how to use the `TypedMsgPackMixin` to validate the request with the help of [`msgspec`](https://github.com/jcrist/msgspec).
 
-OpenAPI generation itself works with any `Worker` and does not require this mixin.
-Mosec documents supported type annotations on the first and last workers in a
-pipeline. `TypedMsgPackMixin` additionally enables runtime validation and
+Starting in v0.9.8, OpenAPI generation works with any `Worker` and does not require
+this mixin. Mosec documents supported type annotations on the first and last workers
+in a pipeline. `TypedMsgPackMixin` additionally enables runtime validation and
 MessagePack serialization.
 
 Request validation can provide the following benefits:
