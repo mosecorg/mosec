@@ -2,13 +2,6 @@
 
 This guide will help you migrate from other frameworks to `mosec`.
 
-## OpenAPI in v0.9.8
-
-OpenAPI schema generation no longer requires `TypedMsgPackMixin`. Mosec generates
-schemas from supported `forward` annotations on the first and last workers in every
-pipeline. `TypedMsgPackMixin` remains available for runtime MessagePack validation
-and serialization, but it is independent of OpenAPI generation.
-
 ## From the `Triton Inference Server`
 
 Both [`PyTriton`](https://github.com/triton-inference-server/pytriton) and [`Triton Python Backend`](https://github.com/triton-inference-server/python_backend) are using [`Triton Inference Server`](https://github.com/triton-inference-server).
