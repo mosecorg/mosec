@@ -14,6 +14,8 @@
 
 import json
 
+import pytest
+
 from mosec.openapi import (
     INFERENCE_ERROR_RESPONSES,
     OPENAPI_METADATA_FILE,
@@ -46,6 +48,58 @@ class CustomMimeWorker(Worker):
 class AnnotatedSSEWorker(SSEWorker):
     def forward(self, data: str) -> str:
         return data
+
+
+class UnsupportedModel:
+    pass
+
+
+@pytest.mark.parametrize("boundary", ["data", "return"])
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        pytest.param(UnsupportedModel, id="unsupported-model"),
+        pytest.param(dict[str, UnsupportedModel], id="nested-unsupported-model"),
+        pytest.param("MissingModel", id="unresolved-name"),
+        pytest.param("list[", id="invalid-syntax"),
+        pytest.param("list[int, str]", id="malformed-batch"),
+    ],
+)
+def test_generate_openapi_isolates_invalid_boundary_types(
+    boundary, annotation, mocker, tmp_path
+):
+    class InvalidWorker(Worker):
+        def forward(self, data: int) -> int:
+            return data
+
+    InvalidWorker.forward.__annotations__[boundary] = annotation
+    warning = mocker.patch("mosec.openapi.logger.warning")
+
+    write_openapi_assets(
+        {"/invalid": [InvalidWorker], "/valid": [PlainWorker]}, tmp_path
+    )
+    spec = json.loads((tmp_path / OPENAPI_METADATA_FILE).read_text())
+    operation = spec["paths"]["/invalid"]["post"]
+
+    if boundary == "data":
+        assert "requestBody" not in operation
+        content = operation["responses"]["200"]["content"]
+        direction = "request"
+    else:
+        assert "content" not in operation["responses"]["200"]
+        content = operation["requestBody"]["content"]
+        direction = "response"
+    assert content == {"application/json": {"schema": {"type": "integer"}}}
+    assert (
+        spec["paths"]["/valid"]
+        == generate_openapi({"/valid": [PlainWorker]})["paths"]["/valid"]
+    )
+    assert (tmp_path / OPENAPI_SWAGGER_FILE).is_file()
+    warning.assert_called_once()
+    assert warning.call_args.args[:2] == (
+        f"Failed to generate {direction} schema for %s: %s",
+        "/invalid",
+    )
 
 
 def test_generate_openapi_for_plain_worker():
