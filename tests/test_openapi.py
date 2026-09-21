@@ -16,6 +16,7 @@ import json
 
 import pytest
 
+from mosec.mixin import TypedMsgPackMixin
 from mosec.openapi import (
     INFERENCE_ERROR_RESPONSES,
     OPENAPI_METADATA_FILE,
@@ -54,6 +55,7 @@ class UnsupportedModel:
     pass
 
 
+@pytest.mark.parametrize("typed", [False, True])
 @pytest.mark.parametrize("boundary", ["data", "return"])
 @pytest.mark.parametrize(
     "annotation",
@@ -65,8 +67,8 @@ class UnsupportedModel:
         pytest.param("list[int, str]", id="malformed-batch"),
     ],
 )
-def test_generate_openapi_isolates_invalid_boundary_types(
-    boundary, annotation, mocker, tmp_path
+def test_generate_openapi_handles_invalid_boundary_types(
+    typed, boundary, annotation, mocker, tmp_path
 ):
     class InvalidWorker(Worker):
         def forward(self, data: int) -> int:
@@ -74,6 +76,17 @@ def test_generate_openapi_isolates_invalid_boundary_types(
 
     InvalidWorker.forward.__annotations__[boundary] = annotation
     warning = mocker.patch("mosec.openapi.logger.warning")
+
+    if typed:
+
+        class InvalidTypedWorker(TypedMsgPackMixin, InvalidWorker):
+            pass
+
+        with pytest.raises((TypeError, ValueError, NameError, SyntaxError)):
+            write_openapi_assets({"/invalid": [InvalidTypedWorker]}, tmp_path)
+        warning.assert_not_called()
+        assert not list(tmp_path.iterdir())
+        return
 
     write_openapi_assets(
         {"/invalid": [InvalidWorker], "/valid": [PlainWorker]}, tmp_path
@@ -100,6 +113,43 @@ def test_generate_openapi_isolates_invalid_boundary_types(
         f"Failed to generate {direction} schema for %s: %s",
         "/invalid",
     )
+
+
+def test_generate_openapi_propagates_unexpected_errors(mocker):
+    mocker.patch(
+        "mosec.openapi.get_forward_input_type",
+        side_effect=RuntimeError("unexpected extraction failure"),
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected extraction failure"):
+        generate_openapi({"/inference": [PlainWorker]})
+
+
+@pytest.mark.parametrize("typed_first", [False, True])
+def test_generate_openapi_applies_strictness_per_boundary(typed_first, mocker):
+    class OrdinaryWorker(Worker):
+        def forward(self, data: int) -> int:
+            return data
+
+    class TypedWorker(TypedMsgPackMixin):
+        def forward(self, data: int) -> int:
+            return data
+
+    boundary = "return" if typed_first else "data"
+    OrdinaryWorker.forward.__annotations__[boundary] = "list["
+    workers = (
+        [TypedWorker, OrdinaryWorker] if typed_first else [OrdinaryWorker, TypedWorker]
+    )
+    warning = mocker.patch("mosec.openapi.logger.warning")
+    operation = generate_openapi({"/mixed": workers})["paths"]["/mixed"]["post"]
+
+    if typed_first:
+        assert "requestBody" in operation
+        assert "content" not in operation["responses"]["200"]
+    else:
+        assert "requestBody" not in operation
+        assert "content" in operation["responses"]["200"]
+    warning.assert_called_once()
 
 
 def test_generate_openapi_for_plain_worker():

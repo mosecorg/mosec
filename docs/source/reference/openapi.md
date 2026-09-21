@@ -19,9 +19,11 @@ internal batch.
 Types supported by [defspec](https://github.com/kemingy/defspec), including standard
 Python types and `msgspec.Struct`, produce schemas. If a boundary has no usable type
 annotation, its route is still documented but that request or response schema is
-omitted. Invalid annotations and unsupported model types produce a warning and
-omit only the affected schema; they do not prevent startup. This fallback applies
-to OpenAPI generation, not runtime request validation or serialization.
+omitted. For ordinary workers, malformed annotations, unresolved type names, and
+unsupported model types produce a warning and omit only the affected schema.
+For `TypedMsgPackMixin` workers, these errors fail startup because their boundary
+annotations must be valid. Missing annotations and `Any` still omit the schema.
+Unexpected errors propagate for all workers.
 
 ```python
 from dataclasses import dataclass

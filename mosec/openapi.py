@@ -24,6 +24,7 @@ import msgspec
 from defspec import OpenAPI, OpenAPIInfo
 
 from mosec import get_logger
+from mosec.mixin.typed_worker import TypedMsgPackMixin
 from mosec.utils import get_forward_input_type, get_forward_return_type
 from mosec.worker import SSEWorker, Worker
 
@@ -56,15 +57,19 @@ def _schema_type(typ: Any) -> type | None:
     return None if typ is Any else typ
 
 
-def _try_schema_type(func, message: str, *args: Any) -> type | None:
-    """Resolve and check a boundary type without making OpenAPI generation fatal."""
+def _try_schema_type(
+    func, message: str, *args: Any, strict: bool = False
+) -> type | None:
+    """Resolve a boundary type, optionally tolerating invalid annotations."""
     try:
         typ = _schema_type(func())
         # Use defspec's schema generator to check each boundary independently
         # before registering the route, preserving the other boundary on failure.
         msgspec.json.schema(typ)
         return typ
-    except Exception as err:  # Annotations and schema generation are user-defined.
+    except (TypeError, ValueError, NameError, SyntaxError) as err:
+        if strict:
+            raise
         logger.warning(message, *args, err)
         return None
 
@@ -93,18 +98,20 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
             endpoint,
             "post",
             summary="Mosec inference",
-            # Bad annotations must not prevent Mosec from starting; omit only
-            # the affected schema and make the failure visible in the logs.
+            # Typed workers must have valid annotations. For other workers,
+            # omit invalid schemas and make the failure visible in the logs.
             request_type=_try_schema_type(
                 partial(get_forward_input_type, request_worker.forward),
                 "Failed to generate request schema for %s: %s",
                 endpoint,
+                strict=issubclass(request_worker, TypedMsgPackMixin),
             ),
             request_content_type=request_worker.req_mime_type,
             response_type=_try_schema_type(
                 partial(get_forward_return_type, response_worker.forward),
                 "Failed to generate response schema for %s: %s",
                 endpoint,
+                strict=issubclass(response_worker, TypedMsgPackMixin),
             ),
             response_content_type=response_worker.resp_mime_type,
         )
