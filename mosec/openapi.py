@@ -20,6 +20,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Type
 
+import msgspec
 from defspec import OpenAPI, OpenAPIInfo
 
 from mosec import get_logger
@@ -56,12 +57,14 @@ def _schema_type(typ: Any) -> type | None:
 
 
 def _try_schema_type(func, message: str, *args: Any) -> type | None:
-    """Call a type extractor without making OpenAPI generation fatal."""
+    """Resolve and check a boundary type without making OpenAPI generation fatal."""
     try:
-        return _schema_type(func())
-    # TypeError is raised for malformed batch annotations. NameError is raised
-    # when inspect cannot resolve a forward reference in an annotation.
-    except (TypeError, NameError) as err:
+        typ = _schema_type(func())
+        # Use defspec's schema generator to check each boundary independently
+        # before registering the route, preserving the other boundary on failure.
+        msgspec.json.schema(typ)
+        return typ
+    except Exception as err:  # Annotations and schema generation are user-defined.
         logger.warning(message, *args, err)
         return None
 

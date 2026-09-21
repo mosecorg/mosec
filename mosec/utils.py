@@ -53,7 +53,9 @@ def get_mosec_path() -> Optional[Path]:
 
 
 def _unwrap_batch_type(func, typ: Any) -> Any:
-    """Return one request item from Mosec's ``list[T]`` batch annotation."""
+    """Resolve one boundary annotation and unwrap Mosec's ``list[T]`` batch."""
+    if isinstance(typ, str):
+        typ = eval(typ, inspect.unwrap(func).__globals__)
     if get_origin(typ) is not list:
         return typ
 
@@ -72,7 +74,8 @@ def get_forward_input_type(func) -> Any:
     Mosec passes each HTTP request as one item in a dynamic batch, so a
     ``list[T]`` parameter annotation represents an individual ``T``.
     """
-    annotations = inspect.get_annotations(func, eval_str=True)
+    # Resolve only the input so an invalid return annotation cannot affect it.
+    annotations = inspect.get_annotations(func)
     typ = next((value for name, value in annotations.items() if name != "return"), Any)
     return _unwrap_batch_type(func, typ)
 
@@ -83,5 +86,5 @@ def get_forward_return_type(func) -> Any:
     A ``list[T]`` return annotation represents the per-request ``T`` values
     produced by a dynamically batched worker.
     """
-    typ = inspect.get_annotations(func, eval_str=True).get("return", Any)
+    typ = inspect.get_annotations(func).get("return", Any)
     return _unwrap_batch_type(func, typ)
