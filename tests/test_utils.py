@@ -31,10 +31,10 @@ class Demo(Worker):
         pass
 
     def batch_forward(self, data: List[Request]) -> List[Request]:
-        pass
+        return data
 
     def generic_forward(self, data: dict[str, int]) -> dict[str, int]:
-        pass
+        return data
 
 
 def test_parse_forward_input_type():

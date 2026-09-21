@@ -89,7 +89,8 @@ def test_generate_openapi_preserves_generic_boundary_types():
 
 def test_generate_openapi_omits_invalid_boundary_types():
     class InvalidWorker(Worker):
-        def forward(self, data: list[int, str]) -> list[int, str]:
+        # Intentionally malformed to exercise schema generation's fallback.
+        def forward(self, data: list[int, str]) -> list[int, str]:  # type: ignore[type-arg]
             return data
 
     operation = generate_openapi({"/invalid": [InvalidWorker]})["paths"]["/invalid"][
