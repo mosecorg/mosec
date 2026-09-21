@@ -14,7 +14,9 @@
 
 """Test dry run metrics collection."""
 
+import sys
 from multiprocessing.context import SpawnContext
+from types import SimpleNamespace
 from typing import List
 
 import pytest
@@ -23,6 +25,7 @@ from mosec.dry_run import (
     Pool,
     _get_gpu_metrics,
     _get_memory_metrics,
+    _get_nvml_handle,
     dry_run_func,
 )
 from mosec.runtime import Runtime
@@ -80,6 +83,75 @@ def test_get_memory_metrics_unit():
 def test_get_gpu_metrics_no_gpu():
     metrics = _get_gpu_metrics()
     assert isinstance(metrics, dict)
+
+
+class FakeNVML:
+    def __init__(self, count=2, pci_ok=True):
+        self.count = count
+        self.pci_ok = pci_ok
+
+    def nvmlDeviceGetCount(self):
+        return self.count
+
+    def nvmlDeviceGetHandleByUUID(self, uuid):
+        return ("uuid", uuid)
+
+    def nvmlDeviceGetHandleByPciBusId(self, bus_id):
+        if not self.pci_ok:
+            raise RuntimeError("NVML_ERROR_NOT_FOUND")
+        return ("pci", bus_id)
+
+    def nvmlDeviceGetHandleByIndex(self, index):
+        return ("index", index)
+
+
+def fake_torch(available=True, **prop):
+    return SimpleNamespace(
+        cuda=SimpleNamespace(
+            is_available=lambda: available,
+            current_device=lambda: 0,
+            get_device_properties=lambda _: SimpleNamespace(**prop),
+        )
+    )
+
+
+TORCH_2_8 = fake_torch(pci_domain_id=0, pci_bus_id=0x41, pci_device_id=0, uuid="ab-cd")
+TORCH_2_5 = fake_torch(uuid="ab-cd")
+TORCH_2_4 = fake_torch()
+NO_CUDA = fake_torch(available=False)
+
+
+@pytest.mark.parametrize(
+    "visible, order, torch, nvml, expected",
+    [
+        (None, None, TORCH_2_8, FakeNVML(), ("pci", b"00000000:41:00.0")),
+        ("3,1", None, TORCH_2_8, FakeNVML(), ("pci", b"00000000:41:00.0")),
+        ("3,1", None, TORCH_2_5, FakeNVML(), ("uuid", b"GPU-ab-cd")),
+        ("GPU-abc,1", None, TORCH_2_8, FakeNVML(), ("uuid", b"GPU-abc")),
+        ("MIG-abc", None, None, FakeNVML(), ("uuid", b"MIG-abc")),
+        ("3,1", "PCI_BUS_ID", None, FakeNVML(), ("index", 3)),
+        ("3,1", "PCI_BUS_ID", NO_CUDA, FakeNVML(), ("index", 3)),
+        # a single GPU cannot be mixed up
+        (None, None, None, FakeNVML(count=1), ("index", 0)),
+        (None, None, TORCH_2_4, FakeNVML(count=1), ("index", 0)),
+        (None, None, TORCH_2_8, FakeNVML(count=1, pci_ok=False), ("index", 0)),
+        # a CUDA index in fastest-first order may not be the NVML index
+        ("3,1", None, None, FakeNVML(), None),
+        (None, None, NO_CUDA, FakeNVML(), None),
+        (None, None, TORCH_2_4, FakeNVML(), None),
+        (None, None, TORCH_2_8, FakeNVML(pci_ok=False), None),
+        ("", None, TORCH_2_8, FakeNVML(), None),
+    ],
+)
+def test_get_nvml_handle(monkeypatch, visible, order, torch, nvml, expected):
+    for key, value in (("CUDA_VISIBLE_DEVICES", visible), ("CUDA_DEVICE_ORDER", order)):
+        if value is None:
+            monkeypatch.delenv(key, raising=False)
+        else:
+            monkeypatch.setenv(key, value)
+    # a None entry in sys.modules makes `import torch` raise ImportError
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    assert _get_nvml_handle(nvml) == expected
 
 
 def test_dry_run_func_sends_metrics(dry_run_pipes):

@@ -58,6 +58,44 @@ def _try_reset_gpu_peak_memory():
         pass
 
 
+def _get_nvml_handle(nvml: Any) -> Any:
+    """Return the NVML handle of this worker's GPU, or None if unsure.
+
+    NVML has its own device order (PCI bus order in practice) while CUDA
+    orders devices fastest first by default, so a CUDA index is not an NVML
+    index. Match on UUID or PCI bus ID instead.
+    """
+    # without torch, the worker's GPU is the first entry of
+    # CUDA_VISIBLE_DEVICES, which may be an index or a `GPU-<uuid>`/`MIG-<uuid>`
+    devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+    visible = "0" if devices is None else devices.split(",")[0].strip()
+    if not visible:
+        # set but empty: no GPU is visible to this worker
+        return None
+    if visible.startswith(("GPU-", "MIG-")):
+        return nvml.nvmlDeviceGetHandleByUUID(visible.encode())
+
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+
+        if torch.cuda.is_available():
+            prop = torch.cuda.get_device_properties(torch.cuda.current_device())
+            if hasattr(prop, "pci_domain_id"):  # torch >= 2.8
+                bus_id = f"{prop.pci_domain_id:08X}:{prop.pci_bus_id:02X}:{prop.pci_device_id:02X}.0"
+                return nvml.nvmlDeviceGetHandleByPciBusId(bus_id.encode())
+            if hasattr(prop, "uuid"):  # torch >= 2.5
+                return nvml.nvmlDeviceGetHandleByUUID(f"GPU-{prop.uuid}".encode())
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    # with a single GPU there is nothing to mix up
+    if os.environ.get("CUDA_DEVICE_ORDER") == "PCI_BUS_ID" or (
+        visible == "0" and nvml.nvmlDeviceGetCount() == 1
+    ):
+        return nvml.nvmlDeviceGetHandleByIndex(int(visible))
+    return None
+
+
 def _get_gpu_metrics() -> Dict[str, Any]:
     """Collect GPU metrics if available (torch.cuda or pynvml)."""
     metrics: Dict[str, Any] = {}
@@ -70,33 +108,17 @@ def _get_gpu_metrics() -> Dict[str, Any]:
         pass
 
     try:
-        # pylint: disable=import-outside-toplevel
-        from pynvml import (  # type: ignore[import-not-found]
-            nvmlDeviceGetHandleByIndex,
-            nvmlDeviceGetHandleByUUID,
-            nvmlDeviceGetMemoryInfo,
-            nvmlInit,
-            nvmlShutdown,
-        )
+        import pynvml  # type: ignore[import-not-found] # pylint: disable=import-outside-toplevel
 
-        nvmlInit()
+        pynvml.nvmlInit()
         try:
-            # honor CUDA_VISIBLE_DEVICES: the worker's device 0 is the first
-            # entry there, which may be an index or a `GPU-<uuid>`/`MIG-<uuid>`
-            devices = os.environ.get("CUDA_VISIBLE_DEVICES")
-            visible = "0" if devices is None else devices.split(",")[0].strip()
-            if not visible:
-                # set but empty: no GPU is visible to this worker
-                return metrics
-            if visible.startswith(("GPU-", "MIG-")):
-                handle = nvmlDeviceGetHandleByUUID(visible.encode())
-            else:
-                handle = nvmlDeviceGetHandleByIndex(int(visible))
-            mem = nvmlDeviceGetMemoryInfo(handle)
-            metrics.setdefault("gpu_memory_used_bytes", mem.used)
-            metrics["gpu_memory_total_bytes"] = mem.total
+            handle = _get_nvml_handle(pynvml)
+            if handle is not None:
+                mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                metrics.setdefault("gpu_memory_used_bytes", mem.used)
+                metrics["gpu_memory_total_bytes"] = mem.total
         finally:
-            nvmlShutdown()
+            pynvml.nvmlShutdown()
     except Exception:  # pylint: disable=broad-except
         pass
 
