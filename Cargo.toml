@@ -1,6 +1,6 @@
 [package]
 name = "mosec"
-version = "0.9.7"
+version = "0.9.8"
 authors = ["Keming <kemingy94@gmail.com>", "Zichen <lkevinzc@gmail.com>"]
 edition = "2024"
 license = "Apache-2.0"
@@ -45,14 +45,13 @@ axum = { version = "0.8.9", default-features = false, features = [
 async-stream = "0.3.6"
 serde = "1.0"
 serde_json = "1.0"
-utoipa = "5.5"
-utoipa-swagger-ui = { version = "9", features = ["axum"] }
 tower = "0.5.3"
 tower-http = { version = "0.7.0", features = [
   "compression-zstd",
   "decompression-zstd",
   "compression-gzip",
   "decompression-gzip",
+  "fs",
 ] }
 log = { version = "0.4.28", features = ["kv"] }
 logforth = { version = "0.29.1", features = ["starter-log"] }

@@ -158,6 +158,9 @@ python examples/stable_diffusion/server.py --log-level debug --timeout 30000
 ```
 
 Open `http://127.0.0.1:8000/openapi/swagger/` in your browser to get the OpenAPI doc.
+Starting in v0.9.8, OpenAPI generation works for all `Worker` implementations and
+does not require `TypedMsgPackMixin`. See the [OpenAPI reference](https://mosecorg.github.io/mosec/reference/openapi.html)
+for schema generation details.
 
 And in another terminal, test it:
 
