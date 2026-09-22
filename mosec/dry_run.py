@@ -115,7 +115,7 @@ def _get_gpu_metrics() -> Dict[str, Any]:
             handle = _get_nvml_handle(pynvml)
             if handle is not None:
                 mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                metrics.setdefault("gpu_memory_used_bytes", mem.used)
+                metrics["gpu_memory_used_bytes"] = mem.used
                 metrics["gpu_memory_total_bytes"] = mem.total
         finally:
             pynvml.nvmlShutdown()
