@@ -131,8 +131,10 @@ def build_arguments_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--dry-run",
-        help="Dry run the service with provided warmup examples (if any). "
-        "This will omit the worker number for each stage.",
+        help="Dry run the service with the provided warmup examples (if any). "
+        "This will start one worker per stage (ignoring the configured number), "
+        "run the warmup example through all the stages, and report per-stage "
+        "metrics. Install `torch` and `pynvml` to collect GPU memory metrics.",
         action="store_true",
     )
 
