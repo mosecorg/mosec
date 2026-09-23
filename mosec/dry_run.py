@@ -17,11 +17,13 @@
 from __future__ import annotations
 
 import json
+import os
+import resource
 import signal
 import sys
 import time
 from multiprocessing.context import SpawnContext, SpawnProcess
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 from mosec.env import env_var_context
 from mosec.log import get_internal_logger
@@ -35,13 +37,103 @@ if TYPE_CHECKING:
 logger = get_internal_logger()
 
 
+def _get_memory_metrics() -> Dict[str, Any]:
+    """Collect memory metrics using stdlib resource module."""
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    rss = usage.ru_maxrss
+    # On macOS, ru_maxrss is in bytes; on Linux, it's in kilobytes
+    if sys.platform != "darwin":
+        rss *= 1024
+    return {"max_rss_bytes": rss}
+
+
+def _try_reset_gpu_peak_memory():
+    """Reset GPU peak memory stats if torch.cuda is available."""
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+
+def _get_nvml_handle(nvml: Any) -> Any:
+    """Return the NVML handle of this worker's GPU, or None if unsure.
+
+    NVML has its own device order (PCI bus order in practice) while CUDA
+    orders devices fastest first by default, so a CUDA index is not an NVML
+    index. Match on UUID or PCI bus ID instead.
+    """
+    # without torch, the worker's GPU is the first entry of
+    # CUDA_VISIBLE_DEVICES, which may be an index or a `GPU-<uuid>`/`MIG-<uuid>`
+    devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+    visible = "0" if devices is None else devices.split(",")[0].strip()
+    if not visible:
+        # set but empty: no GPU is visible to this worker
+        return None
+    if visible.startswith(("GPU-", "MIG-")):
+        return nvml.nvmlDeviceGetHandleByUUID(visible.encode())
+
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+
+        if torch.cuda.is_available():
+            prop = torch.cuda.get_device_properties(torch.cuda.current_device())
+            if hasattr(prop, "pci_domain_id"):  # torch >= 2.8
+                bus_id = f"{prop.pci_domain_id:08X}:{prop.pci_bus_id:02X}:{prop.pci_device_id:02X}.0"
+                return nvml.nvmlDeviceGetHandleByPciBusId(bus_id.encode())
+            if hasattr(prop, "uuid"):  # torch >= 2.5
+                return nvml.nvmlDeviceGetHandleByUUID(f"GPU-{prop.uuid}".encode())
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    # with a single GPU there is nothing to mix up
+    if os.environ.get("CUDA_DEVICE_ORDER") == "PCI_BUS_ID" or (
+        visible == "0" and nvml.nvmlDeviceGetCount() == 1
+    ):
+        return nvml.nvmlDeviceGetHandleByIndex(int(visible))
+    return None
+
+
+def _get_gpu_metrics() -> Dict[str, Any]:
+    """Collect GPU metrics if available (torch.cuda or pynvml)."""
+    metrics: Dict[str, Any] = {}
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+
+        if torch.cuda.is_available():
+            metrics["gpu_peak_memory_bytes"] = torch.cuda.max_memory_allocated()
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    try:
+        import pynvml  # type: ignore[import-not-found] # pylint: disable=import-outside-toplevel
+
+        pynvml.nvmlInit()
+        try:
+            handle = _get_nvml_handle(pynvml)
+            if handle is not None:
+                mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                metrics["gpu_memory_used_bytes"] = mem.used
+                metrics["gpu_memory_total_bytes"] = mem.total
+        finally:
+            pynvml.nvmlShutdown()
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    return metrics
+
+
 def dry_run_func(
     worker_cls: type[Worker],
+    name: str,
     batch: int,
     receiver: PipeConnection,
     sender: PipeConnection,
     ingress: bool,
     shutdown_notify: Event,
+    metrics_sender: PipeConnection,
 ):
     """Dry run simulation function."""
     worker = worker_cls()
@@ -55,7 +147,21 @@ def dry_run_func(
     try:
         data = receiver.recv() if ingress else worker.deserialize(receiver.recv_bytes())
         logger.info("%s received %s", worker, data)
+
+        _try_reset_gpu_peak_memory()
+        cpu_before = time.process_time()
+
         data = worker.forward([data])[0] if batch > 1 else worker.forward(data)
+
+        cpu_after = time.process_time()
+        stage_metrics: Dict[str, Any] = {
+            "stage": name,
+            "cpu_time_seconds": cpu_after - cpu_before,
+            **_get_memory_metrics(),
+            **_get_gpu_metrics(),
+        }
+        metrics_sender.send(stage_metrics)
+
         logger.info("%s inference result: %s", worker, data)
         data = worker.serialize(data)
         sender.send_bytes(data)
@@ -82,6 +188,7 @@ class Pool:
         self.processes: List[SpawnProcess] = []
         self.sender_pipes: List[PipeConnection] = []
         self.receiver_pipes: List[PipeConnection] = []
+        self.metrics_receivers: List[PipeConnection] = []
 
     def new_pipe(self):
         """Create new pipe for dry run workers to communicate."""
@@ -98,15 +205,19 @@ class Pool:
 
         """
         self.new_pipe()
+        metrics_receiver, metrics_sender = self.process_context.Pipe(duplex=False)
+        self.metrics_receivers.append(metrics_receiver)
         coordinator = self.process_context.Process(
             target=dry_run_func,
             args=(
                 worker_runtime.worker,
+                worker_runtime.name,
                 worker_runtime.max_batch_size,
                 self.receiver_pipes[-2],
                 self.sender_pipes[-1],
                 init,
                 self.shutdown_notify,
+                metrics_sender,
             ),
             daemon=True,
         )
@@ -146,6 +257,22 @@ class Pool:
     def first_last_pipe(self):
         """Get first sender and last receiver pipes."""
         return self.sender_pipes[0], self.receiver_pipes[-1]
+
+    def collect_metrics(self, timeout: float = 5.0) -> List[Dict[str, Any]]:
+        """Collect metrics from all worker stages.
+
+        Args:
+            timeout: seconds to wait for each worker's metrics.
+
+        Returns:
+            List of per-stage metrics dicts.
+
+        """
+        results: List[Dict[str, Any]] = []
+        for receiver in self.metrics_receivers:
+            if receiver.poll(timeout):
+                results.append(receiver.recv())
+        return results
 
 
 class DryRunner:
@@ -249,13 +376,22 @@ class DryRunner:
 
         res = receiver.recv_bytes()
         duration = time.perf_counter() - start_time
-        logger.info(
-            "dry run result: %s",
-            json.dumps(
-                {
-                    "request": example,
-                    "result_size": len(res),
-                    "warmup_duration": duration,
-                }
-            ),
-        )
+
+        stage_metrics = pool.collect_metrics()
+        num_stages = len(runtimes)
+        if len(stage_metrics) < num_stages:
+            logger.warning(
+                "only received metrics from %d/%d stages"
+                " (some workers may have failed before reporting)",
+                len(stage_metrics),
+                num_stages,
+            )
+
+        result = {
+            "request": example,
+            "result_size": len(res),
+            "warmup_duration": duration,
+        }
+        if stage_metrics:
+            result["stage_metrics"] = stage_metrics
+        logger.info("dry run result: %s", json.dumps(result, default=str))
