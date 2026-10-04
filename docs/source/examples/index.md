@@ -12,6 +12,7 @@ jax
 ipc
 metric
 multi_route
+multi_model
 pytorch
 rerank
 stable_diffusion

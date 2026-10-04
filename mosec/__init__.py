@@ -24,12 +24,13 @@ from mosec.errors import (
 from mosec.log import get_logger
 from mosec.runtime import Runtime
 from mosec.server import Server
-from mosec.worker import SSEWorker, Worker
+from mosec.worker import MultiModelWorker, SSEWorker, Worker
 
 __all__ = [
     "ClientError",
     "DecodingError",
     "EncodingError",
+    "MultiModelWorker",
     "Runtime",
     "SSEWorker",
     "Server",

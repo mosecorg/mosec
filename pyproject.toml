@@ -73,6 +73,7 @@ module = [
   "sentence_transformers",
   "llmspec",
   "openai",
+  "ultralytics",
 ]
 ignore_missing_imports = true
 
@@ -95,7 +96,7 @@ known-first-party = ["mosec"]
 [tool.ruff.lint.pylint]
 max-args = 10
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]
+"tests/*" = ["D", "PLR2004"]
 "examples/*" = ["D"]
 [tool.ruff.lint.pydocstyle]
 convention = "google"
