@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from dataclasses import make_dataclass
 
 import pytest
 
@@ -330,3 +331,56 @@ def test_write_openapi_assets(tmp_path):
     page = (tmp_path / OPENAPI_SWAGGER_FILE).read_text()
     assert "/openapi/metadata.json" in page
     assert "<html" in page.lower()
+
+
+@pytest.mark.parametrize("typed", [False, True])
+@pytest.mark.parametrize(
+    "same_route,boundary", [(False, "data"), (False, "return"), (True, "return")]
+)
+def test_conflicting_model_names_preserve_other_boundaries(
+    typed, boundary, same_route, mocker
+):
+    first_model = make_dataclass("CollisionModel", [("text", str)])
+    second_model = make_dataclass("CollisionModel", [("count", int)])
+
+    class FirstWorker(Worker):
+        def forward(self, data: int) -> int:
+            return data
+
+    class SecondWorker(Worker):
+        def forward(self, data: int) -> int:
+            return data
+
+    class TypedSecondWorker(TypedMsgPackMixin, SecondWorker):
+        pass
+
+    worker = TypedSecondWorker if typed else SecondWorker
+    SecondWorker.forward.__annotations__[boundary] = second_model
+    if same_route:
+        # Request registration reserves its names before checking the response.
+        SecondWorker.forward.__annotations__["data"] = first_model
+        routes = {"/second": [Runtime(worker)]}
+    else:
+        FirstWorker.forward.__annotations__["data"] = first_model
+        routes = {"/first": [Runtime(FirstWorker)], "/second": [Runtime(worker)]}
+    warning = mocker.patch("mosec.openapi.logger.warning")
+    if typed:
+        with pytest.raises(ValueError, match="Conflicting schema name"):
+            generate_openapi(routes)
+        warning.assert_not_called()
+        return
+
+    spec = generate_openapi(routes)
+    operation = spec["paths"]["/second"]["post"]
+    if boundary == "data":
+        assert "requestBody" not in operation
+        assert operation["responses"]["200"]["content"]["application/json"][
+            "schema"
+        ] == {"type": "integer"}
+    else:
+        assert "content" not in operation["responses"]["200"]
+        assert "requestBody" in operation
+    assert spec["components"]["schemas"]["CollisionModel"]["properties"] == {
+        "text": {"type": "string"}
+    }
+    warning.assert_called_once()

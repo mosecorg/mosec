@@ -24,12 +24,17 @@ Types supported by [defspec](https://github.com/kemingy/defspec), including stan
 Python types and `msgspec.Struct`, produce schemas. If a boundary has no usable type
 annotation, its route is still documented but that request or response schema is
 omitted. For ordinary workers, malformed annotations, unresolved type names, and
-unsupported model types produce a warning and omit only the affected schema.
+unsupported model types, and conflicting shared model names produce a warning
+and omit only the affected schema. Shared model names must identify the same
+schema across all routes; rename distinct models that share a name.
 For `TypedMsgPackMixin` workers, these errors fail startup because their boundary
 annotations must be valid. Missing annotations and `Any` still omit the schema.
 Unexpected errors propagate for all workers.
 Schema validation also runs with `--dry-run`, before any runtime configuration or
 OpenAPI files are written.
+Normal startup writes both OpenAPI assets before starting the Rust HTTP process
+or Python workers. If writing assets or starting Rust fails, Mosec cleans up the
+runtime directory and propagates the error.
 
 ## Migration from v0.9.7
 

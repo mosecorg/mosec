@@ -20,8 +20,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Dict, List, Mapping
 
-import msgspec
-from defspec import OpenAPI, OpenAPIInfo
+from defspec import OpenAPI, OpenAPIComponent, OpenAPIInfo
 
 from mosec import get_logger
 from mosec.mixin.typed_worker import TypedMsgPackMixin
@@ -59,14 +58,14 @@ def _schema_type(typ: Any) -> type | None:
 
 
 def _try_schema_type(
-    func, message: str, *args: Any, strict: bool = False
+    schema_doc: OpenAPI, func, message: str, *args: Any, strict: bool = False
 ) -> type | None:
     """Resolve a boundary type, optionally tolerating invalid annotations."""
     try:
         typ = _schema_type(func())
-        # Check each boundary with msgspec, the schema backend used by defspec,
-        # before registering the route, preserving the other boundary on failure.
-        msgspec.json.schema(typ)
+        # Registration is transactional in defspec. Stage each boundary against
+        # existing components so failures leave other schemas intact.
+        schema_doc.register_route("/schema", "post", request_type=typ)
         return typ
     except (TypeError, ValueError, NameError, SyntaxError) as err:
         if strict:
@@ -97,6 +96,9 @@ def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
         request_runtime, response_runtime = workers[0], workers[-1]
         request_worker = request_runtime.worker
         response_worker = response_runtime.worker
+        schema_doc = OpenAPI(
+            components=OpenAPIComponent(schemas=openapi.components.schemas.copy())
+        )
         openapi.register_route(
             endpoint,
             "post",
@@ -104,6 +106,7 @@ def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
             # Typed workers must have valid annotations. For other workers,
             # omit invalid schemas and make the failure visible in the logs.
             request_type=_try_schema_type(
+                schema_doc,
                 partial(
                     get_forward_input_type,
                     request_worker.forward,
@@ -115,6 +118,7 @@ def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
             ),
             request_content_type=request_worker.req_mime_type,
             response_type=_try_schema_type(
+                schema_doc,
                 partial(
                     get_forward_return_type,
                     response_worker.forward,

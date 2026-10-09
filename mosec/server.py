@@ -276,11 +276,13 @@ class Server:
             DryRunner(self._router).run()
             return
 
-        self._handle_signal()
-        self._start_rs_runtime()
         try:
-            self._manage_py_runtime()
-        # pylint: disable=broad-except
-        except Exception:
-            logger.error(traceback.format_exc().replace("\n", " "))
-        self._halt()
+            self._handle_signal()
+            self._start_rs_runtime()
+            try:
+                self._manage_py_runtime()
+            # pylint: disable=broad-except
+            except Exception:
+                logger.error(traceback.format_exc().replace("\n", " "))
+        finally:
+            self._halt()
