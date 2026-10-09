@@ -171,7 +171,7 @@ class Server:
         # shutdown py runtime manager
         self._shutdown.set()
         shutil.rmtree(self._configs["path"], ignore_errors=True)
-        logger.info("mosec exited normally")
+        logger.info("mosec cleanup completed")
 
     def register_daemon(self, name: str, proc: subprocess.Popen):
         """Register a daemon to be monitored.

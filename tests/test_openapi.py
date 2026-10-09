@@ -347,6 +347,9 @@ def test_conflicting_model_names_preserve_other_boundaries(
         def forward(self, data: int) -> int:
             return data
 
+    class TypedFirstWorker(TypedMsgPackMixin, FirstWorker):
+        pass
+
     class SecondWorker(Worker):
         def forward(self, data: int) -> int:
             return data
@@ -362,7 +365,10 @@ def test_conflicting_model_names_preserve_other_boundaries(
         routes = {"/second": [Runtime(worker)]}
     else:
         FirstWorker.forward.__annotations__["data"] = first_model
-        routes = {"/first": [Runtime(FirstWorker)], "/second": [Runtime(worker)]}
+        routes = {
+            "/first": [Runtime(TypedFirstWorker if typed else FirstWorker)],
+            "/second": [Runtime(worker)],
+        }
     warning = mocker.patch("mosec.openapi.logger.warning")
     if typed:
         with pytest.raises(ValueError, match="Conflicting schema name"):
@@ -382,5 +388,79 @@ def test_conflicting_model_names_preserve_other_boundaries(
         assert "requestBody" in operation
     assert spec["components"]["schemas"]["CollisionModel"]["properties"] == {
         "text": {"type": "string"}
+    }
+    warning.assert_called_once()
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("both_typed", [False, True])
+@pytest.mark.parametrize("typed_boundary", ["data", "return"])
+@pytest.mark.parametrize("other_boundary", ["data", "return"])
+def test_typed_schema_priority_is_independent_of_route_order(
+    reverse, both_typed, typed_boundary, other_boundary, mocker
+):
+    typed_model = make_dataclass("Req", [("count", int)])
+    other_model = make_dataclass("Req", [("text", str)])
+
+    class TypedWorker(TypedMsgPackMixin):
+        def forward(self, data: int) -> int:
+            return data
+
+    class OtherWorker(Worker):
+        def forward(self, data: int) -> int:
+            return data
+
+    class OtherTypedWorker(TypedMsgPackMixin, OtherWorker):
+        pass
+
+    TypedWorker.forward.__annotations__[typed_boundary] = typed_model
+    OtherWorker.forward.__annotations__[other_boundary] = other_model
+    other = OtherTypedWorker if both_typed else OtherWorker
+    entries = [("/typed", [Runtime(TypedWorker)]), ("/other", [Runtime(other)])]
+    routes = dict(reversed(entries) if reverse else entries)
+    warning = mocker.patch("mosec.openapi.logger.warning")
+    if both_typed:
+        with pytest.raises(ValueError, match="Conflicting schema name"):
+            generate_openapi(routes)
+        warning.assert_not_called()
+        return
+
+    spec = generate_openapi(routes)
+    assert spec["components"]["schemas"]["Req"]["properties"] == {
+        "count": {"type": "integer"}
+    }
+    operation = spec["paths"]["/other"]["post"]
+    if other_boundary == "data":
+        assert "requestBody" not in operation
+        assert "content" in operation["responses"]["200"]
+    else:
+        assert "content" not in operation["responses"]["200"]
+        assert "requestBody" in operation
+    warning.assert_called_once()
+
+
+def test_typed_response_takes_priority_over_plain_request_in_same_pipeline(mocker):
+    request = make_dataclass("Req", [("text", str)])
+    response = make_dataclass("Req", [("count", int)])
+
+    class PlainWorker(Worker):
+        def forward(self, data: int) -> int:
+            return data
+
+    class TypedWorker(TypedMsgPackMixin):
+        def forward(self, data: int) -> int:
+            return data
+
+    PlainWorker.forward.__annotations__["data"] = request
+    TypedWorker.forward.__annotations__["return"] = response
+    warning = mocker.patch("mosec.openapi.logger.warning")
+    spec = generate_openapi({"/mixed": [Runtime(PlainWorker), Runtime(TypedWorker)]})
+    operation = spec["paths"]["/mixed"]["post"]
+    assert "requestBody" not in operation
+    assert operation["responses"]["200"]["content"]["application/msgpack"][
+        "schema"
+    ] == {"$ref": "#/components/schemas/Req"}
+    assert spec["components"]["schemas"]["Req"]["properties"] == {
+        "count": {"type": "integer"}
     }
     warning.assert_called_once()

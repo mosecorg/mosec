@@ -20,7 +20,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Dict, List, Mapping
 
-from defspec import OpenAPI, OpenAPIComponent, OpenAPIInfo
+from defspec import OpenAPI, OpenAPIInfo
 
 from mosec import get_logger
 from mosec.mixin.typed_worker import TypedMsgPackMixin
@@ -90,53 +90,49 @@ def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
         "/metrics", "get", summary="Prometheus metrics", response_type=str
     )
 
+    # Reserve typed schemas before checking ordinary boundaries, regardless of
+    # route order. Only collisions between typed boundaries can fail startup.
+    schema_doc = OpenAPI()
+    boundary_types: Dict[tuple[str, str], Any] = {}
+    for strict in (True, False):
+        for endpoint, workers in routes.items():
+            if not workers:
+                continue
+            for direction, runtime, extract in (
+                ("request", workers[0], get_forward_input_type),
+                ("response", workers[-1], get_forward_return_type),
+            ):
+                if issubclass(runtime.worker, TypedMsgPackMixin) != strict:
+                    continue
+                boundary_types[endpoint, direction] = _try_schema_type(
+                    schema_doc,
+                    partial(
+                        extract,
+                        runtime.worker.forward,
+                        batched=runtime.max_batch_size > 1,
+                    ),
+                    f"Failed to generate {direction} schema for %s: %s",
+                    endpoint,
+                    strict=strict,
+                )
+
     for endpoint, workers in routes.items():
         if not workers:
             continue
         request_runtime, response_runtime = workers[0], workers[-1]
         request_worker = request_runtime.worker
         response_worker = response_runtime.worker
-        schema_doc = OpenAPI(
-            components=OpenAPIComponent(schemas=openapi.components.schemas.copy())
-        )
         openapi.register_route(
             endpoint,
             "post",
             summary="Mosec inference",
-            # Typed workers must have valid annotations. For other workers,
-            # omit invalid schemas and make the failure visible in the logs.
-            request_type=_try_schema_type(
-                schema_doc,
-                partial(
-                    get_forward_input_type,
-                    request_worker.forward,
-                    batched=request_runtime.max_batch_size > 1,
-                ),
-                "Failed to generate request schema for %s: %s",
-                endpoint,
-                strict=issubclass(request_worker, TypedMsgPackMixin),
-            ),
+            request_type=boundary_types[endpoint, "request"],
             request_content_type=request_worker.req_mime_type,
-            response_type=_try_schema_type(
-                schema_doc,
-                partial(
-                    get_forward_return_type,
-                    response_worker.forward,
-                    batched=response_runtime.max_batch_size > 1,
-                ),
-                "Failed to generate response schema for %s: %s",
-                endpoint,
-                strict=issubclass(response_worker, TypedMsgPackMixin),
-            ),
+            response_type=boundary_types[endpoint, "response"],
             response_content_type=response_worker.resp_mime_type,
         )
 
     spec = openapi.to_dict()
-    for path_item in spec["paths"].values():
-        for operation in path_item.values():
-            if not operation.get("requestBody"):
-                operation.pop("requestBody", None)
-
     spec["paths"]["/"]["get"]["responses"]["503"] = {
         "description": "SERVICE_UNAVAILABLE"
     }

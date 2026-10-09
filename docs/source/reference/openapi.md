@@ -23,12 +23,13 @@ runtimes, so the same worker class can be used with different batch settings.
 Types supported by [defspec](https://github.com/kemingy/defspec), including standard
 Python types and `msgspec.Struct`, produce schemas. If a boundary has no usable type
 annotation, its route is still documented but that request or response schema is
-omitted. For ordinary workers, malformed annotations, unresolved type names, and
+omitted. For ordinary workers, malformed annotations, unresolved type names,
 unsupported model types, and conflicting shared model names produce a warning
 and omit only the affected schema. Shared model names must identify the same
 schema across all routes; rename distinct models that share a name.
-For `TypedMsgPackMixin` workers, these errors fail startup because their boundary
-annotations must be valid. Missing annotations and `Any` still omit the schema.
+Typed schemas take priority over ordinary schemas regardless of route order.
+For `TypedMsgPackMixin` workers, invalid annotations and collisions between typed
+schemas fail startup. Missing annotations and `Any` still omit the schema.
 Unexpected errors propagate for all workers.
 Schema validation also runs with `--dry-run`, before any runtime configuration or
 OpenAPI files are written.

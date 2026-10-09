@@ -112,6 +112,7 @@ def test_startup_failures_cleanup_and_propagate(failure, mocker, tmp_path):
     workers = mocker.patch.object(server, "_manage_py_runtime")
     start = mocker.patch.object(server._rs_runtime_manager, "start")
     halt = mocker.spy(server, "_halt")
+    log = mocker.patch("mosec.server.logger.info")
     if failure == "asset-write":
         mocker.patch(
             "mosec.server.write_openapi_assets",
@@ -129,6 +130,7 @@ def test_startup_failures_cleanup_and_propagate(failure, mocker, tmp_path):
     with pytest.raises(OSError, match="failed"):
         server.run()
     halt.assert_called_once_with()
+    log.assert_called_once_with("mosec cleanup completed")
     workers.assert_not_called()
     assert not work_path.exists()
     assert server._shutdown.is_set()
