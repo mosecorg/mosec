@@ -43,10 +43,10 @@ def test_parse_forward_input_type():
     single = get_forward_input_type(demo.forward)
     assert single is Request, single
 
-    batch = get_forward_input_type(demo.batch_forward)
+    batch = get_forward_input_type(demo.batch_forward, batched=True)
     assert batch is Request, batch
 
     assert get_forward_return_type(demo.forward) == Optional[Request]
-    assert get_forward_return_type(demo.batch_forward) is Request
+    assert get_forward_return_type(demo.batch_forward, batched=True) is Request
     assert get_forward_input_type(demo.generic_forward) == dict[str, int]
     assert get_forward_return_type(demo.generic_forward) == dict[str, int]

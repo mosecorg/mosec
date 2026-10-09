@@ -16,6 +16,8 @@ import json
 
 import pytest
 
+from mosec import Runtime
+from mosec.errors import ValidationError
 from mosec.mixin import TypedMsgPackMixin
 from mosec.openapi import (
     INFERENCE_ERROR_RESPONSES,
@@ -83,13 +85,14 @@ def test_generate_openapi_handles_invalid_boundary_types(
             pass
 
         with pytest.raises((TypeError, ValueError, NameError, SyntaxError)):
-            write_openapi_assets({"/invalid": [InvalidTypedWorker]}, tmp_path)
+            write_openapi_assets({"/invalid": [Runtime(InvalidTypedWorker)]}, tmp_path)
         warning.assert_not_called()
         assert not list(tmp_path.iterdir())
         return
 
     write_openapi_assets(
-        {"/invalid": [InvalidWorker], "/valid": [PlainWorker]}, tmp_path
+        {"/invalid": [Runtime(InvalidWorker)], "/valid": [Runtime(PlainWorker)]},
+        tmp_path,
     )
     spec = json.loads((tmp_path / OPENAPI_METADATA_FILE).read_text())
     operation = spec["paths"]["/invalid"]["post"]
@@ -105,7 +108,7 @@ def test_generate_openapi_handles_invalid_boundary_types(
     assert content == {"application/json": {"schema": {"type": "integer"}}}
     assert (
         spec["paths"]["/valid"]
-        == generate_openapi({"/valid": [PlainWorker]})["paths"]["/valid"]
+        == generate_openapi({"/valid": [Runtime(PlainWorker)]})["paths"]["/valid"]
     )
     assert (tmp_path / OPENAPI_SWAGGER_FILE).is_file()
     warning.assert_called_once()
@@ -122,7 +125,7 @@ def test_generate_openapi_propagates_unexpected_errors(mocker):
     )
 
     with pytest.raises(RuntimeError, match="unexpected extraction failure"):
-        generate_openapi({"/inference": [PlainWorker]})
+        generate_openapi({"/inference": [Runtime(PlainWorker)]})
 
 
 @pytest.mark.parametrize("typed_first", [False, True])
@@ -138,7 +141,9 @@ def test_generate_openapi_applies_strictness_per_boundary(typed_first, mocker):
     boundary = "return" if typed_first else "data"
     OrdinaryWorker.forward.__annotations__[boundary] = "list["
     workers = (
-        [TypedWorker, OrdinaryWorker] if typed_first else [OrdinaryWorker, TypedWorker]
+        [Runtime(TypedWorker), Runtime(OrdinaryWorker)]
+        if typed_first
+        else [Runtime(OrdinaryWorker), Runtime(TypedWorker)]
     )
     warning = mocker.patch("mosec.openapi.logger.warning")
     operation = generate_openapi({"/mixed": workers})["paths"]["/mixed"]["post"]
@@ -153,9 +158,10 @@ def test_generate_openapi_applies_strictness_per_boundary(typed_first, mocker):
 
 
 def test_generate_openapi_for_plain_worker():
-    spec = generate_openapi({"/inference": [PlainWorker]})
+    spec = generate_openapi({"/inference": [Runtime(PlainWorker)]})
     operation = spec["paths"]["/inference"]["post"]
 
+    assert spec["openapi"] == "3.2.0"
     assert operation["requestBody"]["content"] == {
         "application/json": {"schema": {"type": "string"}}
     }
@@ -165,7 +171,7 @@ def test_generate_openapi_for_plain_worker():
 
 
 def test_generate_openapi_uses_separate_request_and_response_mime_types():
-    spec = generate_openapi({"/inference": [CustomMimeWorker]})
+    spec = generate_openapi({"/inference": [Runtime(CustomMimeWorker)]})
     operation = spec["paths"]["/inference"]["post"]
 
     assert set(operation["requestBody"]["content"]) == {"text/plain"}
@@ -177,7 +183,7 @@ def test_generate_openapi_preserves_generic_boundary_types():
         def forward(self, data: dict[str, int]) -> dict[str, int]:
             return data
 
-    operation = generate_openapi({"/inference": [GenericWorker]})["paths"][
+    operation = generate_openapi({"/inference": [Runtime(GenericWorker)]})["paths"][
         "/inference"
     ]["post"]
 
@@ -191,22 +197,71 @@ def test_generate_openapi_preserves_generic_boundary_types():
     }
 
 
+@pytest.mark.parametrize("request_batch_size", [1, 2, 16])
+@pytest.mark.parametrize("response_batch_size", [1, 2, 16])
+@pytest.mark.parametrize("typed", [False, True])
+def test_array_schemas_follow_each_boundary_runtime(
+    request_batch_size, response_batch_size, typed
+):
+    class ArrayWorker(Worker):
+        def forward(self, data: list[list[int]]) -> list[list[int]]:
+            return data
+
+    class TypedArrayWorker(TypedMsgPackMixin, ArrayWorker):
+        pass
+
+    worker = TypedArrayWorker if typed else ArrayWorker
+    mime = worker.req_mime_type
+    operation = generate_openapi(
+        {
+            "/arrays": [
+                Runtime(worker, max_batch_size=request_batch_size),
+                Runtime(worker, max_batch_size=response_batch_size),
+            ]
+        }
+    )["paths"]["/arrays"]["post"]
+    item = {"type": "array", "items": {"type": "integer"}}
+    array = {"type": "array", "items": item}
+    assert operation["requestBody"]["content"][mime]["schema"] == (
+        array if request_batch_size == 1 else item
+    )
+    assert operation["responses"]["200"]["content"][mime]["schema"] == (
+        array if response_batch_size == 1 else item
+    )
+
+
+@pytest.mark.parametrize("batch_size", [1, 2, 16])
+def test_typed_array_validation_follows_batching(batch_size):
+    import msgspec
+
+    class ArrayWorker(TypedMsgPackMixin):
+        def forward(self, data: list[list[int]]) -> list[list[int]]:
+            return data
+
+    worker = ArrayWorker()
+    worker.max_batch_size = batch_size
+    request = [[1, 2]] if batch_size == 1 else [1, 2]
+    assert worker.deserialize(msgspec.msgpack.encode(request)) == request
+    with pytest.raises(ValidationError, match="Expected `array`"):
+        worker.deserialize(msgspec.msgpack.encode(1))
+
+
 def test_generate_openapi_omits_invalid_boundary_types():
     class InvalidWorker(Worker):
         # Intentionally malformed to exercise schema generation's fallback.
         def forward(self, data: list[int, str]) -> list[int, str]:  # type: ignore[type-arg]
             return data
 
-    operation = generate_openapi({"/invalid": [InvalidWorker]})["paths"]["/invalid"][
-        "post"
-    ]
+    operation = generate_openapi({"/invalid": [Runtime(InvalidWorker)]})["paths"][
+        "/invalid"
+    ]["post"]
 
     assert "requestBody" not in operation
     assert "content" not in operation["responses"]["200"]
 
 
 def test_generate_openapi_sse_request_defaults_to_json():
-    spec = generate_openapi({"/stream": [AnnotatedSSEWorker]})
+    spec = generate_openapi({"/stream": [Runtime(AnnotatedSSEWorker)]})
     operation = spec["paths"]["/stream"]["post"]
 
     assert set(operation["requestBody"]["content"]) == {"application/json"}
@@ -214,23 +269,33 @@ def test_generate_openapi_sse_request_defaults_to_json():
 
 
 def test_generate_openapi_from_worker_boundary_types():
-    spec = generate_openapi({"/v1/inference": [TypedPreprocess, TypedInference]})
+    spec = generate_openapi(
+        {
+            "/v1/inference": [
+                Runtime(TypedPreprocess),
+                Runtime(TypedInference, max_batch_size=16),
+            ]
+        }
+    )
     operation = spec["paths"]["/v1/inference"]["post"]
 
     assert operation["requestBody"]["content"] == {
-        "application/msgpack": {"schema": {"$ref": "#/$defs/Request"}}
+        "application/msgpack": {"schema": {"$ref": "#/components/schemas/Request"}}
     }
     assert operation["responses"]["200"]["content"] == {
         "application/msgpack": {"schema": {"type": "integer"}}
     }
     assert set(INFERENCE_ERROR_RESPONSES) <= operation["responses"].keys()
-    assert "Request" in spec["$defs"]
+    assert "Request" in spec["components"]["schemas"]
 
 
 def test_generate_openapi_omits_only_missing_boundary_types():
     routes = {
-        "/no-request": [UntypedPreprocess, TypedInference],
-        "/no-response": [TypedPreprocess, UntypedInference],
+        "/no-request": [
+            Runtime(UntypedPreprocess),
+            Runtime(TypedInference, max_batch_size=16),
+        ],
+        "/no-response": [Runtime(TypedPreprocess), Runtime(UntypedInference)],
     }
     spec = generate_openapi(routes)
 
@@ -244,7 +309,12 @@ def test_generate_openapi_omits_only_missing_boundary_types():
 
 
 def test_write_openapi_assets(tmp_path):
-    routes = {"/v1/inference": [TypedPreprocess, TypedInference]}
+    routes = {
+        "/v1/inference": [
+            Runtime(TypedPreprocess),
+            Runtime(TypedInference, max_batch_size=16),
+        ]
+    }
     write_openapi_assets(routes, tmp_path)
 
     spec = json.loads((tmp_path / OPENAPI_METADATA_FILE).read_text())

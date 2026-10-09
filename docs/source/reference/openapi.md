@@ -1,7 +1,8 @@
 # OpenAPI
 
 Starting in v0.9.8, Mosec generates an OpenAPI specification for every registered
-route before starting the HTTP server. OpenAPI generation applies to all
+route before starting the HTTP server. The document uses OpenAPI 3.2.0, with
+shared models under `components.schemas`. OpenAPI generation applies to all
 {class}`mosec.Worker` subclasses; it does not require
 {class}`mosec.mixin.TypedMsgPackMixin`.
 
@@ -14,7 +15,10 @@ For each pipeline, Mosec uses:
 
 For dynamically batched workers, annotate the boundary with `List[Model]`. Mosec
 documents one `Model`, because each HTTP request contains one item rather than the
-internal batch.
+internal batch. This applies when the boundary runtime has `max_batch_size > 1`.
+With `max_batch_size=1`, `List[Model]` describes an array in the HTTP body. Request
+and response batching are determined independently from the first and last
+runtimes, so the same worker class can be used with different batch settings.
 
 Types supported by [defspec](https://github.com/kemingy/defspec), including standard
 Python types and `msgspec.Struct`, produce schemas. If a boundary has no usable type

@@ -138,13 +138,7 @@ class Server:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w", encoding="utf-8") as file:
             json.dump(configs, file, indent=2)
-        write_openapi_assets(
-            {
-                endpoint: [runtime.worker for runtime in pipeline]
-                for endpoint, pipeline in self._router.items()
-            },
-            config_path.parent,
-        )
+        write_openapi_assets(self._router, config_path.parent)
 
         process = self._rs_runtime_manager.start(config_path)
         self.register_daemon("rs_runtime", process)

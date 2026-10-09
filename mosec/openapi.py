@@ -18,15 +18,16 @@ import json
 from functools import partial
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Type
+from typing import Any, Dict, List, Mapping
 
 import msgspec
 from defspec import OpenAPI, OpenAPIInfo
 
 from mosec import get_logger
 from mosec.mixin.typed_worker import TypedMsgPackMixin
+from mosec.runtime import Runtime
 from mosec.utils import get_forward_input_type, get_forward_return_type
-from mosec.worker import SSEWorker, Worker
+from mosec.worker import SSEWorker
 
 logger = get_logger()
 
@@ -74,7 +75,7 @@ def _try_schema_type(
         return None
 
 
-def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]:
+def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
     """Generate a complete OpenAPI document for all registered routes."""
     openapi = OpenAPI(
         info=OpenAPIInfo(
@@ -93,7 +94,9 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
     for endpoint, workers in routes.items():
         if not workers:
             continue
-        request_worker, response_worker = workers[0], workers[-1]
+        request_runtime, response_runtime = workers[0], workers[-1]
+        request_worker = request_runtime.worker
+        response_worker = response_runtime.worker
         openapi.register_route(
             endpoint,
             "post",
@@ -101,14 +104,22 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
             # Typed workers must have valid annotations. For other workers,
             # omit invalid schemas and make the failure visible in the logs.
             request_type=_try_schema_type(
-                partial(get_forward_input_type, request_worker.forward),
+                partial(
+                    get_forward_input_type,
+                    request_worker.forward,
+                    batched=request_runtime.max_batch_size > 1,
+                ),
                 "Failed to generate request schema for %s: %s",
                 endpoint,
                 strict=issubclass(request_worker, TypedMsgPackMixin),
             ),
             request_content_type=request_worker.req_mime_type,
             response_type=_try_schema_type(
-                partial(get_forward_return_type, response_worker.forward),
+                partial(
+                    get_forward_return_type,
+                    response_worker.forward,
+                    batched=response_runtime.max_batch_size > 1,
+                ),
                 "Failed to generate response schema for %s: %s",
                 endpoint,
                 strict=issubclass(response_worker, TypedMsgPackMixin),
@@ -130,16 +141,14 @@ def generate_openapi(routes: Mapping[str, List[Type[Worker]]]) -> Dict[str, Any]
             spec["paths"][endpoint]["post"]["responses"].update(
                 INFERENCE_ERROR_RESPONSES
             )
-            if issubclass(workers[-1], SSEWorker):
+            if issubclass(workers[-1].worker, SSEWorker):
                 spec["paths"][endpoint]["post"]["responses"]["200"]["description"] = (
                     "Server-sent event stream"
                 )
     return spec
 
 
-def write_openapi_assets(
-    routes: Mapping[str, List[Type[Worker]]], output_dir: Path
-) -> None:
+def write_openapi_assets(routes: Mapping[str, List[Runtime]], output_dir: Path) -> None:
     """Write the OpenAPI JSON and self-contained viewer pages to ``output_dir``."""
     # offapi eagerly materializes its bundled UI assets. Import it only in the
     # controller process that writes the page, not in every spawned worker.

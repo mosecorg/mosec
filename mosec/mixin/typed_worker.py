@@ -37,7 +37,9 @@ class TypedMsgPackMixin(Worker):
         import msgspec
 
         if self._input_typ is None:
-            self._input_typ = get_forward_input_type(self.forward)
+            self._input_typ = get_forward_input_type(
+                self.forward, batched=self.max_batch_size > 1
+            )
 
         try:
             return msgspec.msgpack.decode(data, type=self._input_typ)
