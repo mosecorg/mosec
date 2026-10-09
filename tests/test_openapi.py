@@ -85,13 +85,17 @@ def test_generate_openapi_handles_invalid_boundary_types(
             pass
 
         with pytest.raises((TypeError, ValueError, NameError, SyntaxError)):
-            write_openapi_assets({"/invalid": [Runtime(InvalidTypedWorker)]}, tmp_path)
+            write_openapi_assets(
+                generate_openapi({"/invalid": [Runtime(InvalidTypedWorker)]}), tmp_path
+            )
         warning.assert_not_called()
         assert not list(tmp_path.iterdir())
         return
 
     write_openapi_assets(
-        {"/invalid": [Runtime(InvalidWorker)], "/valid": [Runtime(PlainWorker)]},
+        generate_openapi(
+            {"/invalid": [Runtime(InvalidWorker)], "/valid": [Runtime(PlainWorker)]}
+        ),
         tmp_path,
     )
     spec = json.loads((tmp_path / OPENAPI_METADATA_FILE).read_text())
@@ -315,7 +319,7 @@ def test_write_openapi_assets(tmp_path):
             Runtime(TypedInference, max_batch_size=16),
         ]
     }
-    write_openapi_assets(routes, tmp_path)
+    write_openapi_assets(generate_openapi(routes), tmp_path)
 
     spec = json.loads((tmp_path / OPENAPI_METADATA_FILE).read_text())
     assert "/v1/inference" in spec["paths"]

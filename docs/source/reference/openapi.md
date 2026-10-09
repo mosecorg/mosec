@@ -28,6 +28,26 @@ unsupported model types produce a warning and omit only the affected schema.
 For `TypedMsgPackMixin` workers, these errors fail startup because their boundary
 annotations must be valid. Missing annotations and `Any` still omit the schema.
 Unexpected errors propagate for all workers.
+Schema validation also runs with `--dry-run`, before any runtime configuration or
+OpenAPI files are written.
+
+## Migration from v0.9.7
+
+- OpenAPI documents now use version 3.2.0. Update client generators and validators
+  that only support 3.1. Shared models remain under `components.schemas`.
+- `Worker.get_forward_json_schema`, `MOSEC_REF_TEMPLATE`, and
+  `mosec.utils.ParseTarget`/`parse_func_type` have been removed. Replace custom
+  schema overrides with supported `forward` type annotations.
+- Invalid boundary annotations on `TypedMsgPackMixin` workers now fail validation
+  at startup and with `--dry-run`. Fix unresolved names, malformed annotations,
+  and unsupported model types before running the service.
+- For typed workers with `max_batch_size=1`, a `List[T]` input now validates an
+  array of `T`. With dynamic batching enabled, it still validates one `T` per
+  request. Set `max_batch_size` to match the way `forward` handles its input.
+- Set `req_mime_type` explicitly for custom deserializers. Setting
+  `resp_mime_type` now controls only the response documentation.
+
+## Example
 
 ```python
 from dataclasses import dataclass

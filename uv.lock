@@ -224,15 +224,15 @@ wheels = [
 
 [[package]]
 name = "defspec"
-version = "0.5.1"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "msgspec" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/9e/35ca61132aa70641fc9d125268d8ece93c09bb78d7e5cce13120d321b5f9/defspec-0.5.1.tar.gz", hash = "sha256:474f76ac93241ad536347fc240c477032e90f8c5baa072e93cbce45858f43a63", size = 12898, upload-time = "2025-11-25T06:12:17.089Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/eb/d2d6bd95a22e06152038ad95cd554121689b19f0d728289cde97370d2ba9/defspec-0.7.0.tar.gz", hash = "sha256:5c917cbcb64b58f6fbdf6f47df1cdcf762e8e0fb9dad77eda032ba8bfc71bcec", size = 36014, upload-time = "2026-10-09T10:22:04.147248Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/ea/853257f4feb91ad44c7b991a8fc31a6c53c4fa23efc039aa8de16685ddfc/defspec-0.5.1-py3-none-any.whl", hash = "sha256:6812ed6cb5b9f66c3fef222ebd5c22e1a5cfebb74f32057e80b8db7766e16913", size = 12024, upload-time = "2025-11-25T06:12:16.309Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/eb/f283e8ecc5a0fc45919e52d5d4f0dc5020c0b532163a63665b66f9e5e46b/defspec-0.7.0-py3-none-any.whl", hash = "sha256:6a7cf7a5f35e86a5ae7c582873a5f245ebf9d8999ff0630559714911812d586c", size = 19872, upload-time = "2026-10-09T10:22:03.025716Z" },
 ]
 
 [package.optional-dependencies]
@@ -687,7 +687,7 @@ mixin = [
 
 [package.metadata]
 requires-dist = [
-    { name = "defspec", extras = ["offline"], specifier = ">=0.5.1" },
+    { name = "defspec", extras = ["offline"], specifier = ">=0.7.0" },
     { name = "msgpack", marker = "extra == 'msgpack'", specifier = ">=1.1.0" },
     { name = "msgspec", marker = "extra == 'validation'", specifier = ">=0.20" },
     { name = "numbin", marker = "extra == 'numbin'", specifier = ">=0.5.0" },
@@ -1117,11 +1117,11 @@ wheels = [
 
 [[package]]
 name = "offapi"
-version = "0.1.2"
+version = "0.1.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ba/e4/14d7adf44ebd41eb8e880ceddd2c756fa28a019ca4d5c213f879a8d3aad0/offapi-0.1.2.tar.gz", hash = "sha256:8399d10ba5648d61a8e8cc790b5894b37562ebb512c26e59364e59b096a1ce2b", size = 1667595, upload-time = "2025-12-16T01:53:20.948Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/5f/836e07f4dced76836eb142251551093d7284774878b5e1e405890823978f/offapi-0.1.3.tar.gz", hash = "sha256:cd1e067cae7aa41b7f64098e9671a970b556a58f605b369ddc1a98864e30641b", size = 2148123, upload-time = "2026-10-09T09:49:20.341370Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/03/b49aab6cfd290c5f49f8b8d209808a72fde5e728a82882e782406819172f/offapi-0.1.2-py3-none-any.whl", hash = "sha256:5d97c83ed8dd6436b55dd4e4f5097c7f7a9b61dbeda0578db10cacbb769addb3", size = 1673823, upload-time = "2025-12-16T01:53:19.041Z" },
+    { url = "https://files.pythonhosted.org/packages/01/64/61e9532f040f654adefacc94945353ad6ee98e9a22dd42ea9af8c705716b/offapi-0.1.3-py3-none-any.whl", hash = "sha256:ed5b26a7af2a8892119cd2513c5b3bf90f1667b652a29c2d216797269d4e9275", size = 2154016, upload-time = "2026-10-09T09:49:18.658961Z" },
 ]
 
 [[package]]

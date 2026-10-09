@@ -64,7 +64,7 @@ def _try_schema_type(
     """Resolve a boundary type, optionally tolerating invalid annotations."""
     try:
         typ = _schema_type(func())
-        # Use defspec's schema generator to check each boundary independently
+        # Check each boundary with msgspec, the schema backend used by defspec,
         # before registering the route, preserving the other boundary on failure.
         msgspec.json.schema(typ)
         return typ
@@ -148,13 +148,12 @@ def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
     return spec
 
 
-def write_openapi_assets(routes: Mapping[str, List[Runtime]], output_dir: Path) -> None:
+def write_openapi_assets(spec: Mapping[str, Any], output_dir: Path) -> None:
     """Write the OpenAPI JSON and self-contained viewer pages to ``output_dir``."""
     # offapi eagerly materializes its bundled UI assets. Import it only in the
     # controller process that writes the page, not in every spawned worker.
     from offapi import OpenAPITemplate
 
-    spec = generate_openapi(routes)
     (output_dir / OPENAPI_METADATA_FILE).write_text(
         json.dumps(spec, indent=2), encoding="utf-8"
     )

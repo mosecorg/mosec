@@ -40,12 +40,12 @@ import traceback
 from collections import defaultdict
 from multiprocessing.synchronize import Event
 from time import sleep
-from typing import Dict, List, Type, Union
+from typing import Any, Dict, List, Type, Union
 
 from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.log import get_internal_logger
-from mosec.openapi import write_openapi_assets
+from mosec.openapi import generate_openapi, write_openapi_assets
 from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
 from mosec.worker import SSEWorker, Worker
 
@@ -75,6 +75,7 @@ class Server:
         )
         self._rs_runtime_manager = RsRuntimeManager(self._configs["timeout"])
         self._router: Dict[str, List[Runtime]] = defaultdict(list)
+        self._openapi_spec: Dict[str, Any] = {}
 
         self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
 
@@ -89,6 +90,7 @@ class Server:
             "no worker registered\n"
             "help: use `.append_worker(...)` to register at least one worker"
         )
+        self._openapi_spec = generate_openapi(self._router)
 
     def _check_daemon(self):
         for name, proc in self._daemon.items():
@@ -138,7 +140,7 @@ class Server:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w", encoding="utf-8") as file:
             json.dump(configs, file, indent=2)
-        write_openapi_assets(self._router, config_path.parent)
+        write_openapi_assets(self._openapi_spec, config_path.parent)
 
         process = self._rs_runtime_manager.start(config_path)
         self.register_daemon("rs_runtime", process)

@@ -14,9 +14,9 @@
 
 """MOSEC type validation mixin."""
 
-# pylint: disable=import-outside-toplevel
-
 from typing import Any, Optional
+
+import msgspec
 
 from mosec.errors import ValidationError
 from mosec.utils import get_forward_input_type
@@ -34,8 +34,6 @@ class TypedMsgPackMixin(Worker):
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""
-        import msgspec
-
         if self._input_typ is None:
             self._input_typ = get_forward_input_type(
                 self.forward, batched=self.max_batch_size > 1
@@ -48,6 +46,4 @@ class TypedMsgPackMixin(Worker):
 
     def serialize(self, data: Any) -> bytes:
         """Serialize with `msgpack`."""
-        import msgspec
-
         return msgspec.msgpack.encode(data)
