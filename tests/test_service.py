@@ -92,9 +92,11 @@ def test_square_service(mosec_service, http_client):
     # only check the prefix since the version comes from Cargo.toml and cannot be
     # accessed here
     assert resp.headers["server"].startswith("mosec/"), f"{resp.headers['server']}"
+    assert resp.headers["content-type"] == "text/plain; charset=utf-8"
 
     resp = http_client.get("/metrics")
     assert resp.status_code == HTTPStatus.OK
+    assert resp.headers["content-type"] == "text/plain; version=0.0.4; charset=utf-8"
 
     resp = http_client.post("/inference", json={"msg": 2})
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY

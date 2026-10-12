@@ -175,6 +175,17 @@ def test_generate_openapi_for_plain_worker():
     }
 
 
+def test_generate_openapi_builtin_routes_use_text_content_types():
+    spec = generate_openapi({})
+
+    assert spec["paths"]["/"]["get"]["responses"]["200"]["content"] == {
+        "text/plain": {"schema": {"type": "string"}}
+    }
+    assert spec["paths"]["/metrics"]["get"]["responses"]["200"]["content"] == {
+        "text/plain; version=0.0.4": {"schema": {"type": "string"}}
+    }
+
+
 def test_generate_openapi_uses_separate_request_and_response_mime_types():
     spec = generate_openapi({"/inference": [Runtime(CustomMimeWorker)]})
     operation = spec["paths"]["/inference"]["post"]

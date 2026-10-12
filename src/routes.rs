@@ -34,6 +34,8 @@ const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_TOO_LARGE: &[u8] = b"request body is too large";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 const DEFAULT_RESPONSE_MIME: &str = "application/json";
+const TEXT_PLAIN_MIME: &str = "text/plain; charset=utf-8";
+const PROMETHEUS_TEXT_MIME: &str = "text/plain; version=0.0.4; charset=utf-8";
 
 #[derive(Clone)]
 pub(crate) struct AppState {
@@ -50,21 +52,27 @@ fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
 
 pub(crate) async fn index() -> Response<Body> {
     let task_manager = TaskManager::global();
-    if task_manager.is_shutdown() {
+    let mut resp = if task_manager.is_shutdown() {
         build_response(
             StatusCode::SERVICE_UNAVAILABLE,
             Bytes::from_static(RESPONSE_SHUTDOWN),
         )
     } else {
         build_response(StatusCode::OK, Bytes::from_static(RESPONSE_DEFAULT))
-    }
+    };
+    resp.headers_mut()
+        .insert(CONTENT_TYPE, HeaderValue::from_static(TEXT_PLAIN_MIME));
+    resp
 }
 
 pub(crate) async fn metrics() -> Response<Body> {
     let mut encoded = String::new();
     let registry = REGISTRY.get().unwrap();
     encode(&mut encoded, registry).unwrap();
-    build_response(StatusCode::OK, Bytes::from(encoded))
+    let mut resp = build_response(StatusCode::OK, Bytes::from(encoded));
+    resp.headers_mut()
+        .insert(CONTENT_TYPE, HeaderValue::from_static(PROMETHEUS_TEXT_MIME));
+    resp
 }
 
 pub(crate) async fn inference(

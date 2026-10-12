@@ -85,10 +85,18 @@ def generate_openapi(routes: Mapping[str, list[Runtime]]) -> dict[str, Any]:
         )
     )
     openapi.register_route(
-        "/", "get", summary="Liveness health check", response_type=str
+        "/",
+        "get",
+        summary="Liveness health check",
+        response_type=str,
+        response_content_type="text/plain",
     )
     openapi.register_route(
-        "/metrics", "get", summary="Prometheus metrics", response_type=str
+        "/metrics",
+        "get",
+        summary="Prometheus metrics",
+        response_type=str,
+        response_content_type="text/plain; version=0.0.4",
     )
 
     # Reserve typed schemas before checking ordinary boundaries, regardless of
