@@ -14,7 +14,6 @@
 """Example: Sample Resnet server."""
 
 from io import BytesIO
-from typing import List
 from urllib.request import urlretrieve
 
 import numpy as np  # type: ignore
@@ -76,7 +75,7 @@ class Inference(Worker):
             np.zeros((3, 244, 244), dtype=np.float32)
         ] * INFERENCE_BATCH_SIZE
 
-    def forward(self, data: List[np.ndarray]) -> List[int]:
+    def forward(self, data: list[np.ndarray]) -> list[int]:
         logger.info("processing batch with size: %d", len(data))
         with torch.no_grad():
             batch = torch.stack([torch.tensor(arr, device=self.device) for arr in data])

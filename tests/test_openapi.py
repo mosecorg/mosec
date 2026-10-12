@@ -183,6 +183,23 @@ def test_generate_openapi_uses_separate_request_and_response_mime_types():
     assert set(operation["responses"]["200"]["content"]) == {"application/octet-stream"}
 
 
+def test_generate_openapi_for_none_return():
+    class NoneReturnWorker(Worker):
+        def forward(self, data: str) -> None:
+            return None
+
+    operation = generate_openapi({"/inference": [Runtime(NoneReturnWorker)]})["paths"][
+        "/inference"
+    ]["post"]
+
+    assert operation["requestBody"]["content"] == {
+        "application/json": {"schema": {"type": "string"}}
+    }
+    assert operation["responses"]["200"]["content"] == {
+        "application/json": {"schema": {"type": "null"}}
+    }
+
+
 def test_generate_openapi_preserves_generic_boundary_types():
     class GenericWorker(Worker):
         def forward(self, data: dict[str, int]) -> dict[str, int]:

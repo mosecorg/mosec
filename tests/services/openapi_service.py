@@ -15,7 +15,7 @@
 """Test OpenAPI generated spec."""
 
 import sys
-from typing import Any, Dict, List, Type
+from typing import Any
 
 from msgspec import Struct
 
@@ -53,7 +53,7 @@ class UntypedPreprocess(TypedMsgPackMixin, Worker):
 class TypedInference(TypedMsgPackMixin, Worker):
     """Dummy batch inference."""
 
-    def forward(self, data: List[bytes]) -> List[int]:
+    def forward(self, data: list[bytes]) -> list[int]:
         return [len(buf) for buf in data]
 
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         print("Please specify the worker mapping. e.g. TypedPreprocess/TypedInference")
         sys.exit(1)
 
-    worker_mapping: Dict[str, Type[Worker]] = {
+    worker_mapping: dict[str, type[Worker]] = {
         "TypedPreprocess": TypedPreprocess,
         "UntypedPreprocess": UntypedPreprocess,
         "TypedInference": TypedInference,

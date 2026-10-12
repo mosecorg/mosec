@@ -15,10 +15,11 @@
 """Generate the static OpenAPI artifacts served by the Rust HTTP process."""
 
 import json
+from collections.abc import Mapping
 from functools import partial
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Dict, List, Mapping
+from typing import Any
 
 from defspec import OpenAPI, OpenAPIInfo
 
@@ -74,7 +75,7 @@ def _try_schema_type(
         return None
 
 
-def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
+def generate_openapi(routes: Mapping[str, list[Runtime]]) -> dict[str, Any]:
     """Generate a complete OpenAPI document for all registered routes."""
     openapi = OpenAPI(
         info=OpenAPIInfo(
@@ -93,7 +94,7 @@ def generate_openapi(routes: Mapping[str, List[Runtime]]) -> Dict[str, Any]:
     # Reserve typed schemas before checking ordinary boundaries, regardless of
     # route order. Only collisions between typed boundaries can fail startup.
     schema_doc = OpenAPI()
-    boundary_types: Dict[tuple[str, str], Any] = {}
+    boundary_types: dict[tuple[str, str], Any] = {}
     for strict in (True, False):
         for endpoint, workers in routes.items():
             if not workers:

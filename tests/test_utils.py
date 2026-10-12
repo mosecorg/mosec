@@ -14,8 +14,9 @@
 
 """Test util functions."""
 
-from typing import List, Optional
+import typing
 
+import pytest
 from msgspec import Struct
 
 from mosec import Worker
@@ -27,10 +28,10 @@ class Request(Struct):
 
 
 class Demo(Worker):
-    def forward(self, data: Request) -> Optional[Request]:
+    def forward(self, data: Request) -> Request | None:
         pass
 
-    def batch_forward(self, data: List[Request]) -> List[Request]:
+    def batch_forward(self, data: list[Request]) -> list[Request]:
         return data
 
     def generic_forward(self, data: dict[str, int]) -> dict[str, int]:
@@ -46,7 +47,47 @@ def test_parse_forward_input_type():
     batch = get_forward_input_type(demo.batch_forward, batched=True)
     assert batch is Request, batch
 
-    assert get_forward_return_type(demo.forward) == Optional[Request]
+    assert get_forward_return_type(demo.forward) == Request | None
     assert get_forward_return_type(demo.batch_forward, batched=True) is Request
     assert get_forward_input_type(demo.generic_forward) == dict[str, int]
     assert get_forward_return_type(demo.generic_forward) == dict[str, int]
+
+
+def test_parse_string_annotations():
+    def forward(self, data):
+        return data
+
+    forward.__annotations__ = {"data": "Request", "return": "Request | None"}
+    assert get_forward_input_type(forward) is Request
+    assert get_forward_return_type(forward) == Request | None
+
+    # `from __future__ import annotations` combined with explicit quotes
+    # stores the annotation as a doubly-quoted string.
+    forward.__annotations__ = {"data": "'Request'", "return": "'Request | None'"}
+    assert get_forward_input_type(forward) is Request
+    assert get_forward_return_type(forward) == Request | None
+
+
+def test_invalid_return_annotation_does_not_affect_input():
+    def forward(self, data: Request):
+        return data
+
+    forward.__annotations__["return"] = "Missing"
+
+    assert get_forward_input_type(forward) is Request
+    with pytest.raises(NameError, match="Missing"):
+        get_forward_return_type(forward)
+
+
+def test_batch_annotation_error_mentions_boundary():
+    def forward(self, data):
+        return data
+
+    # The deprecated bare `typing.List` is the only annotation that reaches
+    # the wrong-argument-count batch check, since `list` always takes one.
+    forward.__annotations__ = {"data": typing.List, "return": typing.List}
+
+    with pytest.raises(TypeError, match="input annotation"):
+        get_forward_input_type(forward, batched=True)
+    with pytest.raises(TypeError, match="output annotation"):
+        get_forward_return_type(forward, batched=True)

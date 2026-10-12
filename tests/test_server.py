@@ -19,6 +19,26 @@ import pytest
 from mosec import Server, Worker
 from mosec.mixin import TypedMsgPackMixin
 from mosec.openapi import OPENAPI_METADATA_FILE, OPENAPI_SWAGGER_FILE
+from mosec.server import MOSEC_RESERVED_ENDPOINTS
+
+
+@pytest.mark.parametrize("route", sorted(MOSEC_RESERVED_ENDPOINTS))
+def test_register_reserved_route_fails(route, mocker, tmp_path):
+    class EchoWorker(Worker):
+        def forward(self, data):
+            return data
+
+    mocker.patch(
+        "mosec.server.parse_arguments",
+        return_value=Namespace(
+            path=str(tmp_path), timeout=3000, wait=10, dry_run=False
+        ),
+    )
+    server = Server()
+    with pytest.raises(ValueError, match="reserved"):
+        server.append_worker(EchoWorker, route=route)
+    with pytest.raises(ValueError, match="reserved"):
+        server.append_worker(EchoWorker, route=["/inference", route])
 
 
 @pytest.mark.parametrize("dry_run", [False, True])

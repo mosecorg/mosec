@@ -633,6 +633,7 @@ name = "mosec"
 source = { editable = "." }
 dependencies = [
     { name = "defspec", extra = ["offline"] },
+    { name = "msgspec" },
 ]
 
 [package.optional-dependencies]
@@ -644,9 +645,6 @@ numbin = [
 ]
 redis = [
     { name = "redis" },
-]
-validation = [
-    { name = "msgspec" },
 ]
 
 [package.dev-dependencies]
@@ -689,11 +687,11 @@ mixin = [
 requires-dist = [
     { name = "defspec", extras = ["offline"], specifier = ">=0.7.0" },
     { name = "msgpack", marker = "extra == 'msgpack'", specifier = ">=1.1.0" },
-    { name = "msgspec", marker = "extra == 'validation'", specifier = ">=0.20" },
+    { name = "msgspec", specifier = ">=0.20" },
     { name = "numbin", marker = "extra == 'numbin'", specifier = ">=0.5.0" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=5.2.1" },
 ]
-provides-extras = ["msgpack", "numbin", "redis", "validation"]
+provides-extras = ["msgpack", "numbin", "redis"]
 
 [package.metadata.requires-dev]
 dev = [

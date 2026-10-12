@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from io import BytesIO
-from typing import List
 
 import torch  # type: ignore
 from diffusers import StableDiffusionPipeline  # type: ignore
@@ -33,7 +32,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         self.pipe.enable_model_cpu_offload()
         self.example = ["useless example prompt"] * 4  # warmup (bs=4)
 
-    def forward(self, data: List[str]) -> List[memoryview]:
+    def forward(self, data: list[str]) -> list[memoryview]:
         logger.debug("generate images for %s", data)
         res = self.pipe(data)  # type: ignore
         logger.debug("NSFW: %s", res[1])

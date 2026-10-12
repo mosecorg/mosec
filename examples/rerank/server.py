@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from os import getenv
-from typing import List
 
 from msgspec import Struct
 from sentence_transformers import CrossEncoder  # type: ignore
@@ -27,11 +26,11 @@ WORKER_NUM = int(getenv("WORKER_NUM", default="1"))
 
 class Request(Struct, kw_only=True):
     query: str
-    docs: List[str]
+    docs: list[str]
 
 
 class Response(Struct, kw_only=True):
-    scores: List[float]
+    scores: list[float]
 
 
 class Encoder(TypedMsgPackMixin, Worker):

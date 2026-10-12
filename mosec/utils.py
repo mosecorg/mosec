@@ -18,12 +18,12 @@ import inspect
 import os
 import sysconfig
 from pathlib import Path
-from typing import Any, Optional, get_args, get_origin
+from typing import Any, get_args, get_origin, get_type_hints
 
 
 # adopted from https://github.com/PyO3/maturin/blob/main/maturin/__main__.py
 # License: Apache-2.0 or MIT
-def get_mosec_path() -> Optional[Path]:
+def get_mosec_path() -> Path | None:
     """Get `mosec` binary path."""
     SCRIPT_NAME = "mosec"
 
@@ -52,10 +52,26 @@ def get_mosec_path() -> Optional[Path]:
     return None
 
 
-def _unwrap_batch_type(func, typ: Any, batched: bool) -> Any:
+def _resolve_annotations(func) -> dict[str, Any]:
+    """Resolve the annotations of ``func``, including nested string references.
+
+    Fall back to the raw annotations when any of them cannot be resolved so
+    that one invalid boundary does not affect the other.
+    """
+    try:
+        return get_type_hints(inspect.unwrap(func))
+    except Exception:
+        return inspect.get_annotations(func)
+
+
+def _unwrap_batch_type(func, typ: Any, batched: bool, boundary: str) -> Any:
     """Resolve one boundary annotation and unwrap Mosec's ``list[T]`` batch."""
-    if isinstance(typ, str):
-        typ = eval(typ, inspect.unwrap(func).__globals__)
+    globalns = inspect.unwrap(func).__globals__
+    while isinstance(typ, str):
+        resolved = eval(typ, globalns)
+        if resolved == typ:
+            break
+        typ = resolved
     if not batched or get_origin(typ) is not list:
         return typ
 
@@ -63,7 +79,7 @@ def _unwrap_batch_type(func, typ: Any, batched: bool) -> Any:
     if len(args) != 1:
         raise TypeError(
             f"`{func.__name__}` with dynamic batch should use "
-            "`List[Struct]` as the input annotation"
+            f"`list[Struct]` as the {boundary} annotation"
         )
     return args[0]
 
@@ -74,10 +90,9 @@ def get_forward_input_type(func, *, batched: bool = False) -> Any:
     Set ``batched`` when the runtime uses dynamic batching. Only then does
     a ``list[T]`` parameter annotation represent an individual ``T``.
     """
-    # Resolve only the input so an invalid return annotation cannot affect it.
-    annotations = inspect.get_annotations(func)
+    annotations = _resolve_annotations(func)
     typ = next((value for name, value in annotations.items() if name != "return"), Any)
-    return _unwrap_batch_type(func, typ, batched)
+    return _unwrap_batch_type(func, typ, batched, "input")
 
 
 def get_forward_return_type(func, *, batched: bool = False) -> Any:
@@ -86,5 +101,5 @@ def get_forward_return_type(func, *, batched: bool = False) -> Any:
     Set ``batched`` when the runtime uses dynamic batching to unwrap one
     ``list[T]`` layer. Otherwise an annotated list is an HTTP response array.
     """
-    typ = inspect.get_annotations(func).get("return", Any)
-    return _unwrap_batch_type(func, typ, batched)
+    typ = _resolve_annotations(func).get("return", Any)
+    return _unwrap_batch_type(func, typ, batched, "output")

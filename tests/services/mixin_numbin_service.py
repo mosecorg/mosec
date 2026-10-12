@@ -14,8 +14,6 @@
 
 """Test NumBin IPC mixin."""
 
-from typing import Dict, List
-
 import numpy as np
 
 from mosec import Server, Worker
@@ -23,14 +21,14 @@ from mosec.mixin import NumBinIPCMixin
 
 
 class Preprocess(NumBinIPCMixin, Worker):
-    def forward(self, data: Dict[str, str]) -> np.ndarray:
+    def forward(self, data: dict[str, str]) -> np.ndarray:
         num = int(data.get("num", 10))
         arr = np.ones(num) * (1 / num)
         return arr
 
 
 class Inference(NumBinIPCMixin, Worker):
-    def forward(self, data: List[np.ndarray]) -> List[str]:
+    def forward(self, data: list[np.ndarray]) -> list[str]:
         res = ["equal" if np.equal(1, arr.sum()) else "unequal" for arr in data]
         return res
 

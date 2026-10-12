@@ -21,7 +21,6 @@
 
 import time
 from random import random
-from typing import List
 
 from mosec import Server, ServerError, ValidationError, Worker, get_logger
 
@@ -44,7 +43,7 @@ class Preprocess(Worker):
 class Inference(Worker):
     """Sample Class."""
 
-    def forward(self, data: List[float]) -> List[float]:
+    def forward(self, data: list[float]) -> list[float]:
         # special case: {"time": 0}
         if len(data) == 1 and data[0] == 0:
             return data

@@ -340,7 +340,7 @@ def test_openapi_service(mosec_service, http_client, args):
 
     if args == "TypedPreprocess/TypedInference":
         redirect = http_client.get("/openapi/swagger")
-        assert redirect.status_code == HTTPStatus.PERMANENT_REDIRECT
+        assert redirect.status_code == HTTPStatus.TEMPORARY_REDIRECT
         assert redirect.headers["location"] == "/openapi/swagger/"
 
         response = http_client.get("/openapi/swagger/")

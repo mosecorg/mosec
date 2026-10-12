@@ -15,7 +15,6 @@
 """Test IPC shared memory storage."""
 
 import sys
-from typing import List
 
 import numpy as np
 
@@ -25,7 +24,7 @@ from mosec.mixin import PlasmaShmIPCMixin, RedisShmIPCMixin
 
 
 class PlasmaRandomService(PlasmaShmIPCMixin, Worker):
-    def forward(self, data: List[dict]) -> List[dict]:
+    def forward(self, data: list[dict]) -> list[dict]:
         try:
             result = [{"x": np.random.rand(int(req["size"]))} for req in data]
         except KeyError as err:
@@ -43,7 +42,7 @@ class PlasmaDummyPostprocess(PlasmaShmIPCMixin, Worker):
 
 
 class RedisRandomService(RedisShmIPCMixin, Worker):
-    def forward(self, data: List[dict]) -> List[dict]:
+    def forward(self, data: list[dict]) -> list[dict]:
         try:
             result = [{"x": np.random.rand(int(req["size"]))} for req in data]
         except KeyError as err:

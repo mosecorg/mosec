@@ -76,7 +76,6 @@ Firstly, we import the libraries and set up a basic logger to better observe wha
 
 ```python
 from io import BytesIO
-from typing import List
 
 import torch  # type: ignore
 from diffusers import StableDiffusionPipeline  # type: ignore
@@ -93,7 +92,7 @@ Then, we **build an API** for clients to query a text prompt and obtain an image
 
 2) Inside the `__init__` method, initialize your model and put it onto the corresponding device. Optionally you can assign `self.example` with some data to warm up<sup>(b)</sup></a> the model. Note that the data should be compatible with your handler's input format, which we detail next.
 
-3) Override the `forward` method to write your service handler<sup>(c)</sup></a>, with the signature `forward(self, data: Any | List[Any]) -> Any | List[Any]`. Receiving/returning a single item or a tuple depends on whether [dynamic batching](#configuration)<sup>(d)</sup></a> is configured.
+3) Override the `forward` method to write your service handler<sup>(c)</sup></a>, with the signature `forward(self, data: Any | list[Any]) -> Any | list[Any]`. Receiving/returning a single item or a tuple depends on whether [dynamic batching](#configuration)<sup>(d)</sup></a> is configured.
 
 
 ```python
@@ -105,7 +104,7 @@ class StableDiffusion(MsgpackMixin, Worker):
         self.pipe.enable_model_cpu_offload()
         self.example = ["useless example prompt"] * 4  # warmup (batch_size=4)
 
-    def forward(self, data: List[str]) -> List[memoryview]:
+    def forward(self, data: list[str]) -> list[memoryview]:
         logger.debug("generate images for %s", data)
         res = self.pipe(data)
         logger.debug("NSFW: %s", res[1])

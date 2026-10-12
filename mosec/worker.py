@@ -27,7 +27,8 @@ from __future__ import annotations
 import abc
 import json
 import pickle
-from typing import TYPE_CHECKING, Any, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from mosec.errors import DecodingError, EncodingError
 

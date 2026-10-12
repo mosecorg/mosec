@@ -16,7 +16,6 @@
 import os
 import pathlib
 import tempfile
-from typing import List
 
 from prometheus_client import (  # type: ignore
     CollectorRegistry,
@@ -62,7 +61,7 @@ class Inference(Worker):
             raise ValidationError(err) from err
         return res
 
-    def forward(self, data: List[int]) -> List[bool]:
+    def forward(self, data: list[int]) -> list[bool]:
         avg = sum(data) / len(data)
         ans = [x >= avg for x in data]
         counter.labels(status="true", worker_id=self.worker_id).inc(sum(ans))

@@ -11,7 +11,7 @@ license = { text = "Apache-2.0" }
 keywords = ["machine learning", "deep learning", "model serving"]
 dynamic = ["version"]
 requires-python = ">=3.10"
-dependencies = ["defspec[offline]>=0.7.0"]
+dependencies = ["defspec[offline]>=0.7.0", "msgspec>=0.20"]
 classifiers = [
   "Environment :: GPU",
   "Intended Audience :: Developers",
@@ -38,7 +38,6 @@ repository = "https://github.com/mosecorg/mosec"
 changelog = "https://github.com/mosecorg/mosec/releases"
 [project.scripts]
 [project.optional-dependencies]
-validation = ["msgspec>=0.20"]
 redis = ["redis>=5.2.1"]
 msgpack = ["msgpack>=1.1.0"]
 numbin = ["numbin>=0.5.0"]

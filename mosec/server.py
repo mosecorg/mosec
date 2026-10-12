@@ -40,7 +40,7 @@ import traceback
 from collections import defaultdict
 from multiprocessing.synchronize import Event
 from time import sleep
-from typing import Any, Dict, List, Type, Union
+from typing import Any
 
 from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
@@ -53,7 +53,14 @@ logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 0.1
-MOSEC_RESERVED_ENDPOINTS = {"/", "/metrics", "/openapi"}
+MOSEC_RESERVED_ENDPOINTS = {
+    "/",
+    "/metrics",
+    "/openapi",
+    "/openapi/metadata.json",
+    "/openapi/swagger",
+    "/openapi/swagger/",
+}
 
 
 class Server:
@@ -74,10 +81,10 @@ class Server:
             self._configs["path"], self._shutdown, self._shutdown_notify
         )
         self._rs_runtime_manager = RsRuntimeManager(self._configs["timeout"])
-        self._router: Dict[str, List[Runtime]] = defaultdict(list)
-        self._openapi_spec: Dict[str, Any] = {}
+        self._router: dict[str, list[Runtime]] = defaultdict(list)
+        self._openapi_spec: dict[str, Any] = {}
 
-        self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
+        self._daemon: dict[str, subprocess.Popen | mp.Process] = {}
 
         self._server_shutdown: bool = False
 
@@ -190,14 +197,14 @@ class Server:
     # pylint: disable=too-many-arguments
     def append_worker(
         self,
-        worker: Type[Worker],
+        worker: type[Worker],
         num: int = 1,
         max_batch_size: int = 1,
         max_wait_time: int = 0,
         start_method: str = "spawn",
-        env: Union[List[Dict[str, str]], None] = None,
+        env: list[dict[str, str]] | None = None,
         timeout: float = 0,
-        route: Union[str, List[str]] = "/inference",
+        route: str | list[str] = "/inference",
     ):
         """Sequentially appends workers to the workflow pipeline.
 
@@ -236,7 +243,7 @@ class Server:
         self._register_route(runtime, route)
         self._py_runtime_manager.append(runtime)
 
-    def register_runtime(self, routes: Dict[str, List[Runtime]]):
+    def register_runtime(self, routes: dict[str, list[Runtime]]):
         """Register the runtime to the routes.
 
         Args:
@@ -257,7 +264,7 @@ class Server:
         for runtime in unique_runtimes:
             self._py_runtime_manager.append(runtime)
 
-    def _register_route(self, runtime: Runtime, route: Union[str, List[str]]):
+    def _register_route(self, runtime: Runtime, route: str | list[str]):
         """Register the route path for the worker."""
         if isinstance(route, str):
             if route in MOSEC_RESERVED_ENDPOINTS:

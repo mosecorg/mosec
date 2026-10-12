@@ -13,17 +13,18 @@ For each pipeline, Mosec uses:
 - the first worker's `req_mime_type` as the request content type;
 - the last worker's `resp_mime_type` as the response content type.
 
-For dynamically batched workers, annotate the boundary with `List[Model]`. Mosec
+For dynamically batched workers, annotate the boundary with `list[Model]`. Mosec
 documents one `Model`, because each HTTP request contains one item rather than the
 internal batch. This applies when the boundary runtime has `max_batch_size > 1`.
-With `max_batch_size=1`, `List[Model]` describes an array in the HTTP body. Request
+With `max_batch_size=1`, `list[Model]` describes an array in the HTTP body. Request
 and response batching are determined independently from the first and last
 runtimes, so the same worker class can be used with different batch settings.
 
 Types supported by [defspec](https://github.com/kemingy/defspec), including standard
 Python types and `msgspec.Struct`, produce schemas. If a boundary has no usable type
 annotation, its route is still documented but that request or response schema is
-omitted. For ordinary workers, malformed annotations, unresolved type names,
+omitted. An explicit `-> None` return annotation documents a `null` response body.
+For ordinary workers, malformed annotations, unresolved type names,
 unsupported model types, and conflicting shared model names produce a warning
 and omit only the affected schema. Shared model names must identify the same
 schema across all routes; rename distinct models that share a name.
@@ -47,7 +48,7 @@ runtime directory and propagates the error.
 - Invalid boundary annotations on `TypedMsgPackMixin` workers now fail validation
   at startup and with `--dry-run`. Fix unresolved names, malformed annotations,
   and unsupported model types before running the service.
-- For typed workers with `max_batch_size=1`, a `List[T]` input now validates an
+- For typed workers with `max_batch_size=1`, a `list[T]` input now validates an
   array of `T`. With dynamic batching enabled, it still validates one `T` per
   request. Set `max_batch_size` to match the way `forward` handles its input.
 - Set `req_mime_type` explicitly for custom deserializers. Setting

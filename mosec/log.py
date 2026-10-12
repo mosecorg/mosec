@@ -14,13 +14,12 @@
 
 """MOSEC multiprocessing logging configurations."""
 
-from __future__ import annotations
-
 import json
 import logging
 import os
+from collections.abc import MutableMapping
 from datetime import datetime, timezone
-from typing import Any, MutableMapping
+from typing import Any
 
 from mosec.args import get_log_level
 

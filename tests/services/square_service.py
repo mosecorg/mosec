@@ -14,14 +14,12 @@
 
 """Test basic `forward` logic for single/concurrency request."""
 
-from typing import List
-
 from mosec import Server, Worker
 from mosec.errors import ValidationError
 
 
 class SquareService(Worker):
-    def forward(self, data: List[dict]) -> List[dict]:
+    def forward(self, data: list[dict]) -> list[dict]:
         try:
             result = [{"x": int(req["x"]) ** 2} for req in data]
         except KeyError as err:

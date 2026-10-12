@@ -14,7 +14,7 @@
 
 """MOSEC type validation mixin."""
 
-from typing import Any, Optional
+from typing import Any
 
 import msgspec
 
@@ -30,7 +30,7 @@ class TypedMsgPackMixin(Worker):
 
     req_mime_type = "application/msgpack"
     resp_mime_type = "application/msgpack"
-    _input_typ: Optional[Any] = None
+    _input_typ: Any | None = None
 
     def deserialize(self, data: Any) -> Any:
         """Deserialize and validate request with msgspec."""

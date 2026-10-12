@@ -31,7 +31,7 @@ use std::path::Path;
 use axum::Router;
 use axum::response::Redirect;
 use axum::routing::{get, post};
-use log::{debug, info};
+use log::{debug, info, warn};
 use logforth::append;
 use logforth::record::{Level, LevelFilter};
 use tokio::signal::unix::{SignalKind, signal};
@@ -74,6 +74,11 @@ const OPENAPI_SWAGGER_FILE: &str = "openapi-swagger.html";
 async fn run(conf: &Config, config_dir: &Path) {
     let metadata = config_dir.join(OPENAPI_METADATA_FILE);
     let swagger = config_dir.join(OPENAPI_SWAGGER_FILE);
+    for artifact in [&metadata, &swagger] {
+        if !artifact.exists() {
+            warn!(artifact:?; "openapi artifact not found, its endpoint will return 404");
+        }
+    }
 
     let metrics_instance = Metrics::init_with_namespace(&conf.namespace, conf.timeout);
     METRICS.set(metrics_instance).unwrap();
@@ -88,7 +93,7 @@ async fn run(conf: &Config, config_dir: &Path) {
         .route_service("/openapi/metadata.json", ServeFile::new(metadata))
         .route(
             "/openapi/swagger",
-            get(|| async { Redirect::permanent("/openapi/swagger/") }),
+            get(|| async { Redirect::temporary("/openapi/swagger/") }),
         )
         .route_service("/openapi/swagger/", ServeFile::new(swagger))
         .route("/", get(index))
