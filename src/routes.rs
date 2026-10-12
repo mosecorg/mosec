@@ -23,7 +23,6 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use bytes::Bytes;
 use log::warn;
 use prometheus_client::encoding::text::encode;
-use utoipa::OpenApi;
 
 use crate::errors::ServiceError;
 use crate::metrics::{CodeLabel, DURATION_LABEL, Metrics, REGISTRY};
@@ -35,6 +34,8 @@ const RESPONSE_EMPTY: &[u8] = b"no data provided";
 const RESPONSE_TOO_LARGE: &[u8] = b"request body is too large";
 const RESPONSE_SHUTDOWN: &[u8] = b"gracefully shutting down";
 const DEFAULT_RESPONSE_MIME: &str = "application/json";
+const TEXT_PLAIN_MIME: &str = "text/plain; charset=utf-8";
+const PROMETHEUS_TEXT_MIME: &str = "text/plain; version=0.0.4; charset=utf-8";
 
 #[derive(Clone)]
 pub(crate) struct AppState {
@@ -49,61 +50,31 @@ fn build_response(status: StatusCode, content: Bytes) -> Response<Body> {
         .unwrap()
 }
 
-#[utoipa::path(
-    get,
-    path = "/",
-    responses(
-        (
-            status = StatusCode::OK,
-            description = "Root path, can be used for liveness health check",
-            body = String,
-        ),
-        (
-            status = StatusCode::SERVICE_UNAVAILABLE,
-            description = "SERVICE_UNAVAILABLE",
-            body = String,
-        ),
-    ),
-)]
 pub(crate) async fn index() -> Response<Body> {
     let task_manager = TaskManager::global();
-    if task_manager.is_shutdown() {
+    let mut resp = if task_manager.is_shutdown() {
         build_response(
             StatusCode::SERVICE_UNAVAILABLE,
             Bytes::from_static(RESPONSE_SHUTDOWN),
         )
     } else {
         build_response(StatusCode::OK, Bytes::from_static(RESPONSE_DEFAULT))
-    }
+    };
+    resp.headers_mut()
+        .insert(CONTENT_TYPE, HeaderValue::from_static(TEXT_PLAIN_MIME));
+    resp
 }
 
-#[utoipa::path(
-    get,
-    path = "/metrics",
-    responses(
-        (status = StatusCode::OK, description = "Get metrics", body = String),
-    ),
-)]
 pub(crate) async fn metrics() -> Response<Body> {
     let mut encoded = String::new();
     let registry = REGISTRY.get().unwrap();
     encode(&mut encoded, registry).unwrap();
-    build_response(StatusCode::OK, Bytes::from(encoded))
+    let mut resp = build_response(StatusCode::OK, Bytes::from(encoded));
+    resp.headers_mut()
+        .insert(CONTENT_TYPE, HeaderValue::from_static(PROMETHEUS_TEXT_MIME));
+    resp
 }
 
-#[utoipa::path(
-    post,
-    path = "/openapi/reserved/inference",
-    responses(
-        (status = StatusCode::OK, description = "Inference"),
-        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
-        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
-        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
-        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
-        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
-    ),
-)]
 pub(crate) async fn inference(
     State(state): State<AppState>,
     uri: Uri,
@@ -189,19 +160,6 @@ pub(crate) async fn inference(
     resp
 }
 
-#[utoipa::path(
-    post,
-    path = "/openapi/reserved/inference_sse",
-    responses(
-        (status = StatusCode::OK, description = "Inference"),
-        (status = StatusCode::BAD_REQUEST, description = "BAD_REQUEST"),
-        (status = StatusCode::SERVICE_UNAVAILABLE, description = "SERVICE_UNAVAILABLE"),
-        (status = StatusCode::UNPROCESSABLE_ENTITY, description = "UNPROCESSABLE_ENTITY"),
-        (status = StatusCode::REQUEST_TIMEOUT, description = "REQUEST_TIMEOUT"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR"),
-        (status = StatusCode::TOO_MANY_REQUESTS, description = "TOO_MANY_REQUESTS"),
-    ),
-)]
 pub(crate) async fn sse_inference(
     State(state): State<AppState>,
     uri: Uri,
@@ -276,7 +234,3 @@ pub(crate) async fn sse_inference(
         }
     }
 }
-
-#[derive(OpenApi)]
-#[openapi(paths(index, metrics, inference, sse_inference))]
-pub(crate) struct RustAPIDoc;

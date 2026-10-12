@@ -92,9 +92,11 @@ def test_square_service(mosec_service, http_client):
     # only check the prefix since the version comes from Cargo.toml and cannot be
     # accessed here
     assert resp.headers["server"].startswith("mosec/"), f"{resp.headers['server']}"
+    assert resp.headers["content-type"] == "text/plain; charset=utf-8"
 
     resp = http_client.get("/metrics")
     assert resp.status_code == HTTPStatus.OK
+    assert resp.headers["content-type"] == "text/plain; version=0.0.4; charset=utf-8"
 
     resp = http_client.post("/inference", json={"msg": 2})
     assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
@@ -337,6 +339,16 @@ def test_openapi_service(mosec_service, http_client, args):
         assert path_item["responses"]["200"]["content"] == want
     else:
         assert "content" not in path_item["responses"]["200"]
+
+    if args == "TypedPreprocess/TypedInference":
+        redirect = http_client.get("/openapi/swagger")
+        assert redirect.status_code == HTTPStatus.TEMPORARY_REDIRECT
+        assert redirect.headers["location"] == "/openapi/swagger/"
+
+        response = http_client.get("/openapi/swagger/")
+        assert response.status_code == HTTPStatus.OK
+        assert response.headers["content-type"].startswith("text/html")
+        assert "/openapi/metadata.json" in response.text
 
 
 @pytest.mark.parametrize(

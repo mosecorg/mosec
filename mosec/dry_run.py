@@ -23,7 +23,7 @@ import signal
 import sys
 import time
 from multiprocessing.context import SpawnContext, SpawnProcess
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 from mosec.env import env_var_context
 from mosec.log import get_internal_logger
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 logger = get_internal_logger()
 
 
-def _get_memory_metrics() -> Dict[str, Any]:
+def _get_memory_metrics() -> dict[str, Any]:
     """Collect memory metrics using stdlib resource module."""
     usage = resource.getrusage(resource.RUSAGE_SELF)
     rss = usage.ru_maxrss
@@ -96,9 +96,9 @@ def _get_nvml_handle(nvml: Any) -> Any:
     return None
 
 
-def _get_gpu_metrics() -> Dict[str, Any]:
+def _get_gpu_metrics() -> dict[str, Any]:
     """Collect GPU metrics if available (torch.cuda or pynvml)."""
-    metrics: Dict[str, Any] = {}
+    metrics: dict[str, Any] = {}
     try:
         import torch  # pylint: disable=import-outside-toplevel
 
@@ -154,7 +154,7 @@ def dry_run_func(
         data = worker.forward([data])[0] if batch > 1 else worker.forward(data)
 
         cpu_after = time.process_time()
-        stage_metrics: Dict[str, Any] = {
+        stage_metrics: dict[str, Any] = {
             "stage": name,
             "cpu_time_seconds": cpu_after - cpu_before,
             **_get_memory_metrics(),
@@ -185,10 +185,10 @@ class Pool:
         self.process_context = process_context
         self.shutdown_notify = shutdown_notify
 
-        self.processes: List[SpawnProcess] = []
-        self.sender_pipes: List[PipeConnection] = []
-        self.receiver_pipes: List[PipeConnection] = []
-        self.metrics_receivers: List[PipeConnection] = []
+        self.processes: list[SpawnProcess] = []
+        self.sender_pipes: list[PipeConnection] = []
+        self.receiver_pipes: list[PipeConnection] = []
+        self.metrics_receivers: list[PipeConnection] = []
 
     def new_pipe(self):
         """Create new pipe for dry run workers to communicate."""
@@ -227,7 +227,7 @@ class Pool:
 
         self.processes.append(coordinator)
 
-    def probe_worker_liveness(self) -> Tuple[Union[int, None], Union[int, None]]:
+    def probe_worker_liveness(self) -> tuple[int | None, int | None]:
         """Check every worker is running/alive.
 
         Returns:
@@ -240,7 +240,7 @@ class Pool:
                 return i, process.exitcode
         return None, None
 
-    def wait_all(self) -> Tuple[Union[int, None], Union[int, None]]:
+    def wait_all(self) -> tuple[int | None, int | None]:
         """Blocking until all worker to end or one failed.
 
         Returns:
@@ -258,7 +258,7 @@ class Pool:
         """Get first sender and last receiver pipes."""
         return self.sender_pipes[0], self.receiver_pipes[-1]
 
-    def collect_metrics(self, timeout: float = 5.0) -> List[Dict[str, Any]]:
+    def collect_metrics(self, timeout: float = 5.0) -> list[dict[str, Any]]:
         """Collect metrics from all worker stages.
 
         Args:
@@ -268,7 +268,7 @@ class Pool:
             List of per-stage metrics dicts.
 
         """
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         for receiver in self.metrics_receivers:
             if receiver.poll(timeout):
                 results.append(receiver.recv())
@@ -286,7 +286,7 @@ class DryRunner:
     will be used.
     """
 
-    def __init__(self, router: Dict[str, List[Runtime]]):
+    def __init__(self, router: dict[str, list[Runtime]]):
         """Init dry runner."""
         self.router = router
         self.process_context: SpawnContext = SpawnContext()
@@ -333,7 +333,7 @@ class DryRunner:
             self.shutdown_notify.clear()
         logger.info("dry run exit")
 
-    def warmup(self, runtimes: List[Runtime], pool: Pool):
+    def warmup(self, runtimes: list[Runtime], pool: Pool):
         """Warmup the service.
 
         If neither `example` nor `multi_examples` is provided, it will only

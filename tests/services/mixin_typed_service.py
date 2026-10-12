@@ -14,7 +14,7 @@
 
 """Test MsgPack mixin."""
 
-from typing import Any, List
+from typing import Any
 
 from msgspec import Struct
 
@@ -28,7 +28,7 @@ class Request(Struct):
 
 
 class Inference(TypedMsgPackMixin, Worker):
-    def forward(self, data: List[Request]) -> Any:
+    def forward(self, data: list[Request]) -> Any:
         return [len(req.binary) for req in data]
 
 

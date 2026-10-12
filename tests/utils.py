@@ -24,7 +24,7 @@ import struct
 import time
 from http import HTTPStatus
 from io import BytesIO
-from typing import TYPE_CHECKING, List, Tuple, Union
+from typing import TYPE_CHECKING
 
 from mosec.coordinator import State
 
@@ -33,8 +33,8 @@ if TYPE_CHECKING:
 
 
 def imitate_controller_send(
-    sock: Union[mock_socket, socket.socket], data: List[bytes]
-) -> Tuple[List[bytes], List[bytes]]:
+    sock: mock_socket | socket.socket, data: list[bytes]
+) -> tuple[list[bytes], list[bytes]]:
     # explicit byte format here for sanity check
     # placeholder flag, should be discarded by receiver
     header = struct.pack("!HH", HTTPStatus.OK, len(data))

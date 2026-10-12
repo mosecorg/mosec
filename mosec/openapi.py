@@ -1,0 +1,172 @@
+# Copyright 2026 MOSEC Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Generate the static OpenAPI artifacts served by the Rust HTTP process."""
+
+import json
+from collections.abc import Mapping
+from functools import partial
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+from typing import Any
+
+from defspec import OpenAPI, OpenAPIInfo
+
+from mosec import get_logger
+from mosec.mixin.typed_worker import TypedMsgPackMixin
+from mosec.runtime import Runtime
+from mosec.utils import get_forward_input_type, get_forward_return_type
+from mosec.worker import SSEWorker
+
+logger = get_logger()
+
+OPENAPI_METADATA_FILE = "openapi-metadata.json"
+OPENAPI_SWAGGER_FILE = "openapi-swagger.html"
+OPENAPI_METADATA_URL = "/openapi/metadata.json"
+
+INFERENCE_ERROR_RESPONSES = {
+    "400": {"description": "BAD_REQUEST"},
+    "408": {"description": "REQUEST_TIMEOUT"},
+    "413": {"description": "PAYLOAD_TOO_LARGE"},
+    "422": {"description": "UNPROCESSABLE_ENTITY"},
+    "429": {"description": "TOO_MANY_REQUESTS"},
+    "500": {"description": "INTERNAL_SERVER_ERROR"},
+    "503": {"description": "SERVICE_UNAVAILABLE"},
+}
+
+
+def _mosec_version() -> str:
+    try:
+        return version("mosec")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def _schema_type(typ: Any) -> type | None:
+    """Omit an unannotated boundary from the generated OpenAPI document."""
+    return None if typ is Any else typ
+
+
+def _try_schema_type(
+    schema_doc: OpenAPI, func, message: str, *args: Any, strict: bool = False
+) -> type | None:
+    """Resolve a boundary type, optionally tolerating invalid annotations."""
+    try:
+        typ = _schema_type(func())
+        # Registration is transactional in defspec. Stage each boundary against
+        # existing components so failures leave other schemas intact.
+        schema_doc.register_route("/schema", "post", request_type=typ)
+        return typ
+    except (TypeError, ValueError, NameError, SyntaxError) as err:
+        if strict:
+            raise
+        logger.warning(message, *args, err)
+        return None
+
+
+def generate_openapi(routes: Mapping[str, list[Runtime]]) -> dict[str, Any]:
+    """Generate a complete OpenAPI document for all registered routes."""
+    openapi = OpenAPI(
+        info=OpenAPIInfo(
+            title="Mosec API",
+            description="OpenAPI generated from Mosec worker type annotations",
+            version=_mosec_version(),
+        )
+    )
+    openapi.register_route(
+        "/",
+        "get",
+        summary="Liveness health check",
+        response_type=str,
+        response_content_type="text/plain",
+    )
+    openapi.register_route(
+        "/metrics",
+        "get",
+        summary="Prometheus metrics",
+        response_type=str,
+        response_content_type="text/plain; version=0.0.4",
+    )
+
+    # Reserve typed schemas before checking ordinary boundaries, regardless of
+    # route order. Only collisions between typed boundaries can fail startup.
+    schema_doc = OpenAPI()
+    boundary_types: dict[tuple[str, str], Any] = {}
+    for strict in (True, False):
+        for endpoint, workers in routes.items():
+            if not workers:
+                continue
+            for direction, runtime, extract in (
+                ("request", workers[0], get_forward_input_type),
+                ("response", workers[-1], get_forward_return_type),
+            ):
+                if issubclass(runtime.worker, TypedMsgPackMixin) != strict:
+                    continue
+                boundary_types[endpoint, direction] = _try_schema_type(
+                    schema_doc,
+                    partial(
+                        extract,
+                        runtime.worker.forward,
+                        batched=runtime.max_batch_size > 1,
+                    ),
+                    f"Failed to generate {direction} schema for %s: %s",
+                    endpoint,
+                    strict=strict,
+                )
+
+    for endpoint, workers in routes.items():
+        if not workers:
+            continue
+        request_runtime, response_runtime = workers[0], workers[-1]
+        request_worker = request_runtime.worker
+        response_worker = response_runtime.worker
+        openapi.register_route(
+            endpoint,
+            "post",
+            summary="Mosec inference",
+            request_type=boundary_types[endpoint, "request"],
+            request_content_type=request_worker.req_mime_type,
+            response_type=boundary_types[endpoint, "response"],
+            response_content_type=response_worker.resp_mime_type,
+        )
+
+    spec = openapi.to_dict()
+    spec["paths"]["/"]["get"]["responses"]["503"] = {
+        "description": "SERVICE_UNAVAILABLE"
+    }
+    for endpoint, workers in routes.items():
+        if workers:
+            spec["paths"][endpoint]["post"]["responses"].update(
+                INFERENCE_ERROR_RESPONSES
+            )
+            if issubclass(workers[-1].worker, SSEWorker):
+                spec["paths"][endpoint]["post"]["responses"]["200"]["description"] = (
+                    "Server-sent event stream"
+                )
+    return spec
+
+
+def write_openapi_assets(spec: Mapping[str, Any], output_dir: Path) -> None:
+    """Write the OpenAPI JSON and self-contained viewer pages to ``output_dir``."""
+    # offapi eagerly materializes its bundled UI assets. Import it only in the
+    # controller process that writes the page, not in every spawned worker.
+    from offapi import OpenAPITemplate
+
+    (output_dir / OPENAPI_METADATA_FILE).write_text(
+        json.dumps(spec, indent=2), encoding="utf-8"
+    )
+    (output_dir / OPENAPI_SWAGGER_FILE).write_text(
+        OpenAPITemplate.SWAGGER.value.format(spec_url=OPENAPI_METADATA_URL),
+        encoding="utf-8",
+    )

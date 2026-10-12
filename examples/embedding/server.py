@@ -16,7 +16,6 @@
 
 import base64
 import os
-from typing import List, Union
 
 import numpy as np
 import torch  # type: ignore
@@ -41,9 +40,7 @@ class Embedding(Worker):
         self.model = self.model.to(self.device)
         self.model.eval()
 
-    def get_embedding_with_token_count(
-        self, sentences: Union[str, List[Union[str, List[int]]]]
-    ):
+    def get_embedding_with_token_count(self, sentences: str | list[str | list[int]]):
         # Mean Pooling - Take attention mask into account for correct averaging
         def mean_pooling(model_output, attention_mask):
             # First element of model_output contains all token embeddings

@@ -17,7 +17,6 @@
 import sys
 from multiprocessing.context import SpawnContext
 from types import SimpleNamespace
-from typing import List
 
 import pytest
 
@@ -38,7 +37,7 @@ class EchoWorker(Worker):
 
 
 class BatchEchoWorker(Worker):
-    def forward(self, data: List[dict]) -> List[dict]:
+    def forward(self, data: list[dict]) -> list[dict]:
         return data
 
 

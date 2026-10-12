@@ -23,9 +23,10 @@ import struct
 import threading
 import time
 import traceback
+from collections.abc import Sequence
 from contextlib import contextmanager
 from multiprocessing.synchronize import Event
-from typing import Any, Optional, Sequence, Type
+from typing import Any
 
 from mosec.errors import MosecError, MosecTimeoutError
 from mosec.log import get_internal_logger
@@ -78,7 +79,7 @@ class FakeSemaphore:
         """Not intend to be used by users."""
         self.value = value
 
-    def acquire(self, timeout: Optional[float] = None):
+    def acquire(self, timeout: float | None = None):
         """Acquire the semaphore."""
 
     def release(self):
@@ -101,7 +102,7 @@ class Coordinator:
     # pylint: disable=too-many-arguments
     def __init__(
         self,
-        worker: Type[Worker],
+        worker: type[Worker],
         max_batch_size: int,
         shutdown: Event,
         shutdown_notify: Event,

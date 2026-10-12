@@ -25,7 +25,7 @@ class Inference(TypedMsgPackMixin, Worker):
 ```
 
 ```{note}
-If you are using dynamic **batch** inference as the first stage, just use the `List[Request]` as the annotation.
+If you are using dynamic **batch** inference as the first stage, just use the `list[Request]` as the annotation.
 ```
 
 You can check the full demo code below.

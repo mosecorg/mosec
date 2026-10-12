@@ -40,20 +40,27 @@ import traceback
 from collections import defaultdict
 from multiprocessing.synchronize import Event
 from time import sleep
-from typing import Dict, List, Type, Union
+from typing import Any
 
 from mosec.args import parse_arguments
 from mosec.dry_run import DryRunner
 from mosec.log import get_internal_logger
+from mosec.openapi import generate_openapi, write_openapi_assets
 from mosec.runtime import PyRuntimeManager, RsRuntimeManager, Runtime
-from mosec.utils import ParseTarget
-from mosec.worker import MOSEC_REF_TEMPLATE, SSEWorker, Worker
+from mosec.worker import SSEWorker, Worker
 
 logger = get_internal_logger()
 
 
 GUARD_CHECK_INTERVAL = 0.1
-MOSEC_RESERVED_ENDPOINTS = {"/", "/metrics", "/openapi"}
+MOSEC_RESERVED_ENDPOINTS = {
+    "/",
+    "/metrics",
+    "/openapi",
+    "/openapi/metadata.json",
+    "/openapi/swagger",
+    "/openapi/swagger/",
+}
 
 
 class Server:
@@ -74,9 +81,10 @@ class Server:
             self._configs["path"], self._shutdown, self._shutdown_notify
         )
         self._rs_runtime_manager = RsRuntimeManager(self._configs["timeout"])
-        self._router: Dict[str, List[Runtime]] = defaultdict(list)
+        self._router: dict[str, list[Runtime]] = defaultdict(list)
+        self._openapi_spec: dict[str, Any] = {}
 
-        self._daemon: Dict[str, Union[subprocess.Popen, mp.Process]] = {}
+        self._daemon: dict[str, subprocess.Popen | mp.Process] = {}
 
         self._server_shutdown: bool = False
 
@@ -89,6 +97,7 @@ class Server:
             "no worker registered\n"
             "help: use `.append_worker(...)` to register at least one worker"
         )
+        self._openapi_spec = generate_openapi(self._router)
 
     def _check_daemon(self):
         for name, proc in self._daemon.items():
@@ -132,12 +141,13 @@ class Server:
                     "endpoint": endpoint,
                     "workers": [runtime.name for runtime in pipeline],
                     "is_sse": issubclass(pipeline[-1].worker, SSEWorker),
-                    **generate_openapi([runtime.worker for runtime in pipeline]),
+                    "mime": pipeline[-1].worker.resp_mime_type,
                 }
             )
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w", encoding="utf-8") as file:
             json.dump(configs, file, indent=2)
+        write_openapi_assets(self._openapi_spec, config_path.parent)
 
         process = self._rs_runtime_manager.start(config_path)
         self.register_daemon("rs_runtime", process)
@@ -168,7 +178,7 @@ class Server:
         # shutdown py runtime manager
         self._shutdown.set()
         shutil.rmtree(self._configs["path"], ignore_errors=True)
-        logger.info("mosec exited normally")
+        logger.info("mosec cleanup completed")
 
     def register_daemon(self, name: str, proc: subprocess.Popen):
         """Register a daemon to be monitored.
@@ -187,14 +197,14 @@ class Server:
     # pylint: disable=too-many-arguments
     def append_worker(
         self,
-        worker: Type[Worker],
+        worker: type[Worker],
         num: int = 1,
         max_batch_size: int = 1,
         max_wait_time: int = 0,
         start_method: str = "spawn",
-        env: Union[List[Dict[str, str]], None] = None,
+        env: list[dict[str, str]] | None = None,
         timeout: float = 0,
-        route: Union[str, List[str]] = "/inference",
+        route: str | list[str] = "/inference",
     ):
         """Sequentially appends workers to the workflow pipeline.
 
@@ -233,7 +243,7 @@ class Server:
         self._register_route(runtime, route)
         self._py_runtime_manager.append(runtime)
 
-    def register_runtime(self, routes: Dict[str, List[Runtime]]):
+    def register_runtime(self, routes: dict[str, list[Runtime]]):
         """Register the runtime to the routes.
 
         Args:
@@ -254,7 +264,7 @@ class Server:
         for runtime in unique_runtimes:
             self._py_runtime_manager.append(runtime)
 
-    def _register_route(self, runtime: Runtime, route: Union[str, List[str]]):
+    def _register_route(self, runtime: Runtime, route: str | list[str]):
         """Register the route path for the worker."""
         if isinstance(route, str):
             if route in MOSEC_RESERVED_ENDPOINTS:
@@ -273,50 +283,13 @@ class Server:
             DryRunner(self._router).run()
             return
 
-        self._handle_signal()
-        self._start_rs_runtime()
         try:
-            self._manage_py_runtime()
-        # pylint: disable=broad-except
-        except Exception:
-            logger.error(traceback.format_exc().replace("\n", " "))
-        self._halt()
-
-
-def generate_openapi(workers: List[Type[Worker]]):
-    """Generate the OpenAPI specification for one pipeline."""
-    if not workers:
-        return {}
-    request_worker_cls, response_worker_cls = workers[0], workers[-1]
-    input_schema, input_components = request_worker_cls.get_forward_json_schema(
-        ParseTarget.INPUT, MOSEC_REF_TEMPLATE
-    )
-    return_schema, return_components = response_worker_cls.get_forward_json_schema(
-        ParseTarget.RETURN, MOSEC_REF_TEMPLATE
-    )
-
-    def make_body(description, mime, schema):
-        if not schema:
-            return None
-        return {"description": description, "content": {mime: {"schema": schema}}}
-
-    return {
-        "request_body": make_body(
-            "Mosec Inference Request Body",
-            request_worker_cls.resp_mime_type,
-            input_schema,
-        ),
-        "responses": (
-            None
-            if not return_schema
-            else {
-                "200": make_body(
-                    "Mosec Inference Response",
-                    response_worker_cls.resp_mime_type,
-                    return_schema,
-                )
-            }
-        ),
-        "schemas": {**input_components, **return_components},
-        "mime": response_worker_cls.resp_mime_type,
-    }
+            self._handle_signal()
+            self._start_rs_runtime()
+            try:
+                self._manage_py_runtime()
+            # pylint: disable=broad-except
+            except Exception:
+                logger.error(traceback.format_exc().replace("\n", " "))
+        finally:
+            self._halt()
