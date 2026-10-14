@@ -159,3 +159,45 @@ def test_startup_failures_cleanup_and_propagate(failure, mocker, tmp_path):
         start.assert_not_called()
     else:
         start.assert_called_once()
+
+
+def test_cors_origins_are_parsed_from_cli_and_environment(mocker, monkeypatch):
+    from mosec.args import parse_arguments
+
+    mocker.patch("mosec.args.is_port_available", return_value=True)
+    monkeypatch.setenv("MOSEC_CORS_ALLOW_ORIGINS", '["https://env.example"]')
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "server",
+            "--cors-allow-origins",
+            "https://client.example",
+            "https://admin.example",
+        ],
+    )
+    assert parse_arguments().cors_allow_origins == [
+        "https://client.example",
+        "https://admin.example",
+    ]
+    monkeypatch.setattr("sys.argv", ["server"])
+    assert parse_arguments().cors_allow_origins == ["https://env.example"]
+
+
+@pytest.mark.parametrize(
+    "origins",
+    [
+        ["*", "https://client.example"],
+        ["https://client.example/path"],
+        ["https://client.example:bad"],
+        ["https://client.example\nInjected"],
+        ["not-an-origin"],
+    ],
+)
+def test_invalid_cors_origins_are_rejected_before_startup(mocker, monkeypatch, origins):
+    from mosec.args import parse_arguments
+
+    mocker.patch("mosec.args.is_port_available", return_value=True)
+    monkeypatch.setattr("sys.argv", ["server", "--cors-allow-origins", *origins])
+    with pytest.raises(SystemExit) as error:
+        parse_arguments()
+    assert error.value.code != 0
