@@ -15,13 +15,25 @@
 """Environment variables related functions."""
 
 import contextlib
+import json
 import os
 import warnings
 from argparse import Namespace
+from collections.abc import Callable
 from typing import Any
 
 MOSEC_ENV_PREFIX = "MOSEC_"
-MOSEC_ENV_CONFIG = {
+
+
+def parse_cors_origins(value: str) -> list[str]:
+    """Read a JSON list of allowed browser origins from the environment."""
+    origins = json.loads(value)
+    if not isinstance(origins, list) or not all(isinstance(x, str) for x in origins):
+        raise ValueError("CORS origins must be a JSON array of strings")
+    return origins
+
+
+MOSEC_ENV_CONFIG: dict[str, Callable[[str], Any]] = {
     "path": str,
     "capacity": int,
     "timeout": int,
@@ -32,6 +44,7 @@ MOSEC_ENV_CONFIG = {
     "dry_run": bool,
     "log_level": str,
     "max_request_size": int,
+    "cors_allow_origins": parse_cors_origins,
 }
 
 
