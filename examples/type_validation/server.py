@@ -14,7 +14,7 @@
 
 """Request validation example."""
 
-from typing import Any, List
+from typing import Any
 
 from msgspec import Struct
 
@@ -43,7 +43,7 @@ class Preprocess(TypedMsgPackMixin, Worker):
 class Inference(TypedMsgPackMixin, Worker):
     """Dummy batch inference."""
 
-    def forward(self, data: List[bytes]) -> List[int]:
+    def forward(self, data: list[bytes]) -> list[int]:
         return [len(buf) for buf in data]
 
 

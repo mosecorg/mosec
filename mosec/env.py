@@ -14,13 +14,11 @@
 
 """Environment variables related functions."""
 
-from __future__ import annotations
-
 import contextlib
 import os
 import warnings
 from argparse import Namespace
-from typing import Any, Dict, List, Union
+from typing import Any
 
 MOSEC_ENV_PREFIX = "MOSEC_"
 MOSEC_ENV_CONFIG = {
@@ -38,9 +36,9 @@ MOSEC_ENV_CONFIG = {
 
 
 @contextlib.contextmanager
-def env_var_context(env: List[Dict[str, str]] | None, index: int):
+def env_var_context(env: list[dict[str, str]] | None, index: int):
     """Manage the environment variables for a worker process."""
-    default: Dict = {}
+    default: dict = {}
     try:
         if env is not None:
             for key, value in env[index].items():
@@ -94,7 +92,7 @@ def validate_float_ge(number, name, threshold=0.0):
     assert number >= threshold, f"{name} must be no less than {threshold}"
 
 
-def validate_str_dict(dictionary: Dict):
+def validate_str_dict(dictionary: dict):
     """Validate keys and values of the dictionary is string type."""
     for key, value in dictionary.items():
         if not (isinstance(key, str) and isinstance(value, str)):
@@ -102,14 +100,14 @@ def validate_str_dict(dictionary: Dict):
     return True
 
 
-def validate_env(env: Union[Any, List[Dict[str, str]]], num: int):
+def validate_env(env: Any | list[dict[str, str]], num: int):
     """Validate keys and values of the dictionary is string type."""
     if env is None:
         return
     assert len(env) == num, "len(env) must equal to num"
     valid = True
-    if not isinstance(env, List) or not all(
-        isinstance(x, Dict) and validate_str_dict(x) for x in env
+    if not isinstance(env, list) or not all(
+        isinstance(x, dict) and validate_str_dict(x) for x in env
     ):
         valid = False
     assert valid, "env must be a list of string dictionary"

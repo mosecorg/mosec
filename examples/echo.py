@@ -15,7 +15,6 @@
 
 import time
 from types import MappingProxyType as ImmutableDict
-from typing import List
 
 from mosec import Server, ValidationError, Worker, get_logger
 
@@ -42,7 +41,7 @@ class Inference(Worker):
 
     example = (0, 1e-5, 2e-4)
 
-    def forward(self, data: List[float]) -> List[float]:
+    def forward(self, data: list[float]) -> list[float]:
         logger.info("sleeping for %s seconds", max(data))
         time.sleep(max(data))
         return data

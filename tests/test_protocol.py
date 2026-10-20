@@ -18,7 +18,6 @@ import json
 import pickle
 import random
 import struct
-from typing import List
 
 import pytest
 
@@ -28,7 +27,7 @@ from tests.mock_socket import Socket
 from tests.utils import imitate_controller_send
 
 
-def echo(protocol: Protocol, data: List[bytes]):
+def echo(protocol: Protocol, data: list[bytes]):
     sent_flag = random.choice([1, 2, 4, 8])
 
     sent_ids, sent_payloads = imitate_controller_send(protocol.socket, data)

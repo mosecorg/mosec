@@ -28,7 +28,8 @@ import abc
 import json
 import pickle
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Sequence, Tuple, final
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, final
 
 from mosec.cache import SieveCache
 from mosec.errors import DecodingError, EncodingError
@@ -67,6 +68,7 @@ class Worker(abc.ABC):
 
     example: Any = None
     multi_examples: Sequence[Any] = []
+    req_mime_type = "application/json"
     resp_mime_type = "application/json"
     _worker_id: int = 0
     _stage: str = ""
@@ -204,41 +206,6 @@ class Worker(abc.ABC):
 
         """
         raise NotImplementedError
-
-    @classmethod
-    def get_forward_json_schema(
-        cls,
-        target: ParseTarget,
-        ref_template: str,  # pylint: disable=unused-argument
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        """Retrieve the JSON schema for the `forward` method of the class.
-
-        Args:
-            cls : The class object.
-            target : The target variable to parse the schema for.
-            ref_template : A template to use when generating ``"$ref"`` fields.
-
-        Returns:
-            A tuple containing the schema and the component schemas.
-
-        The :py:meth:`get_forward_json_schema` method is a class method that returns the
-        JSON schema for the :py:meth:`forward` method of the :py:class:`cls` class.
-        It takes a :py:obj:`target` param specifying the target to parse the schema for.
-
-        The returned value is a tuple containing the schema and the component schema.
-
-        .. note::
-
-            Developer must implement this function to retrieve the JSON schema
-            to enable openapi spec.
-
-        .. note::
-
-            The :py:const:`MOSEC_REF_TEMPLATE` constant should be used as a reference
-            template according to openapi standards.
-
-        """
-        return {}, {}
 
 
 class SSEWorker(Worker):

@@ -18,9 +18,9 @@ import logging
 import socket
 import struct
 import warnings
+from collections.abc import Sequence
 from enum import IntFlag
 from io import BytesIO
-from typing import Sequence, Tuple
 
 from mosec.log import get_internal_logger
 
@@ -85,7 +85,7 @@ class Protocol:
         self.name = name
         self.addr = addr
 
-    def receive(self) -> Tuple[bytes, Sequence[bytes], Sequence[int], Sequence[bytes]]:
+    def receive(self) -> tuple[bytes, Sequence[bytes], Sequence[int], Sequence[bytes]]:
         """Receive tasks from the server."""
         flag = self.socket.recv(self.LENGTH_TASK_FLAG)
         batch_size_bytes = self.socket.recv(self.LENGTH_TASK_BATCH)

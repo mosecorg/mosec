@@ -27,7 +27,7 @@ import time
 from contextlib import ContextDecorator
 from multiprocessing.context import ForkContext, SpawnContext
 from os.path import join
-from typing import Union, cast
+from typing import cast
 
 import pytest
 
@@ -110,7 +110,7 @@ def make_coordinator(w_cls, shutdown, shutdown_notify, config):
 
 def make_coordinator_process(w_cls, c_ctx, shutdown, shutdown_notify, config):
     context = mp.get_context(c_ctx)
-    context = cast(Union[SpawnContext, ForkContext], context)
+    context = cast(SpawnContext | ForkContext, context)
     return context.Process(
         target=make_coordinator,
         args=(w_cls, shutdown, shutdown_notify, config),

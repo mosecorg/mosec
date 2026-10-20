@@ -15,7 +15,6 @@
 
 import os
 import time
-from typing import List
 
 import chex  # type: ignore
 import jax  # type: ignore
@@ -68,7 +67,7 @@ class JittedInference(Worker):
         chex.assert_rank([x_batch], [2])
         return jax.vmap(self._forward)(x_batch)
 
-    def forward(self, data: List[dict]) -> List[dict]:
+    def forward(self, data: list[dict]) -> list[dict]:
         time_start = time.perf_counter()
         try:
             input_array_raw = [ele["array"] for ele in data]

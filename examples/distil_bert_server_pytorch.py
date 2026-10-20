@@ -13,7 +13,7 @@
 # limitations under the License.
 """Example: Mosec with Pytorch Distil BERT."""
 
-from typing import Any, List
+from typing import Any
 
 import torch  # type: ignore
 from transformers import (  # type: ignore
@@ -73,7 +73,7 @@ class Inference(Worker):
             [101, 2023, 2003, 1037, 8403, 4937, 999, 102] * 5  # make sentence longer
         ] * INFERENCE_BATCH_SIZE
 
-    def forward(self, data: List[Returns]) -> List[str]:
+    def forward(self, data: list[Returns]) -> list[str]:
         tensors = [torch.tensor(token) for token in data]
         with torch.no_grad():
             result = self.model(

@@ -17,14 +17,13 @@
 import inspect
 import os
 import sysconfig
-from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, get_args, get_origin, get_type_hints
 
 
 # adopted from https://github.com/PyO3/maturin/blob/main/maturin/__main__.py
 # License: Apache-2.0 or MIT
-def get_mosec_path() -> Optional[Path]:
+def get_mosec_path() -> Path | None:
     """Get `mosec` binary path."""
     SCRIPT_NAME = "mosec"
 
@@ -53,39 +52,54 @@ def get_mosec_path() -> Optional[Path]:
     return None
 
 
-class ParseTarget(Enum):
-    """Enum to specify the target of parsing func type."""
+def _resolve_annotations(func) -> dict[str, Any]:
+    """Resolve the annotations of ``func``, including nested string references.
 
-    INPUT = "INPUT"
-    RETURN = "RETURN"
-
-
-def parse_func_type(func, target: ParseTarget) -> type:
-    """Parse the input type of the target function.
-
-    - single request: return the type
-    - batch request: return the list item type
+    Fall back to the raw annotations when any of them cannot be resolved so
+    that one invalid boundary does not affect the other.
     """
-    annotations = inspect.get_annotations(func, eval_str=True)
-    name = func.__name__
-    typ = Any
-    if target == ParseTarget.INPUT:
-        for key in annotations:
-            if key != "return":
-                typ = annotations[key]
-                break
-    else:
-        typ = annotations.get("return", Any)
+    try:
+        return get_type_hints(inspect.unwrap(func))
+    except Exception:
+        return inspect.get_annotations(func)
 
-    origin = getattr(typ, "__origin__", None)
-    if origin is None:
-        return typ  # type: ignore
-    # GenericAlias, `func` could be batch inference
-    if origin is list or origin is List:
-        if not hasattr(typ, "__args__") or len(typ.__args__) != 1:  # type: ignore
-            raise TypeError(
-                f"`{name}` with dynamic batch should use "
-                "`List[Struct]` as the input annotation"
-            )
-        return typ.__args__[0]  # type: ignore
-    raise TypeError(f"unsupported type {typ}")
+
+def _unwrap_batch_type(func, typ: Any, batched: bool, boundary: str) -> Any:
+    """Resolve one boundary annotation and unwrap Mosec's ``list[T]`` batch."""
+    globalns = inspect.unwrap(func).__globals__
+    while isinstance(typ, str):
+        resolved = eval(typ, globalns)
+        if resolved == typ:
+            break
+        typ = resolved
+    if not batched or get_origin(typ) is not list:
+        return typ
+
+    args = get_args(typ)
+    if len(args) != 1:
+        raise TypeError(
+            f"`{func.__name__}` with dynamic batch should use "
+            f"`list[Struct]` as the {boundary} annotation"
+        )
+    return args[0]
+
+
+def get_forward_input_type(func, *, batched: bool = False) -> Any:
+    """Return the type of one request passed to ``forward``.
+
+    Set ``batched`` when the runtime uses dynamic batching. Only then does
+    a ``list[T]`` parameter annotation represent an individual ``T``.
+    """
+    annotations = _resolve_annotations(func)
+    typ = next((value for name, value in annotations.items() if name != "return"), Any)
+    return _unwrap_batch_type(func, typ, batched, "input")
+
+
+def get_forward_return_type(func, *, batched: bool = False) -> Any:
+    """Return the type of one response returned from ``forward``.
+
+    Set ``batched`` when the runtime uses dynamic batching to unwrap one
+    ``list[T]`` layer. Otherwise an annotated list is an HTTP response array.
+    """
+    typ = _resolve_annotations(func).get("return", Any)
+    return _unwrap_batch_type(func, typ, batched, "output")

@@ -16,12 +16,13 @@
 
 import multiprocessing as mp
 import subprocess
+from collections.abc import Callable, Iterable
 from multiprocessing.context import ForkContext, SpawnContext
 from multiprocessing.process import BaseProcess
 from multiprocessing.synchronize import Event
 from pathlib import Path
 from time import monotonic, sleep
-from typing import Callable, Dict, Iterable, List, Optional, Type, Union, cast
+from typing import cast
 
 from mosec.coordinator import Coordinator
 from mosec.env import env_var_context, validate_env, validate_float_ge, validate_int_ge
@@ -45,13 +46,13 @@ class Runtime:
 
     def __init__(
         self,
-        worker: Type[Worker],
+        worker: type[Worker],
         num: int = 1,
         max_batch_size: int = 1,
         max_wait_time: int = 0,
         timeout: float = 0.0,
         start_method: str = "spawn",
-        env: Union[List[Dict[str, str]], None] = None,
+        env: list[dict[str, str]] | None = None,
     ):
         """Initialize the mosec coordinator.
 
@@ -81,7 +82,7 @@ class Runtime:
         Runtime._stage_id += 1
         # adding the stage id in case the worker class is added to multiple stages
         self.name = f"{self.worker.__name__}_{self._stage_id}"
-        self._pool: List[Union[BaseProcess, None]] = [None for _ in range(self.num)]
+        self._pool: list[BaseProcess | None] = [None for _ in range(self.num)]
 
         self._validate()
 
@@ -93,7 +94,7 @@ class Runtime:
         )
 
     @staticmethod
-    def _process_healthy(process: Union[BaseProcess, None]) -> bool:
+    def _process_healthy(process: BaseProcess | None) -> bool:
         """Check if the child process is healthy.
 
         ref: https://docs.python.org/3/library/multiprocessing.html
@@ -115,7 +116,7 @@ class Runtime:
     ):
         """Start a worker process in the context."""
         context = mp.get_context(self.start_method)
-        context = cast(Union[SpawnContext, ForkContext], context)
+        context = cast(SpawnContext | ForkContext, context)
         coordinator_process = context.Process(
             target=Coordinator,
             args=(
@@ -199,7 +200,7 @@ class PyRuntimeManager:
             shutdown_notify: Event of server will shutdown
 
         """
-        self.runtimes: List[Runtime] = []
+        self.runtimes: list[Runtime] = []
 
         self._work_path = work_path
         self.shutdown = shutdown
@@ -211,7 +212,7 @@ class PyRuntimeManager:
         return len(self.runtimes)
 
     @property
-    def workers(self) -> List[Type[Worker]]:
+    def workers(self) -> list[type[Worker]]:
         """Get List of workers."""
         return [r.worker for r in self.runtimes]
 
@@ -219,7 +220,7 @@ class PyRuntimeManager:
         """Sequentially appends workers to the workflow pipeline."""
         self.runtimes.append(runtime)
 
-    def check_and_start(self, init: bool) -> Union[Runtime, None]:
+    def check_and_start(self, init: bool) -> Runtime | None:
         """Check all worker processes and try to start failed ones.
 
         Args:
@@ -244,7 +245,7 @@ class RsRuntimeManager:
             timeout: service timeout in milliseconds
 
         """
-        self.process: Optional[subprocess.Popen] = None
+        self.process: subprocess.Popen | None = None
 
         self.timeout = timeout
 
