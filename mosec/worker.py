@@ -32,9 +32,8 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, final
 
 from mosec.cache import SieveCache
-from mosec.errors import DecodingError, EncodingError
+from mosec.errors import DecodingError, EncodingError, ServerError
 from mosec.log import get_internal_logger
-from mosec.utils import ParseTarget
 
 MOSEC_REF_TEMPLATE = "#/components/schemas/{name}"
 
@@ -316,6 +315,25 @@ class MultiModelWorker(Worker):
         """
         return item[self.MODEL_ID_KEY]
 
+    def has_model(self, model_id: str) -> bool:
+        """Check whether the given model can be loaded.
+
+        Override this to validate that ``model_id`` refers to a real,
+        loadable model (e.g. the checkpoint file exists).  The default
+        implementation always returns ``True``.
+
+        When this returns ``False``, ``_ensure_model`` raises a
+        ``ServerError`` *before* evicting any warm cache entry, so a bad
+        request cannot displace a model that is currently in use.
+
+        Args:
+            model_id: identifier to validate.
+
+        Returns:
+            ``True`` if the model is available, ``False`` otherwise.
+        """
+        return True
+
     @final
     def forward(self, data: Any) -> Any:
         """Group the batch by model_id, manage the cache, dispatch sub-batches.
@@ -359,6 +377,12 @@ class MultiModelWorker(Worker):
 
         self._logger.info("cache miss for model_id=%r, loading", model_id)
 
+        if not self.has_model(model_id):
+            raise ServerError(
+                f"model_id={model_id!r} is not available; "
+                "override has_model() to customise validation"
+            )
+
         if len(self._model_cache) >= self._model_cache.max_size:
             evicted = self._model_cache.evict()
             if evicted is not None:
@@ -372,5 +396,10 @@ class MultiModelWorker(Worker):
                 del evicted, evicted_key, evicted_model
 
         model = self.load_model(model_id)
+        if model is None:
+            raise ServerError(
+                f"load_model({model_id!r}) returned None; "
+                "the cache treats None as a miss"
+            )
         self._model_cache.put(model_id, model)
         return model

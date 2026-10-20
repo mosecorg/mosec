@@ -30,6 +30,7 @@ Usage:
     # Multiple model_ids in one batch are automatically sub-batched.
 """
 
+import os
 from typing import Any, Dict, List
 
 from mosec import MultiModelWorker, Server, get_logger
@@ -43,11 +44,16 @@ class YOLOMultiModel(MultiModelWorker):
     # Keep up to 3 YOLO model variants in GPU memory at once.
     max_cache_size = 3
 
+    def has_model(self, model_id: str) -> bool:
+        """Check whether the checkpoint file exists before evicting anything."""
+        return os.path.isfile(f"models/{model_id}.pt")
+
     def load_model(self, model_id: str) -> Any:
         """Load a YOLO model by its identifier.
 
         In production, model_id might map to a path like:
-            models/yolo11n.pt, models/yolo11s-custom.pt, etc.
+            models/yolo26n.pt, models/yolo26s-custom.pt, etc.
+        This works with any YOLO variant (yolo11, yolo26, upcoming yolo27, etc.).
         """
         # Lazy import so the server module itself stays lightweight.
         from ultralytics import YOLO  # type: ignore
@@ -58,7 +64,7 @@ class YOLOMultiModel(MultiModelWorker):
     def unload_model(self, model_id: str, model: Any) -> None:
         """Free GPU memory when a model is evicted."""
         logger.info("Evicting model: %s", model_id)
-        del model
+        model.to("meta")
 
     def forward_model(
         self, model_id: str, model: Any, data: List[Dict[str, Any]]
