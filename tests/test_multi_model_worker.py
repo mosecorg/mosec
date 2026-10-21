@@ -14,10 +14,12 @@
 
 """Test MultiModelWorker sub-batching and cache management."""
 
+import weakref
 from typing import Any, Dict, List
 
 import pytest
 
+from mosec.errors import ClientError
 from mosec.worker import MultiModelWorker
 
 #  concrete test double
@@ -208,3 +210,60 @@ def test_cache_hits_processed_before_misses(worker):
     # Results are still in the original request order.
     assert results[0]["model_id"] == "B"
     assert results[1]["model_id"] == "A"
+
+
+#  error handling and memory release
+
+
+def test_missing_model_id_is_client_error(worker):
+    with pytest.raises(ClientError, match="model_id"):
+        worker.forward([{"x": 1}])
+
+
+def test_unavailable_model_does_not_evict(small_cache_worker):
+    w = small_cache_worker
+    w.has_model = lambda model_id: model_id != "bad"
+    w.forward([{"model_id": "A"}])
+    w.forward([{"model_id": "B"}])
+    with pytest.raises(ClientError, match="bad"):
+        w.forward([{"model_id": "bad"}])
+    assert w.unloaded == []
+    assert sorted(w._model_cache.keys()) == ["A", "B"]
+
+
+def test_none_model_is_cached(worker):
+    worker.load_model = lambda model_id: None
+    worker.forward_model = lambda model_id, model, data: [model for _ in data]
+    assert worker.forward([{"model_id": "A"}]) == [None]
+    assert worker.forward([{"model_id": "A"}]) == [None]
+    assert "A" in worker._model_cache
+    assert len(worker._model_cache) == 1
+
+
+def test_evicted_model_is_released_before_next_load():
+    class Model:
+        pass
+
+    refs: Dict[str, weakref.ref] = {}
+    alive_on_load: List[List[str]] = []
+
+    class ReleaseWorker(DummyMultiModelWorker):
+        max_cache_size = 1
+
+        def load_model(self, model_id: str) -> Model:
+            alive_on_load.append([k for k, ref in refs.items() if ref() is not None])
+            model = Model()
+            refs[model_id] = weakref.ref(model)
+            return model
+
+        def forward_model(
+            self, model_id: str, model: Any, data: List[Any]
+        ) -> List[Any]:
+            # results must not hold the model, otherwise it can't be released
+            return [model_id for _ in data]
+
+    w = ReleaseWorker()
+    w.max_batch_size = 8
+    # both models in one batch: "A" is evicted while loading "B"
+    w.forward([{"model_id": "A"}, {"model_id": "B"}])
+    assert alive_on_load == [[], []]

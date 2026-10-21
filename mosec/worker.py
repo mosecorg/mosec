@@ -32,7 +32,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, final
 
 from mosec.cache import SieveCache
-from mosec.errors import ClientError, DecodingError, EncodingError, ServerError
+from mosec.errors import ClientError, DecodingError, EncodingError
 from mosec.log import get_internal_logger
 
 if TYPE_CHECKING:
@@ -279,6 +279,13 @@ class MultiModelWorker(Worker):
         Override this to free GPU memory, close file handles, etc.
         The default implementation does nothing.
 
+        The caller still holds a reference to *model* during this call, so
+        ``del model`` here does not free anything. Release resources in place
+        if your framework supports it (e.g. ``model.to("meta")`` for PyTorch).
+        Otherwise, the model is freed after this method returns and before the
+        next ``load_model`` call, unless it has reference cycles (call
+        ``gc.collect()`` at the start of ``load_model`` for that case).
+
         Args:
             model_id: identifier of the evicted model.
             model: the model object that was evicted.
@@ -310,8 +317,14 @@ class MultiModelWorker(Worker):
 
         Returns:
             The model identifier string.
+
+        Raises:
+            ClientError: if *item* doesn't contain the model identifier.
         """
-        return item.get(self.model_id_key)
+        try:
+            return item[self.model_id_key]
+        except (KeyError, TypeError) as err:
+            raise ClientError(f"missing `{self.model_id_key}` in the request") from err
 
     def has_model(self, model_id: str) -> bool:
         """Check whether the given model can be loaded.
@@ -361,6 +374,9 @@ class MultiModelWorker(Worker):
             model = self._ensure_model(model_id)
             sub_data = [item for _, item in indexed_items]
             sub_results = self.forward_model(model_id, model, sub_data)
+            # drop the reference so that this model can be freed if the next
+            # `_ensure_model` call evicts it, otherwise it stays alive while
+            # the next model is loaded
             del model
             for (orig_idx, _), result in zip(indexed_items, sub_results, strict=True):
                 results[orig_idx] = result
@@ -369,9 +385,9 @@ class MultiModelWorker(Worker):
 
     def _ensure_model(self, model_id: str) -> Any:
         """Return the model for *model_id*, loading on cache miss."""
-        model = self._model_cache.get(model_id)
-        if model is not None:
-            return model
+        # check membership instead of `get() is None` so that `None` is a valid model
+        if model_id in self._model_cache:
+            return self._model_cache.get(model_id)
 
         self._logger.info("cache miss for model_id=%r, loading", model_id)
 
@@ -391,10 +407,5 @@ class MultiModelWorker(Worker):
                 del evicted, evicted_key, evicted_model
 
         model = self.load_model(model_id)
-        if model is None:
-            raise ServerError(
-                f"load_model({model_id!r}) returned None; "
-                "the cache treats None as a miss"
-            )
         self._model_cache.put(model_id, model)
         return model

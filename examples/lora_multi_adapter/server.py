@@ -47,38 +47,43 @@ class LoRAWorker(MultiModelWorker):
         self.base_model = None
 
     def load_model(self, model_id: str) -> Any:
-        """Load a LoRA adapter and merge it with the base model.
+        """Load a LoRA adapter on top of the shared base model.
 
         In production this would call something like:
-            from peft import PeftModel
-            adapter = PeftModel.from_pretrained(self.base_model, f"adapters/{model_id}")
+            self.base_model.load_adapter(f"adapters/{model_id}", adapter_name=model_id)
         """
         # Lazy-load the base model on first call.
         if self.base_model is None:
             self._load_base_model()
 
         logger.info("Loading adapter: %s", model_id)
-        # Placeholder: return (base_ref, adapter_id) as the "model" object.
-        # In a real implementation this would be the merged PEFT model.
+        # The adapter weights live in the shared PEFT model, so the cached
+        # "model" object only needs to identify the adapter.
         return {"base": self.base_model, "adapter_id": model_id}
 
     def _load_base_model(self):
         """Load the base model once (not cached, never evicted)."""
         logger.info("Loading base model (one-time)")
-        # e.g. AutoModelForCausalLM.from_pretrained("meta-llama/...")
+        # e.g. base = AutoModelForCausalLM.from_pretrained("meta-llama/...")
+        #      self.base_model = PeftModel(base, LoraConfig(...))
+        # Use one PEFT model for all adapters: calling `PeftModel.from_pretrained`
+        # per adapter would inject LoRA layers into the same base model repeatedly.
         self.base_model = "base_model_placeholder"
 
     def unload_model(self, model_id: str, model: Any) -> None:
         """Free the adapter weights."""
         logger.info("Evicting adapter: %s", model_id)
-        # e.g. self.peft_model.delete_adapter(model_id)
+        # e.g. self.base_model.delete_adapter(model_id)
+        # Don't move `model` to "meta" here: it shares the base model weights.
 
     def forward_model(
         self, model_id: str, model: Any, data: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Generate text for a sub-batch using one adapter."""
         prompts = [item["prompt"] for item in data]
-        # In production: outputs = model.generate(tokenizer(prompts))
+        # In production:
+        #   self.base_model.set_adapter(model_id)  # safe: sub-batches run one at a time
+        #   outputs = self.base_model.generate(**tokenizer(prompts, return_tensors="pt"))
         return [
             {
                 "model_id": model_id,
