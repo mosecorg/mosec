@@ -71,7 +71,7 @@ class LoRAWorker(MultiModelWorker):
     def unload_model(self, model_id: str, model: Any) -> None:
         """Free the adapter weights."""
         logger.info("Evicting adapter: %s", model_id)
-        # e.g. del model; torch.cuda.empty_cache()
+        # e.g. self.peft_model.delete_adapter(model_id)
 
     def forward_model(
         self, model_id: str, model: Any, data: List[Dict[str, Any]]

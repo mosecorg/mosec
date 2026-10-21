@@ -29,13 +29,11 @@ import json
 import pickle
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, final
+from typing import TYPE_CHECKING, Any, final
 
 from mosec.cache import SieveCache
-from mosec.errors import DecodingError, EncodingError, ServerError
+from mosec.errors import ClientError, DecodingError, EncodingError, ServerError
 from mosec.log import get_internal_logger
-
-MOSEC_REF_TEMPLATE = "#/components/schemas/{name}"
 
 if TYPE_CHECKING:
     from queue import SimpleQueue
@@ -251,7 +249,7 @@ class MultiModelWorker(Worker):
     max_cache_size: int = 5
     """Maximum number of models to keep loaded simultaneously."""
 
-    MODEL_ID_KEY: str = "model_id"
+    model_id_key: str = "model_id"
     """Key used to extract the model identifier from each request item."""
 
     def __init__(self):
@@ -288,7 +286,7 @@ class MultiModelWorker(Worker):
         pass
 
     @abc.abstractmethod
-    def forward_model(self, model_id: str, model: Any, data: List[Any]) -> List[Any]:
+    def forward_model(self, model_id: str, model: Any, data: list[Any]) -> list[Any]:
         """Run inference on a sub-batch for a single model.
 
         Args:
@@ -313,7 +311,7 @@ class MultiModelWorker(Worker):
         Returns:
             The model identifier string.
         """
-        return item[self.MODEL_ID_KEY]
+        return item.get(self.model_id_key)
 
     def has_model(self, model_id: str) -> bool:
         """Check whether the given model can be loaded.
@@ -323,7 +321,7 @@ class MultiModelWorker(Worker):
         implementation always returns ``True``.
 
         When this returns ``False``, ``_ensure_model`` raises a
-        ``ServerError`` *before* evicting any warm cache entry, so a bad
+        ``ClientError`` *before* evicting any warm cache entry, so a bad
         request cannot displace a model that is currently in use.
 
         Args:
@@ -341,9 +339,9 @@ class MultiModelWorker(Worker):
         This method is sealed. Override ``forward_model`` instead.
         """
         is_batched = self.max_batch_size > 1
-        items: List[Any] = data if is_batched else [data]
+        items: list[Any] = data if is_batched else [data]
 
-        groups: Dict[str, List[Tuple[int, Any]]] = defaultdict(list)
+        groups: dict[str, list[tuple[int, Any]]] = defaultdict(list)
         for idx, item in enumerate(items):
             mid = self.get_model_id(item)
             groups[mid].append((idx, item))
@@ -358,7 +356,7 @@ class MultiModelWorker(Worker):
             else:
                 miss_groups.append((model_id, indexed_items))
 
-        results: List[Any] = [None] * len(items)
+        results: list[Any] = [None] * len(items)
         for model_id, indexed_items in hit_groups + miss_groups:
             model = self._ensure_model(model_id)
             sub_data = [item for _, item in indexed_items]
@@ -378,10 +376,7 @@ class MultiModelWorker(Worker):
         self._logger.info("cache miss for model_id=%r, loading", model_id)
 
         if not self.has_model(model_id):
-            raise ServerError(
-                f"model_id={model_id!r} is not available; "
-                "override has_model() to customise validation"
-            )
+            raise ClientError(f"model_id={model_id!r} is not available")
 
         if len(self._model_cache) >= self._model_cache.max_size:
             evicted = self._model_cache.evict()
