@@ -27,10 +27,13 @@ from __future__ import annotations
 import abc
 import json
 import pickle
+from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, final
 
-from mosec.errors import DecodingError, EncodingError
+from mosec.cache import SieveCache
+from mosec.errors import ClientError, DecodingError, EncodingError
+from mosec.log import get_internal_logger
 
 if TYPE_CHECKING:
     from queue import SimpleQueue
@@ -223,3 +226,186 @@ class SSEWorker(Worker):
             raise RuntimeError("the worker stream or semaphore is not initialized")
         self._stream_semaphore.acquire()
         self._stream_queue.put((text, index))
+
+
+class MultiModelWorker(Worker):
+    """MOSEC worker with dynamic multi-model loading and SIEVE cache eviction.
+
+    It maintains a fixed-size cache of loaded models and implements
+    ``forward`` by grouping each batch into per-``model_id`` sub-batches.
+    Missing models are loaded on demand; when the cache is full the SIEVE
+    policy evicts an entry to make room.
+
+    The user must override ``load_model`` and ``forward_model``.
+    Optionally override ``unload_model`` to clean up evicted models, or
+    ``get_model_id`` to change how the model identifier is extracted from
+    each request item (default: ``item["model_id"]``).
+
+    The eviction policy is SIEVE (Zhang et al., NSDI '24) — a single queue
+    with one pointer and one bit per entry, no reordering on cache hit.
+    See https://sievecache.com for details.
+    """
+
+    max_cache_size: int = 5
+    """Maximum number of models to keep loaded simultaneously."""
+
+    model_id_key: str = "model_id"
+    """Key used to extract the model identifier from each request item."""
+
+    def __init__(self):
+        """Initialize the worker and its model cache."""
+        super().__init__()
+        self._model_cache: SieveCache[str, Any] = SieveCache(self.max_cache_size)
+        self._logger = get_internal_logger()
+
+    @abc.abstractmethod
+    def load_model(self, model_id: str) -> Any:
+        """Load and return a model object for the given identifier.
+
+        Called on a cache miss. The returned object is stored in the cache
+        and passed to ``forward_model`` on subsequent hits.
+
+        Args:
+            model_id: identifier of the model to load.
+
+        Returns:
+            The loaded model (any type).
+        """
+        raise NotImplementedError
+
+    def unload_model(self, model_id: str, model: Any) -> None:
+        """Clean up a model that was just evicted from the cache.
+
+        Override this to free GPU memory, close file handles, etc.
+        The default implementation does nothing.
+
+        The caller still holds a reference to *model* during this call, so
+        ``del model`` here does not free anything. Release resources in place
+        if your framework supports it (e.g. ``model.to("meta")`` for PyTorch).
+        Otherwise, the model is freed after this method returns and before the
+        next ``load_model`` call, unless it has reference cycles (call
+        ``gc.collect()`` at the start of ``load_model`` for that case).
+
+        Args:
+            model_id: identifier of the evicted model.
+            model: the model object that was evicted.
+        """
+        pass
+
+    @abc.abstractmethod
+    def forward_model(self, model_id: str, model: Any, data: list[Any]) -> list[Any]:
+        """Run inference on a sub-batch for a single model.
+
+        Args:
+            model_id: identifier of the model.
+            model: the loaded model object (as returned by ``load_model``).
+            data: list of request items that share this ``model_id``.
+
+        Returns:
+            A list of results, same length and same order as *data*.
+        """
+        raise NotImplementedError
+
+    def get_model_id(self, item: Any) -> str:
+        """Extract the model identifier from a request item.
+
+        The default expects *item* to be a dict with a ``"model_id"`` key.
+        Override this if your items use a different structure.
+
+        Args:
+            item: one element from the batch.
+
+        Returns:
+            The model identifier string.
+
+        Raises:
+            ClientError: if *item* doesn't contain the model identifier.
+        """
+        try:
+            return item[self.model_id_key]
+        except (KeyError, TypeError) as err:
+            raise ClientError(f"missing `{self.model_id_key}` in the request") from err
+
+    def has_model(self, model_id: str) -> bool:
+        """Check whether the given model can be loaded.
+
+        Override this to validate that ``model_id`` refers to a real,
+        loadable model (e.g. the checkpoint file exists).  The default
+        implementation always returns ``True``.
+
+        When this returns ``False``, ``_ensure_model`` raises a
+        ``ClientError`` *before* evicting any warm cache entry, so a bad
+        request cannot displace a model that is currently in use.
+
+        Args:
+            model_id: identifier to validate.
+
+        Returns:
+            ``True`` if the model is available, ``False`` otherwise.
+        """
+        return True
+
+    @final
+    def forward(self, data: Any) -> Any:
+        """Group the batch by model_id, manage the cache, dispatch sub-batches.
+
+        This method is sealed. Override ``forward_model`` instead.
+        """
+        is_batched = self.max_batch_size > 1
+        items: list[Any] = data if is_batched else [data]
+
+        groups: dict[str, list[tuple[int, Any]]] = defaultdict(list)
+        for idx, item in enumerate(items):
+            mid = self.get_model_id(item)
+            groups[mid].append((idx, item))
+
+        # Process cache-hit groups before cache-miss groups to avoid
+        # evicting a model needed later in this forward call.
+        hit_groups = []
+        miss_groups = []
+        for model_id, indexed_items in groups.items():
+            if model_id in self._model_cache:
+                hit_groups.append((model_id, indexed_items))
+            else:
+                miss_groups.append((model_id, indexed_items))
+
+        results: list[Any] = [None] * len(items)
+        for model_id, indexed_items in hit_groups + miss_groups:
+            model = self._ensure_model(model_id)
+            sub_data = [item for _, item in indexed_items]
+            sub_results = self.forward_model(model_id, model, sub_data)
+            # drop the reference so that this model can be freed if the next
+            # `_ensure_model` call evicts it, otherwise it stays alive while
+            # the next model is loaded
+            del model
+            for (orig_idx, _), result in zip(indexed_items, sub_results, strict=True):
+                results[orig_idx] = result
+
+        return results if is_batched else results[0]
+
+    def _ensure_model(self, model_id: str) -> Any:
+        """Return the model for *model_id*, loading on cache miss."""
+        # check membership instead of `get() is None` so that `None` is a valid model
+        if model_id in self._model_cache:
+            return self._model_cache.get(model_id)
+
+        self._logger.info("cache miss for model_id=%r, loading", model_id)
+
+        if not self.has_model(model_id):
+            raise ClientError(f"model_id={model_id!r} is not available")
+
+        if len(self._model_cache) >= self._model_cache.max_size:
+            evicted = self._model_cache.evict()
+            if evicted is not None:
+                evicted_key, evicted_model = evicted
+                self._logger.info(
+                    "evicting model_id=%r to make room for %r",
+                    evicted_key,
+                    model_id,
+                )
+                self.unload_model(evicted_key, evicted_model)
+                del evicted, evicted_key, evicted_model
+
+        model = self.load_model(model_id)
+        self._model_cache.put(model_id, model)
+        return model
