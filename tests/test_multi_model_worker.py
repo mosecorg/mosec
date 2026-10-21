@@ -247,7 +247,7 @@ def test_evicted_model_is_released_before_next_load():
     refs: Dict[str, weakref.ref] = {}
     alive_on_load: List[List[str]] = []
 
-    class ReleaseWorker(DummyMultiModelWorker):
+    class ReleaseWorker(MultiModelWorker):
         max_cache_size = 1
 
         def load_model(self, model_id: str) -> Model:
