@@ -63,6 +63,8 @@ pub(crate) struct Config {
     pub compression: bool,
     // maximum request body size in bytes
     pub max_request_size: usize,
+    #[serde(default)]
+    pub cors_allow_origins: Vec<String>,
     pub runtimes: Vec<Runtime>,
     pub routes: Vec<Route>,
 }
@@ -79,6 +81,7 @@ impl Default for Config {
             log_level: String::from("info"),
             compression: false,
             max_request_size: 10 * 1024 * 1024,
+            cors_allow_origins: Vec::new(),
             runtimes: vec![Runtime {
                 max_batch_size: 64,
                 max_wait_time: 3000,

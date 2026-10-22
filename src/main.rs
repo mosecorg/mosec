@@ -29,6 +29,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 
 use axum::Router;
+use axum::http::{HeaderValue, Method};
 use axum::response::Redirect;
 use axum::routing::{get, post};
 use log::{debug, info, warn};
@@ -37,6 +38,7 @@ use logforth::record::{Level, LevelFilter};
 use tokio::signal::unix::{SignalKind, signal};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
+use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 use tower_http::decompression::RequestDecompressionLayer;
 use tower_http::services::ServeFile;
 
@@ -105,6 +107,27 @@ async fn run(conf: &Config, config_dir: &Path) {
         } else {
             router = router.route(&route.endpoint, post(inference));
         }
+    }
+
+    if !conf.cors_allow_origins.is_empty() {
+        let mut cors = CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST])
+            .allow_headers(AllowHeaders::mirror_request());
+        if conf.cors_allow_origins == ["*"] {
+            cors = cors.allow_origin(Any);
+        } else {
+            assert!(
+                !conf.cors_allow_origins.iter().any(|origin| origin == "*"),
+                "CORS wildcard origin must be the only allowed origin"
+            );
+            let origins: Vec<HeaderValue> = conf
+                .cors_allow_origins
+                .iter()
+                .map(|origin| HeaderValue::from_str(origin).expect("invalid CORS origin"))
+                .collect();
+            cors = cors.allow_origin(origins);
+        }
+        router = router.layer(cors);
     }
 
     if conf.compression {
