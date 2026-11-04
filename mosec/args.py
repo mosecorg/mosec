@@ -28,6 +28,7 @@ import random
 import socket
 import tempfile
 import warnings
+from urllib.parse import urlsplit
 
 from mosec.env import get_env_namespace
 
@@ -56,7 +57,7 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog="The following arguments can be set through environment variables: ("
         "path, capacity, timeout, address, port, namespace, debug, log_level, dry_run, "
-        "max_request_size"
+        "max_request_size, cors_allow_origins"
         "). Note that the environment variable should start with `MOSEC_` with upper "
         "case. For example: `MOSEC_PORT=8080 MOSEC_TIMEOUT=5000 python main.py`.",
     )
@@ -152,6 +153,13 @@ def build_arguments_parser() -> argparse.ArgumentParser:
         default=10 * 1024 * 1024,
     )
 
+    parser.add_argument(
+        "--cors-allow-origins",
+        nargs="+",
+        default=[],
+        help="Browser origins allowed to read HTTP responses (or '*' for any origin).",
+    )
+
     return parser
 
 
@@ -176,6 +184,34 @@ def parse_arguments() -> argparse.Namespace:
             DeprecationWarning,
             stacklevel=2,
         )
+
+    origins = args.cors_allow_origins
+    if not isinstance(origins, list) or not all(isinstance(x, str) for x in origins):
+        parser.error("CORS origins must be a list of strings")
+    if "*" in origins and origins != ["*"]:
+        parser.error("'*' must be the only allowed CORS origin")
+    for origin in origins:
+        if origin == "*":
+            continue
+        try:
+            parsed = urlsplit(origin)
+            valid = (
+                parsed.scheme in ("http", "https")
+                and parsed.hostname is not None
+                and parsed.username is None
+                and parsed.password is None
+                and parsed.netloc != ""
+                and not (parsed.path or parsed.query or parsed.fragment)
+                and origin == f"{parsed.scheme}://{parsed.netloc}"
+                and origin.isprintable()
+                and not any(char.isspace() for char in origin)
+            )
+            valid = valid and (parsed.port is None or parsed.port >= 0)
+            origin.encode("ascii")
+        except (ValueError, UnicodeEncodeError):
+            valid = False
+        if not valid:
+            parser.error(f"invalid CORS origin: {origin}")
 
     if not is_port_available(args.address, args.port):
         raise RuntimeError(

@@ -161,6 +161,21 @@ Starting in v0.9.8, OpenAPI generation works for all `Worker` implementations an
 does not require `TypedMsgPackMixin`. See the [OpenAPI reference](https://mosecorg.github.io/mosec/reference/openapi.html)
 for schema generation details.
 
+To let a browser application call a Mosec service directly, name the allowed
+origins when starting it:
+
+```shell
+python examples/echo.py --cors-allow-origins https://app.example https://admin.example
+```
+
+The list is empty by default, so responses carry no CORS headers. Pass `*` as
+the only origin to allow any browser origin. You can also set
+`MOSEC_CORS_ALLOW_ORIGINS='["https://app.example"]'`. Origins must include the
+`http://` or `https://` scheme and host, with an optional port and no path.
+This setting controls which browsers can read responses; it does not
+authenticate requests. It covers inference, streaming responses, metrics and
+the OpenAPI endpoints.
+
 And in another terminal, test it:
 
 ```shell

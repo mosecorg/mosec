@@ -431,3 +431,89 @@ def test_max_request_size(mosec_service, http_client):
     # request larger than 64 bytes should return status code 413
     resp = http_client.post("/inference", json={"x": 2, "padding": "a" * 100})
     assert resp.status_code == HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client", [("square_service", "")], indirect=True
+)
+def test_cors_is_disabled_by_default(mosec_service, http_client):
+    response = http_client.post(
+        "/inference", json={"x": 3}, headers={"Origin": "https://client.example"}
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert "access-control-allow-origin" not in response.headers
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [
+        (
+            "square_service --cors-allow-origins https://client.example https://admin.example",
+            "",
+        )
+    ],
+    indirect=True,
+)
+def test_cors_preflight_and_inference(mosec_service, http_client):
+    headers = {
+        "Origin": "https://client.example",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type",
+    }
+    preflight = http_client.options("/inference", headers=headers)
+    assert preflight.status_code == HTTPStatus.OK
+    assert preflight.headers["access-control-allow-origin"] == "https://client.example"
+    assert "POST" in preflight.headers["access-control-allow-methods"]
+    assert "content-type" in preflight.headers["access-control-allow-headers"].lower()
+
+    response = http_client.post(
+        "/inference", json={"x": 3}, headers={"Origin": "https://client.example"}
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {"x": 9}
+    assert response.headers["access-control-allow-origin"] == "https://client.example"
+
+    alternate = http_client.get("/", headers={"Origin": "https://admin.example"})
+    assert alternate.headers["access-control-allow-origin"] == "https://admin.example"
+    denied = http_client.post(
+        "/inference", json={"x": 3}, headers={"Origin": "https://other.example"}
+    )
+    assert denied.status_code == HTTPStatus.OK
+    assert "access-control-allow-origin" not in denied.headers
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [("square_service --cors-allow-origins *", "")],
+    indirect=True,
+)
+def test_cors_wildcard_is_opt_in(mosec_service, http_client):
+    response = http_client.options(
+        "/inference",
+        headers={
+            "Origin": "https://client.example",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["access-control-allow-origin"] == "*"
+
+
+@pytest.mark.parametrize(
+    "mosec_service, http_client",
+    [("sse_service --cors-allow-origins https://client.example", "")],
+    indirect=True,
+)
+def test_cors_covers_streaming_response(mosec_service, http_client):
+    with http_client.stream(
+        "POST",
+        "/inference",
+        json={"text": "mosec"},
+        headers={"Origin": "https://client.example", "Accept": "text/event-stream"},
+    ) as response:
+        assert response.status_code == HTTPStatus.OK
+        assert (
+            response.headers["access-control-allow-origin"] == "https://client.example"
+        )
+        assert response.headers["content-type"].startswith("text/event-stream")
+        assert b"data: mosec" in response.read()
